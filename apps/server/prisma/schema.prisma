@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserSkillStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id                String              @id @default(uuid()) @db.Uuid
+  email             String              @unique
+  passwordHash      String
+  createdAt         DateTime            @default(now())
+  userSkillProgress UserSkillProgress[]
+
+  @@map("users")
+}
+
+model CareerPath {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  description String
+  roadmaps    Roadmap[]
+
+  @@map("career_paths")
+}
+
+model Roadmap {
+  id           String     @id @default(uuid()) @db.Uuid
+  careerPathId String     @db.Uuid
+  level        Int
+  careerPath   CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
+  skills       Skill[]
+
+  @@map("roadmaps")
+}
+
+model Skill {
+  id                String              @id @default(uuid()) @db.Uuid
+  roadmapId         String              @db.Uuid
+  name              String
+  description       String
+  orderIndex        Int
+  roadmap           Roadmap             @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  userSkillProgress UserSkillProgress[]
+
+  @@map("skills")
+}
+
+model UserSkillProgress {
+  id          String          @id @default(uuid()) @db.Uuid
+  userId      String          @db.Uuid
+  skillId     String          @db.Uuid
+  status      UserSkillStatus @default(NOT_STARTED)
+  completedAt DateTime?
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill       Skill           @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@map("user_skill_progress")
+}

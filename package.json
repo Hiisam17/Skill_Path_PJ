@@ -1,0 +1,20 @@
+{
+  "name": "it-career-roadmap",
+  "version": "0.1.0",
+  "description": "IT Career Roadmap Platform - NestJS + React + Vite monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "start": "npm start --workspaces",
+    "test": "npm test --workspaces"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

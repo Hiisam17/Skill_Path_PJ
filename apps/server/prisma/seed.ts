@@ -1,7 +1,26 @@
+import 'dotenv/config';
 import { PrismaClient, UserSkillStatus } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
+import { Pool } from 'pg';
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error(
+    'DATABASE_URL is missing. Create apps/server/.env from .env.example first.',
+  );
+}
+
+if (connectionString.includes('<') || connectionString.includes('>')) {
+  throw new Error(
+    'DATABASE_URL in apps/server/.env is still a placeholder. Replace it with a real PostgreSQL/Supabase connection string.',
+  );
+}
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Starting seed...');
@@ -135,6 +154,94 @@ async function main() {
     });
   }
 
+  // === DEV C: Skills seed (remove temp CareerPath/Roadmap after Dev B merges) ===
+  const devCTempCareerPathId = '11111111-1111-4111-8111-111111111111';
+  const devCTempRoadmapId = '22222222-2222-4222-8222-222222222222';
+
+  await prisma.careerPath.upsert({
+    where: { id: devCTempCareerPathId },
+    update: {
+      name: 'Backend Developer',
+      description: 'Lo trinh Backend (tam thoi do Dev C tao)',
+    },
+    create: {
+      id: devCTempCareerPathId,
+      name: 'Backend Developer',
+      description: 'Lo trinh Backend (tam thoi do Dev C tao)',
+    },
+  });
+
+  await prisma.roadmap.upsert({
+    where: { id: devCTempRoadmapId },
+    update: {
+      careerPathId: devCTempCareerPathId,
+      level: 1,
+    },
+    create: {
+      id: devCTempRoadmapId,
+      careerPathId: devCTempCareerPathId,
+      level: 1,
+    },
+  });
+
+  const devCSkills = [
+    {
+      id: '33333333-3333-4333-8333-333333333331',
+      name: 'Git',
+      orderIndex: 1,
+      description: 'Version control co ban',
+    },
+    {
+      id: '33333333-3333-4333-8333-333333333332',
+      name: 'Linux',
+      orderIndex: 2,
+      description: 'Lenh terminal va he dieu hanh',
+    },
+    {
+      id: '33333333-3333-4333-8333-333333333333',
+      name: 'JavaScript',
+      orderIndex: 3,
+      description: 'Ngon ngu lap trinh nen tang',
+    },
+    {
+      id: '33333333-3333-4333-8333-333333333334',
+      name: 'Node.js',
+      orderIndex: 4,
+      description: 'JavaScript phia server',
+    },
+    {
+      id: '33333333-3333-4333-8333-333333333335',
+      name: 'Database',
+      orderIndex: 5,
+      description: 'SQL va co so du lieu',
+    },
+    {
+      id: '33333333-3333-4333-8333-333333333336',
+      name: 'REST API',
+      orderIndex: 6,
+      description: 'Thiet ke va xay dung API',
+    },
+  ];
+
+  for (const skill of devCSkills) {
+    await prisma.skill.upsert({
+      where: { id: skill.id },
+      update: {
+        roadmapId: devCTempRoadmapId,
+        name: skill.name,
+        description: skill.description,
+        orderIndex: skill.orderIndex,
+      },
+      create: {
+        id: skill.id,
+        roadmapId: devCTempRoadmapId,
+        name: skill.name,
+        description: skill.description,
+        orderIndex: skill.orderIndex,
+      },
+    });
+  }
+
   console.log('\n✨ Seed completed successfully!');
   console.log('\n📊 Summary:');
   console.log(`   - Users: 1`);
@@ -154,4 +261,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });

@@ -4,7 +4,9 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
 /**
  * PrismaService - Wraps PrismaClient with NestJS lifecycle hooks
@@ -17,10 +19,40 @@ import { PrismaClient, Prisma } from '@prisma/client';
  */
 @Injectable()
 export class PrismaService
-  extends PrismaClient<Prisma.PrismaClientOptions, Prisma.LogLevel>
+  extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
   private logger = new Logger(PrismaService.name);
+  private readonly pool: Pool;
+
+  constructor() {
+    const connectionString = process.env.DATABASE_URL;
+
+    if (!connectionString) {
+      throw new Error(
+        'DATABASE_URL is missing. Create apps/server/.env from .env.example first.',
+      );
+    }
+
+    if (connectionString.includes('<') || connectionString.includes('>')) {
+      throw new Error(
+        'DATABASE_URL in apps/server/.env is still a placeholder. Replace it with a real PostgreSQL/Supabase connection string.',
+      );
+    }
+
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
+
+    super({
+      adapter,
+      log:
+        process.env.NODE_ENV === 'development'
+          ? ['query', 'info', 'warn', 'error']
+          : ['warn', 'error'],
+    });
+
+    this.pool = pool;
+  }
 
   /**
    * Connect to database when module initializes
@@ -43,6 +75,7 @@ export class PrismaService
   async onModuleDestroy(): Promise<void> {
     try {
       await this.$disconnect();
+      await this.pool.end();
       this.logger.log('Database disconnected successfully');
     } catch (error) {
       this.logger.error('Failed to disconnect from database', error);

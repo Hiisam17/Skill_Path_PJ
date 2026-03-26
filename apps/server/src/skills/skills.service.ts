@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SkillDto } from '../types';
+import { SkillDto, UserSkillStatus } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -26,12 +26,36 @@ export class SkillsService {
    * //   { id: 'uuid2', roadmapId: '...', name: 'Linux', description: '...', orderIndex: 2, status: 'NOT_STARTED' },
    * // ]
    */
+  async findSkillsByRoadmap(
+    roadmapId: string,
+    userId: string,
+  ): Promise<SkillDto[]> {
+    const skills = await this.prisma.skill.findMany({
+      where: { roadmapId },
+      orderBy: { orderIndex: 'asc' },
+      include: {
+        userSkillProgress: {
+          where: { userId },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+
+    return skills.map((skill) => ({
+      id: skill.id,
+      roadmapId: skill.roadmapId,
+      name: skill.name,
+      description: skill.description,
+      orderIndex: skill.orderIndex,
+      status:
+        skill.userSkillProgress.length > 0
+          ? UserSkillStatus.COMPLETED
+          : UserSkillStatus.NOT_STARTED,
+    }));
+  }
+
   async findByRoadmap(roadmapId: string, userId: string): Promise<SkillDto[]> {
-    // TODO: Implement skills retrieval with user progress
-    // 1. Query all skills for given roadmap ordered by orderIndex
-    // 2. LEFT JOIN with UserSkillProgress for current user
-    // 3. Include user's completion status (NOT_STARTED, IN_PROGRESS, COMPLETED)
-    // 4. Return skills with status information for frontend display
-    throw new Error('Not implemented');
+    return this.findSkillsByRoadmap(roadmapId, userId);
   }
 }

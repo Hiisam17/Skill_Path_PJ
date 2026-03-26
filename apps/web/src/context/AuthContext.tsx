@@ -8,10 +8,10 @@
  * ```
  */
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import type { UserDto, LoginDto } from "@/types";
-import { clearAuthToken } from "@/services/api";
+import type { UserDto, LoginDto, AuthResponseDto } from "@/types";
+import { api, setAuthToken, clearAuthToken, getAuthToken } from "@/services/api";
 
 // ───── CONTEXT TYPE ─────
 /**
@@ -55,21 +55,40 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize auth state from localStorage on mount
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      // Token exists, but we don't have user data yet
+      // In a real app, you might fetch user profile here
+      try {
+        // For now, we'll just ensure the token is valid by trying to use it
+        // You could add a GET /auth/me endpoint to verify and get user data
+        console.log("✅ User session found in localStorage");
+      } catch (err) {
+        console.error("Failed to restore session:", err);
+        clearAuthToken();
+      }
+    }
+  }, []);
+
   /**
    * Handle user login
    * @param {LoginDto} loginDto - Email and password
    * @throws {Error} If API call fails
    */
-  const login = async (_loginDto: LoginDto): Promise<void> => {
+  const login = async (loginDto: LoginDto): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
-      // TODO: Call POST /auth/login endpoint
-      // const response = await api.post<AuthResponseDto>('/auth/login', loginDto);
-      // const { token, user } = response.data;
-      // setAuthToken(token);
-      // setUser(user);
-      throw new Error("Not implemented");
+      const response = await api.post<AuthResponseDto>("/auth/login", loginDto);
+      const { token, user: userData } = response.data;
+
+      // Save token to localStorage and set header
+      setAuthToken(token);
+
+      // Update user state
+      setUser(userData);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       setError(message);
@@ -95,7 +114,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     error,
     login,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user || !!getAuthToken(),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

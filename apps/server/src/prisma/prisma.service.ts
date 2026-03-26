@@ -22,6 +22,10 @@ export class PrismaService
 {
   private logger = new Logger(PrismaService.name);
 
+  constructor() {
+    super();
+  }
+
   /**
    * Connect to database when module initializes
    * Called automatically by NestJS after dependency injection setup

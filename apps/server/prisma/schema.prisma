@@ -94,12 +94,12 @@ model Skill {
   @@map("skills")
 }
 
-model Role {
+model Career {
   id       Int       @id @default(autoincrement())
-  name     String    @unique
+  name     String    @unique\
+  descripton String?   @db.Text
   roadmaps Roadmap[]
-
-  @@map("roles")
+  @@map("careers")
 }
 
 model Roadmap {

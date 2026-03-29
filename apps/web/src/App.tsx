@@ -1,10 +1,3 @@
-/**
- * App Component
- * Main application router setup
- * Defines routes: login, career-paths, roadmap, dashboard
- * All routes except login are protected with ProtectedRoute
- */
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import { LoginPage } from "./pages/LoginPage";
 import { CareerPathPage } from "./pages/CareerPathPage";
@@ -12,26 +5,13 @@ import { RoadmapPage } from "./pages/RoadmapPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
-/**
- * App Root Component
- * Sets up React Router with all application routes
- *
- * Routes:
- * - / → LoginPage (public)
- * - /career-paths → CareerPathPage (protected)
- * - /roadmap → RoadmapPage (protected)
- * - /dashboard → DashboardPage (protected)
- * - /* → Redirect to / (404 fallback)
- *
- * @returns {JSX.Element} Router with all routes
- */
 function App() {
   return (
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<LoginPage />} />
 
-      {/* Protected Routes */}
+      {/* Các Route khác vẫn giữ nguyên vỏ bọc ProtectedRoute */}
       <Route
         path="/career-paths"
         element={
@@ -48,13 +28,11 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* ĐÃ SỬA: Bỏ vỏ bọc ProtectedRoute cho riêng trang Dashboard để bạn test */}
       <Route
         path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
+        element={<DashboardPage />}
       />
 
       {/* Fallback Route (404) */}

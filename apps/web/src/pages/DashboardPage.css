@@ -1,0 +1,851 @@
+/* =============================================
+   DevPath Dashboard — Global CSS
+   ============================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+
+/* ---------- Color Tokens ---------- */
+:root {
+  --bg-page: #0b1326;
+  --bg-card: #171f33;
+  --bg-card-inner: #131b2e;
+  --bg-element: #222a3d;
+  --text-primary: #dae2fd;
+  --text-secondary: #bcc9cd;
+  --accent-cyan: #4cd7f6;
+  --accent-purple: #c0c1ff;
+  --accent-orange: #ffb873;
+  --border-subtle: rgba(61, 73, 76, 0.3);
+}
+
+/* ---------- Dashboard Layout ---------- */
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-page);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--text-primary);
+}
+
+/* =============================================
+   SIDEBAR
+   ============================================= */
+.sidebar {
+  width: 256px;
+  min-width: 256px;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.sidebar-top {
+  flex: 1;
+  padding-top: 32px;
+}
+
+.sidebar-brand {
+  padding: 0 24px 24px;
+}
+
+.sidebar-brand h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin: 0;
+  line-height: 1;
+}
+
+.sidebar-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(188, 201, 205, 0.5);
+  padding: 16px 24px 8px;
+  font-weight: 700;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-right: 4px solid transparent;
+  position: relative;
+}
+
+.sidebar-nav a:hover {
+  background: rgba(34, 42, 61, 0.5);
+  color: var(--text-primary);
+}
+
+.sidebar-nav a.active {
+  background: var(--bg-element);
+  border-right: 4px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  font-weight: 500;
+  box-shadow: 0 0 15px rgba(76, 215, 246, 0.2);
+}
+
+.sidebar-nav a .nav-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ---------- Sidebar Bottom ---------- */
+.sidebar-bottom {
+  border-top: 1px solid rgba(61, 73, 76, 0.2);
+  padding: 16px 0;
+}
+
+.sidebar-bottom-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-bottom-links a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.sidebar-bottom-links a:hover {
+  background: rgba(34, 42, 61, 0.5);
+  color: var(--text-primary);
+}
+
+.sidebar-user-card {
+  margin: 12px 16px;
+  background: var(--bg-element);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4cd7f6, #c0c1ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  color: #003640;
+  flex-shrink: 0;
+}
+
+.sidebar-user-info {
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-level {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* =============================================
+   MAIN CONTENT AREA
+   ============================================= */
+.dashboard-main {
+  margin-left: 256px;
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-content {
+  padding: 48px 48px 0;
+  flex: 1;
+}
+
+/* ---------- Header Section ---------- */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 40px;
+}
+
+.dashboard-header-left h2 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: 48px;
+  color: var(--text-primary);
+  letter-spacing: -1.2px;
+  margin: 0 0 8px;
+  line-height: 1.1;
+}
+
+.dashboard-header-left p {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.streak-badge {
+  background: #2d3449;
+  border: 1px solid rgba(61, 73, 76, 0.3);
+  border-radius: 8px;
+  padding: 9px 17px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.streak-badge span {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* =============================================
+   BENTO GRID
+   ============================================= */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: auto auto;
+  gap: 32px;
+}
+
+/* ---------- Card Base ---------- */
+.bento-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---------- Card A: Progress Overview ---------- */
+.card-progress {
+  grid-column: 1 / 5;
+  grid-row: 1 / 3;
+  min-height: 576px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.card-progress::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(116.57deg, rgba(76, 215, 246, 0.05) 0%, rgba(76, 215, 246, 0) 100%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.card-progress-label {
+  position: absolute;
+  top: 32px;
+  left: 32px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-secondary);
+}
+
+.progress-ring-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.progress-ring-svg {
+  width: 256px;
+  height: 256px;
+  transform: rotate(-90deg);
+}
+
+.progress-ring-bg {
+  fill: none;
+  stroke: var(--bg-element);
+  stroke-width: 16;
+}
+
+.progress-ring-fg {
+  fill: none;
+  stroke: var(--accent-cyan);
+  stroke-width: 16;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-ring-text {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress-ring-value {
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.progress-ring-sublabel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.6px;
+  color: var(--text-secondary);
+}
+
+.card-progress-bottom {
+  position: absolute;
+  bottom: 24px;
+  left: 32px;
+  right: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-progress-bottom-left {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.card-progress-bottom-right {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+/* ---------- Card B: Earned Milestones ---------- */
+.card-milestones {
+  grid-column: 5 / 13;
+  grid-row: 1 / 2;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  max-height: 272px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.card-header-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-secondary);
+}
+
+.card-header-link {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.card-header-link:hover {
+  opacity: 0.8;
+}
+
+.milestones-row {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.milestone-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.milestone-icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--bg-element);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.milestone-icon-circle:hover {
+  transform: scale(1.08);
+}
+
+.milestone-badge.unlocked-cyan .milestone-icon-circle {
+  border: 1px solid rgba(76, 215, 246, 0.3);
+  box-shadow: 0 0 20px rgba(76, 215, 246, 0.15);
+}
+
+.milestone-badge.unlocked-purple .milestone-icon-circle {
+  border: 1px solid rgba(192, 193, 255, 0.3);
+  box-shadow: 0 0 20px rgba(49, 49, 192, 0.15);
+}
+
+.milestone-badge.unlocked-orange .milestone-icon-circle {
+  border: 1px solid rgba(255, 184, 115, 0.3);
+  box-shadow: 0 0 20px rgba(255, 184, 115, 0.15);
+}
+
+.milestone-badge.locked .milestone-icon-circle {
+  border: 1px solid rgba(61, 73, 76, 0.2);
+  background: #060e20;
+  opacity: 0.4;
+}
+
+.milestone-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.milestone-badge.locked .milestone-label {
+  opacity: 0.4;
+}
+
+/* ---------- Card C: Market Trends ---------- */
+.card-market {
+  grid-column: 5 / 13;
+  grid-row: 2 / 3;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.market-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.market-header .card-header-label {
+  margin-right: auto;
+}
+
+.market-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.market-live-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.market-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.market-stat-card {
+  background: var(--bg-card-inner);
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.market-stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 12px 0 0 12px;
+}
+
+.market-stat-card.cyan::before { background: var(--accent-cyan); }
+.market-stat-card.purple::before { background: var(--accent-purple); }
+.market-stat-card.orange::before { background: var(--accent-orange); }
+
+.market-stat-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.market-stat-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 8px;
+}
+
+.market-stat-value span {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.market-stat-arrow {
+  color: #22c55e;
+  font-size: 16px;
+}
+
+.sparkline-container {
+  background: rgba(6, 14, 32, 0.3);
+  border-radius: 8px;
+  height: 96px;
+  overflow: hidden;
+  position: relative;
+  flex: 1;
+}
+
+.sparkline-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* =============================================
+   ROW 2: Recommended Skills
+   ============================================= */
+.skills-section {
+  margin-top: 32px;
+}
+
+.skills-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.skills-section-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.skills-section-header-left .section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-secondary);
+}
+
+.skills-section-header-left h3 {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.explore-tree-btn {
+  border: 1px solid rgba(61, 73, 76, 0.5);
+  border-radius: 9999px;
+  padding: 9px 25px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.explore-tree-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.skill-card {
+  background: var(--bg-card-inner);
+  border: 1px solid rgba(61, 73, 76, 0.1);
+  border-radius: 12px;
+  height: 246px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.skill-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(76, 215, 246, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.skill-card-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--bg-element);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.skill-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+  line-height: 1.3;
+}
+
+.skill-card-desc {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.skill-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.skill-xp-badge {
+  background: rgba(49, 49, 192, 0.2);
+  color: var(--accent-purple);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.skill-start-btn {
+  background: linear-gradient(135deg, #4cd7f6, #06b6d4);
+  color: #003640;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skill-start-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(76, 215, 246, 0.35);
+}
+
+/* =============================================
+   FOOTER
+   ============================================= */
+.dashboard-footer {
+  border-top: 1px solid rgba(23, 31, 51, 0.5);
+  padding: 32px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 32px;
+}
+
+.footer-links a {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: var(--accent-cyan);
+}
+
+.footer-copyright {
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* =============================================
+   ANIMATIONS
+   ============================================= */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bento-card,
+.skill-card {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.bento-card:nth-child(1) { animation-delay: 0.1s; }
+.bento-card:nth-child(2) { animation-delay: 0.2s; }
+.bento-card:nth-child(3) { animation-delay: 0.3s; }
+
+.skill-card:nth-child(1) { animation-delay: 0.15s; }
+.skill-card:nth-child(2) { animation-delay: 0.25s; }
+.skill-card:nth-child(3) { animation-delay: 0.35s; }
+.skill-card:nth-child(4) { animation-delay: 0.45s; }
+
+/* =============================================
+   RESPONSIVE (basic fallback for smaller screens)
+   ============================================= */
+@media (max-width: 1280px) {
+  .dashboard-content {
+    padding: 32px 24px 0;
+  }
+
+  .bento-grid {
+    gap: 20px;
+  }
+
+  .skills-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .dashboard-main {
+    margin-left: 0;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-progress {
+    grid-column: 1 / -1;
+    min-height: 400px;
+  }
+
+  .card-milestones,
+  .card-market {
+    grid-column: 1 / -1;
+    max-height: none;
+  }
+
+  .market-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skills-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .milestones-row {
+    flex-wrap: wrap;
+  }
+}

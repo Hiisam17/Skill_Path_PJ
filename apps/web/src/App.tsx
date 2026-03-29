@@ -50,11 +50,7 @@ function App() {
       />
       <Route
         path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
+        element={<DashboardPage />}
       />
 
       {/* Fallback Route (404) */}

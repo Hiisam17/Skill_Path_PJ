@@ -1,12 +1,14 @@
 /**
  * App Component
  * Main application router setup
- * Defines routes: login, career-paths, roadmap, dashboard
- * All routes except login are protected with ProtectedRoute
+ * Defines routes: login, sign-up, career-paths, roadmap, dashboard
+ * Auth routes (login, sign-up) are public
+ * All other routes are protected with ProtectedRoute
  */
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { LoginPage } from "./pages/LoginPage";
+import { SignUpPage } from "./pages/SignUpPage";
 import { CareerPathPage } from "./pages/CareerPathPage";
 import { RoadmapPage } from "./pages/RoadmapPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -16,20 +18,28 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
  * App Root Component
  * Sets up React Router with all application routes
  *
- * Routes:
- * - / → LoginPage (public)
- * - /career-paths → CareerPathPage (protected)
- * - /roadmap → RoadmapPage (protected)
- * - /dashboard → DashboardPage (protected)
- * - /* → Redirect to / (404 fallback)
+ * Public Routes:
+ * - / → Redirect to /login
+ * - /login → LoginPage
+ * - /sign-up → SignUpPage
+ *
+ * Protected Routes:
+ * - /career-paths → CareerPathPage
+ * - /roadmap → RoadmapPage
+ * - /dashboard → DashboardPage
+ *
+ * Fallback:
+ * - /* → Redirect to /login (404)
  *
  * @returns {JSX.Element} Router with all routes
  */
 function App() {
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<LoginPage />} />
+      {/* Auth Routes (Public) */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/sign-up" element={<SignUpPage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* Protected Routes */}
       <Route

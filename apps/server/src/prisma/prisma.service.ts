@@ -5,8 +5,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaClient, Prisma } from '@prisma/client';
-
-/**
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';/**
  * PrismaService - Wraps PrismaClient with NestJS lifecycle hooks
  * Handles database connection initialization and cleanup
  * Provides singleton access to Prisma ORM throughout the application
@@ -17,8 +17,14 @@ import { PrismaClient, Prisma } from '@prisma/client';
  */
 @Injectable()
 export class PrismaService
-  extends PrismaClient<Prisma.PrismaClientOptions, Prisma.LogLevel>
+  extends PrismaClient
   implements OnModuleInit, OnModuleDestroy {
+  constructor() {
+    const connectionString = process.env.DATABASE_URL;
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
+    super({ adapter });
+  }
   private logger = new Logger(PrismaService.name);
 
   /**

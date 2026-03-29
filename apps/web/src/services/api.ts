@@ -98,3 +98,11 @@ export const getAuthToken = (): string | null => {
 export const isAuthenticated = (): boolean => {
   return !!getAuthToken();
 };
+
+/**
+ * Mark one skill as completed for the current user.
+ * Uses existing shared axios instance.
+ */
+export const completeSkill = async (skillId: string): Promise<void> => {
+  await api.post(`/skills/${skillId}/complete`);
+};

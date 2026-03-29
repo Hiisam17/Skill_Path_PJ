@@ -1,89 +1,96 @@
-/**
- * SkillList Component
- * Displays list of skills for a roadmap with completion status
- * Plain React list (no D3.js visualization yet)
- *
- * Props:
- * - roadmapId: ID of the roadmap to load skills for
- * - onSkillComplete: Callback when user marks a skill as completed
- */
-
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { SkillDto } from "@/types";
+import { SkillNode } from "@/components/SkillNode";
 
 interface SkillListProps {
   roadmapId: string;
   onSkillComplete?: (skillId: string) => Promise<void>;
 }
 
-/**
- * SkillList Component
- * Fetches and renders skills for a specific roadmap
- * Each skill shows: name, description, orderIndex, status
- * User can click "Mark completed" button to trigger completion
- *
- * @param {SkillListProps} props - Component props
- * @returns {JSX.Element} Skill list with complete buttons
- */
-export const SkillList = ({
-  roadmapId,
-  onSkillComplete,
-}: SkillListProps) => {
+const createMockSkills = (roadmapId: string): SkillDto[] => [
+  {
+    id: "skill-git",
+    roadmapId,
+    name: "Git",
+    description: "Version control co ban",
+    orderIndex: 1,
+    status: "NOT_STARTED",
+  },
+  {
+    id: "skill-linux",
+    roadmapId,
+    name: "Linux",
+    description: "Lenh terminal va he dieu hanh",
+    orderIndex: 2,
+    status: "NOT_STARTED",
+  },
+  {
+    id: "skill-js",
+    roadmapId,
+    name: "JavaScript",
+    description: "Ngon ngu lap trinh nen tang",
+    orderIndex: 3,
+    status: "NOT_STARTED",
+  },
+  {
+    id: "skill-nodejs",
+    roadmapId,
+    name: "Node.js",
+    description: "JavaScript phia server",
+    orderIndex: 4,
+    status: "NOT_STARTED",
+  },
+  {
+    id: "skill-db",
+    roadmapId,
+    name: "Database",
+    description: "SQL va co so du lieu",
+    orderIndex: 5,
+    status: "NOT_STARTED",
+  },
+  {
+    id: "skill-restapi",
+    roadmapId,
+    name: "REST API",
+    description: "Thiet ke va xay dung API",
+    orderIndex: 6,
+    status: "NOT_STARTED",
+  },
+];
+
+export const SkillList = ({ roadmapId, onSkillComplete }: SkillListProps) => {
   const [skills, setSkills] = useState<SkillDto[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSkills = async (): Promise<void> => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        setSkills([]);
-        // TODO: Fetch skills from GET /roadmaps/:id/skills
-        // const response = await api.get<SkillDto[]>(`/roadmaps/${roadmapId}/skills`);
-        // setSkills(response.data);
-        throw new Error("Not implemented");
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to load skills";
-        setError(message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSkills();
+    setSkills(createMockSkills(roadmapId));
   }, [roadmapId]);
 
-  if (isLoading) {
-    return <div>Loading skills...</div>;
-  }
+  const handleCompleted = (skillId: string): void => {
+    setSkills((currentSkills) =>
+      currentSkills.map((skill) =>
+        skill.id === skillId ? { ...skill, status: "COMPLETED" } : skill,
+      ),
+    );
 
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
+    if (onSkillComplete) {
+      onSkillComplete(skillId).catch(() => {
+        // Parent callback is optional and may still be a TODO during integration.
+      });
+    }
+  };
 
   return (
-    <div>
-      <h2>Skills for Roadmap {roadmapId}</h2>
-      <ul>
+    <section>
+      <h2 style={{ marginBottom: "12px" }}>Skills for roadmap {roadmapId}</h2>
+      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {skills.map((skill) => (
-          <li key={skill.id}>
-            <div>
-              <strong>{skill.name}</strong> - {skill.description}
-            </div>
-            <div>
-              Order: {skill.orderIndex}, Status: {skill.status || "NOT_STARTED"}
-            </div>
-            <button
-              onClick={() => onSkillComplete?.(skill.id)}
-              disabled={skill.status === "COMPLETED"}
-            >
-              {skill.status === "COMPLETED" ? "Completed" : "Mark completed"}
-            </button>
-          </li>
+          <SkillNode
+            key={skill.id}
+            skill={skill}
+            onCompleted={handleCompleted}
+          />
         ))}
       </ul>
-    </div>
+    </section>
   );
 };

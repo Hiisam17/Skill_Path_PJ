@@ -25,11 +25,14 @@ export class CareerPathsService {
    * // ]
    */
   async findAll(): Promise<CareerPathDto[]> {
-    // TODO: Implement career path retrieval
-    // 1. Query all career paths from database
-    // 2. Order by name or custom display order
-    // 3. Map results to CareerPathDto with id, name, description
-    // 4. Ensure descriptions are user-friendly and motivational
-    throw new Error('Not implemented');
+    const careerPaths = await this.prisma.careerPath.findMany({
+      orderBy: { name: 'asc' },
+    });
+
+    return careerPaths.map((careerPath) => ({
+      id: String(careerPath.id),
+      name: careerPath.name,
+      description: careerPath.description ?? '',
+    }));
   }
 }

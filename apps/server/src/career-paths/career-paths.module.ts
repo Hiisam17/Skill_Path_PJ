@@ -4,6 +4,6 @@ import { CareerPathsController } from './career-paths.controller';
 
 @Module({
   providers: [CareerPathsService],
-  controllers: [CareerPathsController]
+  controllers: [CareerPathsController],
 })
 export class CareerPathsModule {}

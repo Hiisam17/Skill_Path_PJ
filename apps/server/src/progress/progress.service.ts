@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { ProgressDto, UserSkillProgressDto } from '../types';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { ProgressDto, UserSkillProgressDto, UserSkillStatus } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -9,6 +9,68 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class ProgressService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private async ensureProgressStatus(name: string): Promise<number> {
+    const status = await this.prisma.progressStatus.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+      select: { id: true },
+    });
+
+    return status.id;
+  }
+
+  private mapStatusNameToEnum(statusName?: string | null): UserSkillStatus {
+    const normalized = (statusName ?? '').trim().toUpperCase();
+    if (normalized === 'COMPLETED' || normalized === 'DONE') {
+      return UserSkillStatus.COMPLETED;
+    }
+    if (normalized === 'IN_PROGRESS' || normalized === 'IN PROGRESS') {
+      return UserSkillStatus.IN_PROGRESS;
+    }
+    return UserSkillStatus.NOT_STARTED;
+  }
+
+  async getDemoUserId(): Promise<string> {
+    const preferredUserId = process.env.DEMO_USER_ID;
+
+    if (preferredUserId) {
+      const byId = await this.prisma.profile.findUnique({
+        where: { userId: preferredUserId },
+        select: { userId: true },
+      });
+
+      if (byId) {
+        return byId.userId;
+      }
+
+      const created = await this.prisma.profile.create({
+        data: {
+          userId: preferredUserId,
+          fullName: 'Demo User',
+          isDeleted: false,
+        },
+        select: { userId: true },
+      });
+
+      return created.userId;
+    }
+
+    const profile = await this.prisma.profile.findFirst({
+      where: { isDeleted: false },
+      orderBy: { updatedAt: 'desc' },
+      select: { userId: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(
+        'No profile found in database. Set DEMO_USER_ID in apps/server/.env or run seed.',
+      );
+    }
+
+    return profile.userId;
+  }
 
   /**
    * Mark a skill as completed by the user
@@ -28,12 +90,53 @@ export class ProgressService {
     userId: string,
     skillId: string,
   ): Promise<UserSkillProgressDto> {
-    // TODO: Implement skill completion logic
-    // 1. Use Prisma upsert: update if exists, create if doesn't
-    // 2. Prevent duplicate completion records via unique constraint @@unique([userId, skillId])
-    // 3. Set status = COMPLETED and completedAt = current timestamp
-    // 4. Return updated progress record
-    throw new Error('Not implemented');
+    const skillIdNumber = Number(skillId);
+    if (!Number.isInteger(skillIdNumber) || skillIdNumber <= 0) {
+      throw new NotFoundException(`Skill ${skillId} not found`);
+    }
+
+    const skill = await this.prisma.skill.findUnique({
+      where: { id: skillIdNumber },
+      select: { id: true },
+    });
+
+    if (!skill) {
+      throw new NotFoundException(`Skill ${skillId} not found`);
+    }
+
+    const completedStatusId = await this.ensureProgressStatus('COMPLETED');
+
+    const progress = await this.prisma.userSkillProgress.upsert({
+      where: {
+        userId_skillId: {
+          userId,
+          skillId: skillIdNumber,
+        },
+      },
+      update: {
+        statusId: completedStatusId,
+        completedAt: new Date(),
+      },
+      create: {
+        userId,
+        skillId: skillIdNumber,
+        statusId: completedStatusId,
+        completedAt: new Date(),
+      },
+      include: {
+        status: {
+          select: { name: true },
+        },
+      },
+    });
+
+    return {
+      id: String(progress.id),
+      userId: progress.userId,
+      skillId: String(progress.skillId),
+      status: this.mapStatusNameToEnum(progress.status?.name),
+      completedAt: progress.completedAt,
+    };
   }
 
   /**
@@ -49,12 +152,24 @@ export class ProgressService {
    * // Returns: { completedSkills: 3, totalSkills: 6, percentage: 50 }
    */
   async getUserProgress(userId: string): Promise<ProgressDto> {
-    // TODO: Implement progress calculation
-    // 1. Get user's current roadmap
-    // 2. Count total skills in that roadmap
-    // 3. Count user's completed skills (status = COMPLETED)
-    // 4. Calculate percentage = (completedSkills / totalSkills) * 100
-    // 5. Return progress summary with all statistics
-    throw new Error('Not implemented');
+    const totalSkills = await this.prisma.skill.count();
+
+    const completedStatusId = await this.ensureProgressStatus('COMPLETED');
+
+    const completedSkills = await this.prisma.userSkillProgress.count({
+      where: {
+        userId,
+        statusId: completedStatusId,
+      },
+    });
+
+    const percentage =
+      totalSkills === 0 ? 0 : Math.round((completedSkills / totalSkills) * 100);
+
+    return {
+      completedSkills,
+      totalSkills,
+      percentage,
+    };
   }
 }

@@ -4,6 +4,6 @@ import { RoadmapsController } from './roadmaps.controller';
 
 @Module({
   providers: [RoadmapsService],
-  controllers: [RoadmapsController]
+  controllers: [RoadmapsController],
 })
 export class RoadmapsModule {}

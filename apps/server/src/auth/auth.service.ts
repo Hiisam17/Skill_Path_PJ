@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unused-vars */
 import { Injectable } from '@nestjs/common';
 import { AuthResponseDto, LoginDto, UserDto } from '../types';
 import { PrismaService } from '../prisma/prisma.service';

@@ -1,72 +1,260 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
-enum UserSkillStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
+// =======================================
+// 1. IDENTITY & PROFILES
+// =======================================
+
+model Profile {
+  // Lưu ý: userId tham chiếu đến auth.users(id) của Supabase
+  // Prisma không quản lý bảng auth.users nên chúng ta chỉ lưu userId làm khóa ngoại.
+  userId         String    @id @map("user_id") @db.Uuid
+  fullName       String?   @map("full_name")
+  avatarUrl      String?   @map("avatar_url")
+  bio            String?   @db.Text
+  githubLink     String?   @map("github_link")
+  streakCount    Int       @default(0) @map("streak_count")
+  lastActivityAt DateTime? @map("last_activity_at") @db.Timestamptz
+  updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamptz
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+
+  // Quan hệ (Nếu bạn muốn query ngược từ User)
+  roadmaps     UserRoadmap[]
+  reviews      ResourceReview[]
+  resourceProgress UserResourceProgress[]
+  skillProgress    UserSkillProgress[]
+  createdRoadmaps  Roadmap[] @relation("SystemUserRoadmaps")
+
+  @@map("profiles")
 }
 
-model User {
-  id                String              @id @default(uuid()) @db.Uuid
-  email             String              @unique
-  passwordHash      String
-  createdAt         DateTime            @default(now())
-  userSkillProgress UserSkillProgress[]
+// =======================================
+// 2. MASTER DATA
+// =======================================
 
-  @@map("users")
+model SkillLevel {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  skills Skill[]
+
+  @@map("skill_levels")
 }
 
-model CareerPath {
-  id          String    @id @default(uuid()) @db.Uuid
-  name        String
-  description String
-  roadmaps    Roadmap[]
+model ProgressStatus {
+  id            Int                 @id @default(autoincrement())
+  name          String              @unique
+  skillProgress UserSkillProgress[]
 
-  @@map("career_paths")
+  @@map("progress_statuses")
 }
 
-model Roadmap {
-  id           String     @id @default(uuid()) @db.Uuid
-  careerPathId String     @db.Uuid
-  level        Int
-  careerPath   CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
-  skills       Skill[]
+model ResourceType {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  resources Resource[]
 
-  @@map("roadmaps")
+  @@map("resource_types")
 }
+
+model RewardType {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  rewards Reward[]
+
+  @@map("reward_types")
+}
+
+// =======================================
+// 3. SKILLS & ROADMAPS
+// =======================================
 
 model Skill {
-  id                String              @id @default(uuid()) @db.Uuid
-  roadmapId         String              @db.Uuid
-  name              String
-  description       String
-  orderIndex        Int
-  roadmap           Roadmap             @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  userSkillProgress UserSkillProgress[]
+  id           Int        @id @default(autoincrement())
+  name         String     @unique
+  description  String?    @db.Text
+  levelId      Int?       @map("level_id")
+  canonicalUrl String?    @map("canonical_url")
+  createdAt    DateTime?  @default(now()) @map("created_at") @db.Timestamptz
+
+  level         SkillLevel?         @relation(fields: [levelId], references: [id])
+  roadmapSkills RoadmapSkill[]
+  resources     Resource[]
+  userProgress  UserSkillProgress[]
 
   @@map("skills")
 }
 
+model CareerPath {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  description String?   @db.Text
+  roadmaps Roadmap[]
+  @@map("careers")
+}
+
+model Roadmap {
+  id                  Int       @id @default(autoincrement())
+  title               String
+  description         String?   @db.Text
+  userId              String?   @map("user_id") @db.Uuid // NULL = System Roadmap
+  careerPathId              Int?      @map("career_id")
+  isPublished         Boolean?  @default(false) @map("is_published")
+  estimatedTotalHours Int?      @map("estimated_total_hours")
+  createdAt           DateTime? @default(now()) @map("created_at") @db.Timestamptz
+
+  careerPath     CareerPath?            @relation(fields: [careerPathId], references: [id])
+  creator  Profile?         @relation("SystemUserRoadmaps", fields: [userId], references: [userId])
+  sections RoadmapSection[]
+  users    UserRoadmap[]
+
+  @@map("roadmaps")
+}
+
+model RoadmapSection {
+  id          Int     @id @default(autoincrement())
+  roadmapId   Int?    @map("roadmap_id")
+  title       String
+  description String? @db.Text
+  sortOrder   Int?    @map("sort_order")
+
+  roadmap Roadmap?       @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  skills  RoadmapSkill[]
+
+  @@map("roadmap_sections")
+}
+
+model RoadmapSkill {
+  id             Int     @id @default(autoincrement())
+  sectionId      Int?    @map("section_id")
+  skillId        Int?    @map("skill_id")
+  stepNumber     Int     @map("step_number")
+  isOptional     Boolean @default(false) @map("is_optional")
+  estimatedHours Int?    @map("estimated_hours")
+  notes          String? @db.Text
+
+  section RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  skill   Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, stepNumber])
+  @@map("roadmap_skills")
+}
+
+// =======================================
+// 4. LEARNING TRACKING
+// =======================================
+
+model UserRoadmap {
+  id                 Int       @id @default(autoincrement())
+  userId             String    @map("user_id") @db.Uuid
+  roadmapId          Int       @map("roadmap_id")
+  currentStepOrder   Int?      @default(1) @map("current_step_order")
+  progressPercentage Float?    @default(0) @map("progress_percentage")
+  startedAt          DateTime? @default(now()) @map("started_at") @db.Timestamptz
+  completedAt        DateTime? @map("completed_at") @db.Timestamptz
+
+  user    Profile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  roadmap Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roadmapId])
+  @@map("user_roadmaps")
+}
+
 model UserSkillProgress {
-  id          String          @id @default(uuid()) @db.Uuid
-  userId      String          @db.Uuid
-  skillId     String          @db.Uuid
-  status      UserSkillStatus @default(NOT_STARTED)
-  completedAt DateTime?
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skill       Skill           @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  id          Int       @id @default(autoincrement())
+  userId      String    @map("user_id") @db.Uuid
+  skillId     Int       @map("skill_id")
+  statusId    Int?      @map("status_id")
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  updatedAt   DateTime? @default(now()) @map("updated_at") @db.Timestamptz
+
+  user   Profile         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  skill  Skill           @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  status ProgressStatus? @relation(fields: [statusId], references: [id])
 
   @@unique([userId, skillId])
   @@map("user_skill_progress")
+}
+
+// =======================================
+// 5. RESOURCES & REVIEWS
+// =======================================
+
+model Resource {
+  id              Int      @id @default(autoincrement())
+  skillId         Int?     @map("skill_id")
+  title           String
+  url             String?
+  resourceTypeId  Int?     @map("resource_type_id")
+  source          String?
+  durationMinutes Int?     @map("duration_minutes")
+  avgRating       Float?   @default(0) @map("avg_rating")
+  reviewCount     Int?     @default(0) @map("review_count")
+  isActive        Boolean? @default(true) @map("is_active")
+
+  skill        Skill?                 @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  resourceType ResourceType?          @relation(fields: [resourceTypeId], references: [id])
+  reviews      ResourceReview[]
+  userProgress UserResourceProgress[]
+
+  @@map("resources")
+}
+
+model UserResourceProgress {
+  id          Int       @id @default(autoincrement())
+  userId      String    @map("user_id") @db.Uuid
+  resourceId  Int       @map("resource_id")
+  isCompleted Boolean?  @default(false) @map("is_completed")
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+
+  user     Profile  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resourceId])
+  @@map("user_resource_progress")
+}
+
+model ResourceReview {
+  id         Int       @id @default(autoincrement())
+  userId     String    @map("user_id") @db.Uuid
+  resourceId Int       @map("resource_id")
+  rating     Int?
+  comment    String?   @db.Text
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime? @default(now()) @map("updated_at") @db.Timestamptz
+
+  user     Profile  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resourceId])
+  @@map("resource_reviews")
+}
+model Reward {
+  id             Int          @id @default(autoincrement())
+  title          String       // Ví dụ: "Backend Beginner Badge"
+  description    String?      @db.Text
+  image_url      String?
+  reward_type_id Int
+  reward_type    RewardType   @relation(fields: [reward_type_id], references: [id])
+  user_rewards   UserReward[]
+
+  @@map("rewards")
+}
+
+model UserReward {
+  id         Int       @id @default(autoincrement())
+  user_id    String    @db.Uuid
+  reward_id  Int
+  reward     Reward    @relation(fields: [reward_id], references: [id], onDelete: Cascade)
+  earned_at  DateTime? @default(now()) @db.Timestamptz
+
+  @@unique([user_id, reward_id])
+  @@map("user_rewards")
 }

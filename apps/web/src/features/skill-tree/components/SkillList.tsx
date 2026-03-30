@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SkillDto } from "@/types";
-import { SkillNode } from "@/components/SkillNode";
+import { SkillNode } from "./SkillNode";
 
 interface SkillListProps {
   roadmapId: string;

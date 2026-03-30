@@ -9,6 +9,7 @@
  */
 
 import { createContext, useContext, useState } from "react";
+/* eslint-disable react-refresh/only-export-components, @typescript-eslint/no-unused-vars */
 import type { ReactNode } from "react";
 import type { UserDto, LoginDto } from "@/types";
 import { clearAuthToken } from "@/services/api";

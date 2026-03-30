@@ -1,0 +1,23 @@
+
+> web@0.0.0 lint
+> eslint .
+
+
+D:\Code VS\Github_Project\Web\CDCNNB\Skill_Path_PJ\apps\web\src\context\AuthContext.tsx
+   34:14  error  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file                      react-refresh/only-export-components
+   63:24  error  '_loginDto' is defined but never used                                                                                           @typescript-eslint/no-unused-vars
+  109:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\Code VS\Github_Project\Web\CDCNNB\Skill_Path_PJ\apps\web\src\features\skill-tree\components\SkillTree.tsx
+  58:16  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  82:14  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 5 problems (5 errors, 0 warnings)
+
+npm error Lifecycle script `lint` failed with error:
+npm error code 1
+npm error path D:\Code VS\Github_Project\Web\CDCNNB\Skill_Path_PJ\apps\web
+npm error workspace web@0.0.0
+npm error location D:\Code VS\Github_Project\Web\CDCNNB\Skill_Path_PJ\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c eslint .

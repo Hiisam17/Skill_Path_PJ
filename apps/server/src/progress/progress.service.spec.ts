@@ -37,7 +37,7 @@ describe('ProgressService', () => {
       mockPrisma.userSkillProgress.upsert.mockResolvedValue(mockResult);
 
       const userId = 'user-1';
-      const skillId = 'skill-1';
+      const skillId = 1;
 
       // Gọi hàm cần test
       const result = await service.completeSkill(userId, skillId);
@@ -50,7 +50,7 @@ describe('ProgressService', () => {
           create: expect.any(Object),
         }),
       );
-      
+
       // Kiểm tra kết quả trả về
       expect(result).toEqual({ status: 'COMPLETED' });
     });
@@ -60,12 +60,12 @@ describe('ProgressService', () => {
     it('should calculate correct percentage', async () => {
       // Giả lập: User đã hoàn thành 3 skills
       mockPrisma.userSkillProgress.count.mockResolvedValue(3);
-      
+
       // Giả lập: Tìm thấy roadmap mà user đang học
       mockPrisma.userSkillProgress.findFirst.mockResolvedValue({
         skill: { roadmapId: 'roadmap-1' }
       });
-      
+
       // Giả lập: Roadmap đó có tổng cộng 6 skills
       mockPrisma.skill.count.mockResolvedValue(6);
 
@@ -75,7 +75,7 @@ describe('ProgressService', () => {
       expect(result).toEqual({
         completedSkills: 3,
         totalSkills: 6,
-        percentage: 0.5, 
+        percentage: 0.5,
       });
     });
   });

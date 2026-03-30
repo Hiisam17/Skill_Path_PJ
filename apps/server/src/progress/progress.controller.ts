@@ -1,21 +1,23 @@
-import { Controller, Post, Get, Param } from '@nestjs/common';
+import { Controller, Post, Get, Param, ParseIntPipe } from '@nestjs/common'; // Thêm ParseIntPipe
 import { ProgressService } from './progress.service';
 
 @Controller()
 export class ProgressController {
-  constructor(private readonly progressService: ProgressService) {}
+  constructor(private readonly progressService: ProgressService) { }
 
   @Post('skills/:id/complete')
-  async completeSkill(@Param('id') skillId: string) {
-    // TODO: Sau này Dev A làm xong Auth, thay mockUserId bằng req.user.id
-    const mockUserId = '7e123c4a-4b02-4273-abf8-f9ab0770c5ea';
+  // Thêm ParseIntPipe vào đây để ép kiểu về number
+  async completeSkill(@Param('id', ParseIntPipe) skillId: number) {
+
+    const mockUserId = '01cbcd3c-05c8-46cf-b807-4b913656ca4b';
+
     return this.progressService.completeSkill(mockUserId, skillId);
   }
 
   @Get('users/progress')
   async getUserProgress() {
-    // TODO: Tương tự, sẽ dùng req.user.id từ Auth token
-    const mockUserId = '7e123c4a-4b02-4273-abf8-f9ab0770c5ea';
+    // Nhớ dán cùng một UUID vào đây luôn nhé
+    const mockUserId = '01cbcd3c-05c8-46cf-b807-4b913656ca4b';
     return this.progressService.getUserProgress(mockUserId);
   }
 }

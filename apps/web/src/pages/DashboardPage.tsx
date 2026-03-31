@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "./DashboardPage.css";
+import { api } from "@/services/api";
 
 /* ── Types ── */
 interface ProgressData {
@@ -116,9 +117,8 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        const response = await fetch("http://localhost:3000/users/progress");
-        if (!response.ok) throw new Error("Network error");
-        const data = await response.json();
+        const response = await api.get("/users/progress");
+        const data = response.data;
         setProgress(data);
       } catch (err) {
         console.error("Lỗi khi tải tiến độ:", err);
@@ -158,11 +158,7 @@ export const DashboardPage: React.FC = () => {
 
     // 3. GỌI API CHẠY NGẦM
     try {
-      const response = await fetch(`http://localhost:3000/skills/${skillId}/complete`, {
-        method: 'POST', // Chỉnh lại cho đúng method bạn viết bên BE
-      });
-
-      if (!response.ok) throw new Error("API lỗi");
+      const response = await api.post(`/skills/${skillId}/complete`);
 
       // Thành công thì không cần làm gì thêm vì UI đã cập nhật từ bước 2 rồi!
 

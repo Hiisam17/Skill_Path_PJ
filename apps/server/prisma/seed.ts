@@ -1,29 +1,43 @@
-import { PrismaClient, UserSkillStatus } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // Clean existing data (for idempotent seeding)
   console.log('Cleaning existing data...');
+  // Delete in correct order to avoid foreign key constraints violations
   await prisma.userSkillProgress.deleteMany({});
+  await prisma.roadmapSkill.deleteMany({});
+  await prisma.resource.deleteMany({});
   await prisma.skill.deleteMany({});
+  await prisma.roadmapSection.deleteMany({});
+  await prisma.userRoadmap.deleteMany({});
   await prisma.roadmap.deleteMany({});
   await prisma.careerPath.deleteMany({});
-  await prisma.user.deleteMany({});
+  await prisma.profile.deleteMany({});
+  await prisma.progressStatus.deleteMany({});
+  await prisma.skillLevel.deleteMany({});
 
-  // 1️⃣ Create test user
-  console.log('Creating test user...');
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  const user = await prisma.user.create({
+  console.log('Creating master data...');
+  const statusNotStarted = await prisma.progressStatus.create({ data: { name: 'NOT_STARTED' } });
+  const statusInProgress = await prisma.progressStatus.create({ data: { name: 'IN_PROGRESS' } });
+  const statusCompleted = await prisma.progressStatus.create({ data: { name: 'COMPLETED' } });
+
+  const beginnerLevel = await prisma.skillLevel.create({ data: { name: 'Beginner' } });
+
+  // 1️⃣ Create test profile con hồ
+  console.log('Creating test profile...');
+  const userId = '01cbcd3c-05c8-46cf-b807-4b913656ca4b'; // Trùng với mockUserId trong controller
+  const profile = await prisma.profile.create({
     data: {
-      email: 'test@example.com',
-      passwordHash: hashedPassword,
+      userId,
+      fullName: 'Test User',
+      streakCount: 0,
     },
   });
-  console.log(`✅ User created: ${user.email} (ID: ${user.id})`);
+  console.log(`✅ Profile created: ${profile.fullName} (ID: ${profile.userId})`);
 
   // 2️⃣ Create Career Paths
   console.log('\nCreating career paths...');
@@ -33,118 +47,126 @@ async function main() {
       description: 'Learn backend technologies: Node.js, databases, APIs',
     },
   });
-  console.log(`✅ CareerPath created: ${backendPath.name}`);
-
   const frontendPath = await prisma.careerPath.create({
     data: {
       name: 'Frontend Developer',
       description: 'Learn frontend technologies: React, TypeScript, CSS',
     },
   });
-  console.log(`✅ CareerPath created: ${frontendPath.name}`);
 
-  // 3️⃣ Create Roadmaps (1 per path, level = beginner)
+  // 3️⃣ Create Roadmaps
   console.log('\nCreating roadmaps...');
   const backendRoadmap = await prisma.roadmap.create({
     data: {
+      title: 'Backend Beginner Roadmap',
       careerPathId: backendPath.id,
-      level: 1, // beginner
+      isPublished: true,
+      estimatedTotalHours: 40,
     },
   });
-  console.log(
-    `✅ Roadmap created: Backend Beginner (ID: ${backendRoadmap.id})`,
-  );
-
   const frontendRoadmap = await prisma.roadmap.create({
     data: {
+      title: 'Frontend Beginner Roadmap',
       careerPathId: frontendPath.id,
-      level: 1, // beginner
+      isPublished: true,
+      estimatedTotalHours: 40,
     },
   });
-  console.log(
-    `✅ Roadmap created: Frontend Beginner (ID: ${frontendRoadmap.id})`,
-  );
 
-  // 4️⃣ Create 6 Skills for Backend Beginner
+  // Create Roadmap Sections
+  const backendSection = await prisma.roadmapSection.create({
+    data: {
+      roadmapId: backendRoadmap.id,
+      title: 'Backend Fundamentals',
+      sortOrder: 1,
+    }
+  });
+
+  const frontendSection = await prisma.roadmapSection.create({
+    data: {
+      roadmapId: frontendRoadmap.id,
+      title: 'Frontend Fundamentals',
+      sortOrder: 1,
+    }
+  });
+
+  // 4️⃣ Create Skills for Backend Beginner
   console.log('\nCreating skills for Backend Beginner roadmap...');
-  const skillNames = [
-    'Git',
-    'Linux',
-    'JavaScript',
-    'Node.js',
-    'Database',
-    'REST API',
-  ];
+  const skillNames = ['Git', 'Linux', 'JavaScript', 'Node.js', 'Database', 'REST API'];
   const skills = [];
 
   for (let i = 0; i < skillNames.length; i++) {
     const skill = await prisma.skill.create({
       data: {
-        roadmapId: backendRoadmap.id,
         name: skillNames[i],
         description: `Learn ${skillNames[i]} — foundational skill for backend development`,
-        orderIndex: i + 1,
+        levelId: beginnerLevel.id,
       },
     });
     skills.push(skill);
-    console.log(`✅ Skill created: ${skill.name} (order: ${skill.orderIndex})`);
-  }
 
-  // 5️⃣ Create UserSkillProgress for test user (all NOT_STARTED)
-  console.log('\nCreating user skill progress (all NOT_STARTED)...');
-  for (const skill of skills) {
-    const progress = await prisma.userSkillProgress.create({
+    // Link skill to roadmap section
+    await prisma.roadmapSkill.create({
       data: {
-        userId: user.id,
+        sectionId: backendSection.id,
         skillId: skill.id,
-        status: UserSkillStatus.NOT_STARTED,
+        isOptional: false,
+      }
+    });
+
+    // Create progress for user
+    await prisma.userSkillProgress.create({
+      data: {
+        userId: profile.userId,
+        skillId: skill.id,
+        statusId: statusNotStarted.id,
       },
     });
-    console.log(`✅ Progress created: ${skill.name} → NOT_STARTED`);
+
+    console.log(`✅ Skill created & mapped: ${skill.name}`);
   }
 
-  // 6️⃣ Create 3 Skills for Frontend Beginner (minimal setup)
   console.log('\nCreating skills for Frontend Beginner roadmap...');
   const frontendSkills = [
     { name: 'HTML/CSS', description: 'Learn HTML and CSS — foundation of web' },
-    {
-      name: 'JavaScript',
-      description: 'Learn vanilla JavaScript — core language',
-    },
+    { name: 'DOM Manipulation', description: 'Learn vanilla JavaScript DOM UI' },
     { name: 'React', description: 'Learn React — popular frontend framework' },
   ];
 
   for (let i = 0; i < frontendSkills.length; i++) {
     const skill = await prisma.skill.create({
       data: {
-        roadmapId: frontendRoadmap.id,
         name: frontendSkills[i].name,
         description: frontendSkills[i].description,
-        orderIndex: i + 1,
+        levelId: beginnerLevel.id,
       },
     });
-    console.log(`✅ Skill created: ${skill.name} (order: ${skill.orderIndex})`);
 
-    // Create progress for user
+    await prisma.roadmapSkill.create({
+      data: {
+        sectionId: frontendSection.id,
+        skillId: skill.id,
+        isOptional: false,
+      }
+    });
+
     await prisma.userSkillProgress.create({
       data: {
-        userId: user.id,
+        userId: profile.userId,
         skillId: skill.id,
-        status: UserSkillStatus.NOT_STARTED,
+        statusId: statusNotStarted.id,
       },
     });
+    console.log(`✅ Skill created & mapped: ${skill.name}`);
   }
 
   console.log('\n✨ Seed completed successfully!');
   console.log('\n📊 Summary:');
-  console.log(`   - Users: 1`);
+  console.log(`   - Profiles: 1`);
   console.log(`   - CareerPaths: 2`);
   console.log(`   - Roadmaps: 2`);
-  console.log(`   - Skills: 9 (6 Backend + 3 Frontend)`);
+  console.log(`   - Skills: 9`);
   console.log(`   - UserSkillProgress: 9`);
-  console.log('\n🔐 Test credentials:');
-  console.log(`   - Email: ${user.email}`);
-  console.log(`   - Password: password123`);
 }
 
 main()

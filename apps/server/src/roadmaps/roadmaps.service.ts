@@ -17,15 +17,10 @@ export class RoadmapsService {
     return '1';
   }
 
-  private toDto(roadmap: {
-    id: number;
-    careerPathId: number | null;
-    title: string;
-  }): RoadmapDto {
+  private toDto(roadmap: { id: number; careerPathId: number | null; title: string }): RoadmapDto {
     return {
       id: String(roadmap.id),
-      careerPathId:
-        roadmap.careerPathId === null ? '' : String(roadmap.careerPathId),
+      careerPathId: roadmap.careerPathId === null ? '' : String(roadmap.careerPathId),
       level: this.toLevel(roadmap.title),
     };
   }

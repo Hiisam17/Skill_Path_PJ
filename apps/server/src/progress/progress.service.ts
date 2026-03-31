@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProgressDto, UserSkillProgressDto, UserSkillStatus } from '../types';
+import {
+  ProgressDto,
+  UserSkillProgressDto,
+  UserSkillStatus,
+} from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**

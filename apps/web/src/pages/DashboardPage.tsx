@@ -129,6 +129,14 @@ export const DashboardPage: React.FC = () => {
     fetchProgress();
   }, []);
 
+  /* ── Skills data (Chuyển lên đầu để tránh lỗi sử dụng trước khi khai báo) ── */
+  const [localSkills, setLocalSkills] = useState([
+    { id: 1, icon: "◈", title: "GraphQL Mastery", desc: "Optimize your API layer with typed queries", xp: 200, isCompleted: false },
+    { id: 2, icon: "🔐", title: "Auth Patterns", desc: "Implement OAuth2, JWT, and WebAuthn", xp: 350, isCompleted: false },
+    { id: 3, icon: "⚡", title: "Serverless Edge", desc: "Deploying functions globally with low latency", xp: 150, isCompleted: false },
+    { id: 4, icon: "🧩", title: "Micro-Frontends", desc: "Scaling UI development across distributed teams", xp: 500, isCompleted: false },
+  ]);
+
   /* ── Xử lý Click Hoàn thành Skill (Optimistic Update) ── */
   const handleCompleteSkill = async (skillId: number) => {
     // 1. TẠO BACKUP: Lưu lại trạng thái cũ phòng khi API xịt
@@ -182,14 +190,6 @@ export const DashboardPage: React.FC = () => {
     { path: "/career-paths", label: "Skill Tree", icon: <SkillTreeIcon /> },
     { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },
   ];
-
-  /* ── Skills data (Đã chuyển thành State) ── */
-  const [localSkills, setLocalSkills] = useState([
-    { id: 1, icon: "◈", title: "GraphQL Mastery", desc: "Optimize your API layer with typed queries", xp: 200, isCompleted: false },
-    { id: 2, icon: "🔐", title: "Auth Patterns", desc: "Implement OAuth2, JWT, and WebAuthn", xp: 350, isCompleted: false },
-    { id: 3, icon: "⚡", title: "Serverless Edge", desc: "Deploying functions globally with low latency", xp: 150, isCompleted: false },
-    { id: 4, icon: "🧩", title: "Micro-Frontends", desc: "Scaling UI development across distributed teams", xp: 500, isCompleted: false },
-  ]);
 
   /* ── Milestones ── */
   const milestones = [

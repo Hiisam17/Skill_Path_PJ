@@ -1,15 +1,22 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { LoginPage } from "./pages/LoginPage";
-import { CareerPathPage } from "./pages/CareerPathPage";
-import { RoadmapPage } from "./pages/RoadmapPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { LoginPage } from "@/pages/LoginPage";
+import { SignUpPage } from "@/pages/SignUpPage";
+import { CareerPathPage } from "@/pages/CareerPathPage";
+import { RoadmapPage } from "@/pages/RoadmapPage";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
+/**
+ * Main Application Component
+ * Manages routing and layout
+ */
 function App() {
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<LoginPage />} />
+      {/* Auth Routes (Public) */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/sign-up" element={<SignUpPage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* Các Route khác vẫn giữ nguyên vỏ bọc ProtectedRoute */}
       <Route

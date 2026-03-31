@@ -129,6 +129,45 @@ export const DashboardPage: React.FC = () => {
     fetchProgress();
   }, []);
 
+  /* ── Xử lý Click Hoàn thành Skill (Optimistic Update) ── */
+  const handleCompleteSkill = async (skillId: number) => {
+    // 1. TẠO BACKUP: Lưu lại trạng thái cũ phòng khi API xịt
+    const previousProgress = progress;
+    const previousSkills = [...localSkills];
+
+    // 2. OPTIMISTIC UPDATE: Cập nhật UI NGAY LẬP TỨC
+    // Đổi màu nút thành "Completed"
+    setLocalSkills(prev => prev.map(s => 
+      s.id === skillId ? { ...s, isCompleted: true } : s
+    ));
+    // Tăng vòng tròn phần trăm lên ngay tắp lự
+    if (progress) {
+      setProgress({
+        ...progress,
+        completedSkills: progress.completedSkills + 1
+      });
+    }
+
+    // 3. GỌI API CHẠY NGẦM
+    try {
+      const response = await fetch(`http://localhost:3000/skills/${skillId}/complete`, {
+        method: 'POST', // Chỉnh lại cho đúng method bạn viết bên BE
+      });
+
+      if (!response.ok) throw new Error("API lỗi");
+
+      // Thành công thì không cần làm gì thêm vì UI đã cập nhật từ bước 2 rồi!
+
+    } catch (error) {
+      console.error("Lỗi khi lưu tiến độ:", error);
+      
+      // 4. ROLLBACK: Nếu mạng lag hoặc API lỗi, khôi phục lại UI ban đầu
+      setProgress(previousProgress);
+      setLocalSkills(previousSkills);
+      alert("Lỗi kết nối! Vui lòng thử lại."); // Trong thực tế nên dùng thư viện Toast (như react-hot-toast) cho đẹp
+    }
+  };
+
   const progressPercentage = progress
     ? Math.round((progress.completedSkills / progress.totalSkills) * 100)
     : 65;
@@ -144,13 +183,13 @@ export const DashboardPage: React.FC = () => {
     { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },
   ];
 
-  /* ── Skills data ── */
-  const skills = [
-    { icon: "◈", title: "GraphQL Mastery", desc: "Optimize your API layer with typed queries", xp: 200 },
-    { icon: "🔐", title: "Auth Patterns", desc: "Implement OAuth2, JWT, and WebAuthn", xp: 350 },
-    { icon: "⚡", title: "Serverless Edge", desc: "Deploying functions globally with low latency", xp: 150 },
-    { icon: "🧩", title: "Micro-Frontends", desc: "Scaling UI development across distributed teams", xp: 500 },
-  ];
+  /* ── Skills data (Đã chuyển thành State) ── */
+  const [localSkills, setLocalSkills] = useState([
+    { id: 1, icon: "◈", title: "GraphQL Mastery", desc: "Optimize your API layer with typed queries", xp: 200, isCompleted: false },
+    { id: 2, icon: "🔐", title: "Auth Patterns", desc: "Implement OAuth2, JWT, and WebAuthn", xp: 350, isCompleted: false },
+    { id: 3, icon: "⚡", title: "Serverless Edge", desc: "Deploying functions globally with low latency", xp: 150, isCompleted: false },
+    { id: 4, icon: "🧩", title: "Micro-Frontends", desc: "Scaling UI development across distributed teams", xp: 500, isCompleted: false },
+  ]);
 
   /* ── Milestones ── */
   const milestones = [
@@ -307,14 +346,24 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             <div className="skills-grid">
-              {skills.map((skill) => (
-                <div key={skill.title} className="skill-card">
+              {localSkills.map((skill) => (
+                <div key={skill.id} className="skill-card">
                   <div className="skill-card-icon">{skill.icon}</div>
                   <h4 className="skill-card-title">{skill.title}</h4>
                   <p className="skill-card-desc">{skill.desc}</p>
                   <div className="skill-card-bottom">
                     <span className="skill-xp-badge">{skill.xp} XP</span>
-                    <button className="skill-start-btn">Start</button>
+                    <button 
+                      onClick={() => handleCompleteSkill(skill.id)}
+                      disabled={skill.isCompleted}
+                      className={`skill-start-btn transition-all duration-300 ${
+                        skill.isCompleted 
+                          ? "bg-[#4cd7f6] text-[#171f33] opacity-80 cursor-not-allowed font-bold" 
+                          : ""
+                      }`}
+                    >
+                      {skill.isCompleted ? "✓ Completed" : "Start"}
+                    </button>
                   </div>
                 </div>
               ))}

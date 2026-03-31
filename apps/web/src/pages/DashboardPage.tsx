@@ -160,8 +160,6 @@ export const DashboardPage: React.FC = () => {
     try {
       const response = await api.post(`/skills/${skillId}/complete`);
 
-      // Thành công thì không cần làm gì thêm vì UI đã cập nhật từ bước 2 rồi!
-
     } catch (error) {
       console.error("Lỗi khi lưu tiến độ:", error);
       
@@ -182,7 +180,8 @@ export const DashboardPage: React.FC = () => {
   /* ── Navigation items ── */
   const navItems = [
     { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
-    { path: "/roadmap", label: "Roadmap", icon: <RoadmapIcon /> },
+    // Roadmap should open career paths list per requested flow
+    { path: "/career-paths", label: "Roadmap", icon: <RoadmapIcon /> },
     { path: "/career-paths", label: "Skill Tree", icon: <SkillTreeIcon /> },
     { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },
   ];

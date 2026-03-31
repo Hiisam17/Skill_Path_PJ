@@ -2,9 +2,10 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { LoginPage } from "@/pages/LoginPage";
 import { SignUpPage } from "@/pages/SignUpPage";
 import { CareerPathPage } from "@/pages/CareerPathPage";
+import { ExploreRoadmapsPage } from "@/pages/ExploreRoadmapsPage";
 import { RoadmapPage } from "@/pages/RoadmapPage";
 import { DashboardPage } from "@/pages/DashboardPage";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 /**
  * Main Application Component
@@ -27,6 +28,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/explore-roadmaps" element={<ExploreRoadmapsPage />} />
       <Route
         path="/roadmap"
         element={

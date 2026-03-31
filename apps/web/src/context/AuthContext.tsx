@@ -81,14 +81,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.post<AuthResponseDto>("/auth/login", loginDto);
-      const { token, user: userData } = response.data;
+      const response = await api.post<any>("/auth/login", loginDto);
+      // Backend might return { token, user } or { access_token, user }
+      const resp = response.data || {};
+      const token = resp.token ?? resp.access_token ?? resp.accessToken ?? null;
+      const userData = resp.user ?? resp.userData ?? null;
+
+      if (!token) {
+        throw new Error('No token returned from server');
+      }
 
       // Save token to localStorage and set header
       setAuthToken(token);
 
-      // Update user state
-      setUser(userData);
+      // Update user state if available
+      if (userData) setUser(userData);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       setError(message);

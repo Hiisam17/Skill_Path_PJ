@@ -1,71 +1,25 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { Request } from 'express';
-import { AuthService } from './auth.service';
-import { UserDto } from '../types';
+// apps/server/src/auth/jwt-auth.guard.ts
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 
-/**
- * JWT Authentication Guard
- * Protects routes by validating JWT token from Authorization header
- * Attaches decoded user information to request object
- *
- * Usage in controller:
- * @UseGuards(JwtAuthGuard)
- * @Get('profile')
- * getProfile(@Request() req: Request & { user: UserDto }) {
- *   return req.user;
- * }
- */
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly authService: AuthService) {}
+export class JwtAuthGuard extends AuthGuard('jwt') {
+	private readonly logger = new Logger(JwtAuthGuard.name);
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-    const token = this.extractTokenFromHeader(request);
+	handleRequest(err: any, user: any, info: any, context: any) {
+		if (err) {
+			this.logger.error('Auth error', err);
+			throw err;
+		}
 
-    if (!token) {
-      throw new UnauthorizedException('Authorization token is missing');
-    }
+		if (!user) {
+			const infoMsg = info?.message || info || 'No authentication information';
+			this.logger.warn(`Authentication failed: ${infoMsg}`);
+			throw new UnauthorizedException(`Unauthorized: ${infoMsg}`);
+		}
 
-    const user = await this.authService.validateToken(token);
+		this.logger.debug(`Authentication successful for user: ${user?.userId ?? user?.sub ?? 'unknown'}`);
+		return user;
+	}
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
-
-    // Attach user to request object for use in controllers
-    (request as any).user = user;
-
-    return true;
-  }
-
-  /**
-   * Extract JWT token from Authorization header
-   * Expected format: "Bearer <token>"
-   *
-   * @param request - Express request object
-   * @returns Token string or undefined if not present
-   */
-  private extractTokenFromHeader(request: Request): string | undefined {
-    const authHeader = request.headers.authorization;
-
-    if (!authHeader) {
-      return undefined;
-    }
-
-    const parts = authHeader.split(' ');
-
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      throw new UnauthorizedException(
-        'Invalid authorization header format. Expected: Bearer <token>',
-      );
-    }
-
-    return parts[1];
-  }
 }

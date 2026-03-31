@@ -54,6 +54,10 @@ export class PrismaService
     this.pool = pool;
   }
 
+  constructor() {
+    super();
+  }
+
   /**
    * Connect to database when module initializes
    * Called automatically by NestJS after dependency injection setup

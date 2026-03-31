@@ -7,8 +7,6 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("https://ptppciujvyvzykzjeugg.supabase.co")
-  directUrl = env("postgresql://postgres:[YOUR-PASSWORD]@db.ptppciujvyvzykzjeugg.supabase.co:5432/postgres") // Dùng cho migrations (cổng 5432)
 }
 
 // =======================================
@@ -94,10 +92,10 @@ model Skill {
   @@map("skills")
 }
 
-model Career {
+model CareerPath {
   id       Int       @id @default(autoincrement())
-  name     String    @unique\
-  descripton String?   @db.Text
+  name     String    @unique
+  description String?   @db.Text
   roadmaps Roadmap[]
   @@map("careers")
 }
@@ -107,12 +105,12 @@ model Roadmap {
   title               String
   description         String?   @db.Text
   userId              String?   @map("user_id") @db.Uuid // NULL = System Roadmap
-  roleId              Int?      @map("role_id")
+  careerPathId              Int?      @map("career_id")
   isPublished         Boolean?  @default(false) @map("is_published")
   estimatedTotalHours Int?      @map("estimated_total_hours")
   createdAt           DateTime? @default(now()) @map("created_at") @db.Timestamptz
 
-  role     Role?            @relation(fields: [roleId], references: [id])
+  careerPath     CareerPath?            @relation(fields: [careerPathId], references: [id])
   creator  Profile?         @relation("SystemUserRoadmaps", fields: [userId], references: [userId])
   sections RoadmapSection[]
   users    UserRoadmap[]
@@ -137,15 +135,13 @@ model RoadmapSkill {
   id             Int     @id @default(autoincrement())
   sectionId      Int?    @map("section_id")
   skillId        Int?    @map("skill_id")
-  stepNumber     Int     @map("step_number")
   isOptional     Boolean @default(false) @map("is_optional")
   estimatedHours Int?    @map("estimated_hours")
   notes          String? @db.Text
 
   section RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   skill   Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
-
-  @@unique([sectionId, stepNumber])
+  @@unique([sectionId, skillId])
   @@map("roadmap_skills")
 }
 
@@ -238,4 +234,25 @@ model ResourceReview {
   @@unique([userId, resourceId])
   @@map("resource_reviews")
 }
+model Reward {
+  id             Int          @id @default(autoincrement())
+  title          String       // Ví dụ: "Backend Beginner Badge"
+  description    String?      @db.Text
+  image_url      String?
+  reward_type_id Int
+  reward_type    RewardType   @relation(fields: [reward_type_id], references: [id])
+  user_rewards   UserReward[]
 
+  @@map("rewards")
+}
+
+model UserReward {
+  id         Int       @id @default(autoincrement())
+  user_id    String    @db.Uuid
+  reward_id  Int
+  reward     Reward    @relation(fields: [reward_id], references: [id], onDelete: Cascade)
+  earned_at  DateTime? @default(now()) @db.Timestamptz
+
+  @@unique([user_id, reward_id])
+  @@map("user_rewards")
+}

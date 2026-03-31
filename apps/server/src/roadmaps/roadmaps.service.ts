@@ -35,14 +35,14 @@ export class RoadmapsService {
    * Returns roadmaps at different difficulty levels (beginner, intermediate, advanced)
    * Users can progress through levels as they complete skills
    *
-   * @param careerPathId - UUID of the career path
+   * @param careerPathId - INT of the career path
    * @returns Array of RoadmapDto objects at different levels for this career path
    *
    * Example:
    * const roadmaps = await roadmapsService.findByCareerPath('backend-path-id')
    * // Returns: [
-   * //   { id: 'uuid1', careerPathId: 'path-id', level: 'beginner' },
-   * //   { id: 'uuid2', careerPathId: 'path-id', level: 'intermediate' },
+   * //   { id: '1', careerPathId: 'path-id', level: 'beginner' },
+   * //   { id: '2', careerPathId: 'path-id', level: 'intermediate' },
    * // ]
    */
   async findByCareerPath(careerPathId: string): Promise<RoadmapDto[]> {
@@ -51,5 +51,14 @@ export class RoadmapsService {
     // 2. Order by level (beginner → intermediate → advanced)
     // 3. Return array of roadmap metadata
     throw new Error('Not implemented');
+  }
+
+  /**
+   * Retrieve all careers (id and name) for the public career list
+   * Returns an array of objects shaped as { id, name }
+   */
+  async findAllCareers(): Promise<{ id: number; name: string }[]> {
+    const careers = await this.prisma.career.findMany({ select: { id: true, name: true } });
+    return careers.map((c) => ({ id: c.id, name: c.name }));
   }
 }

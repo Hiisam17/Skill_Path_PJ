@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 // =======================================
@@ -114,6 +114,7 @@ model Roadmap {
   creator  Profile?         @relation("SystemUserRoadmaps", fields: [userId], references: [userId])
   sections RoadmapSection[]
   users    UserRoadmap[]
+  milestones Milestone[]
 
   @@map("roadmaps")
 }
@@ -135,7 +136,6 @@ model RoadmapSkill {
   id             Int     @id @default(autoincrement())
   sectionId      Int?    @map("section_id")
   skillId        Int?    @map("skill_id")
-  stepNumber     Int     @map("step_number")
   isOptional     Boolean @default(false) @map("is_optional")
   estimatedHours Int?    @map("estimated_hours")
   notes          String? @db.Text
@@ -143,7 +143,6 @@ model RoadmapSkill {
   section RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   skill   Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
-  @@unique([sectionId, stepNumber])
   @@map("roadmap_skills")
 }
 
@@ -244,6 +243,7 @@ model Reward {
   reward_type_id Int
   reward_type    RewardType   @relation(fields: [reward_type_id], references: [id])
   user_rewards   UserReward[]
+  milestones     Milestone[]
 
   @@map("rewards")
 }
@@ -257,4 +257,18 @@ model UserReward {
 
   @@unique([user_id, reward_id])
   @@map("user_rewards")
+}
+
+model Milestone {
+  id               Int      @id @default(autoincrement())
+  roadmapId        Int?     @map("roadmap_id")
+  name             String
+  requiredProgress Float?   @map("required_progress") // Float tương ứng với double precision trong SQL
+  rewardId         Int?     @map("reward_id")
+
+  // Thiết lập khóa ngoại (Relations)
+  roadmap          Roadmap? @relation(fields: [roadmapId], references: [id])
+  reward           Reward?  @relation(fields: [rewardId], references: [id])
+
+  @@map("milestones")
 }

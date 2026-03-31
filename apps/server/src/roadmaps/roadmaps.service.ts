@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { RoadmapDto } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -57,8 +57,35 @@ export class RoadmapsService {
    * Retrieve all careers (id and name) for the public career list
    * Returns an array of objects shaped as { id, name }
    */
-  async findAllCareers(): Promise<{ id: number; name: string }[]> {
-    const careers = await this.prisma.career.findMany({ select: { id: true, name: true } });
-    return careers.map((c) => ({ id: c.id, name: c.name }));
+  async findAllCareerPaths(): Promise<{ id: number; name: string }[]> {
+    const careerPaths = await this.prisma.careerPath.findMany({ select: { id: true, name: true } });
+    return careerPaths.map((c) => ({ id: c.id, name: c.name }));
+  }
+
+  /**
+   * Get published system roadmaps for a given career id
+   * System roadmaps are identified by `userId == null` and `isPublished == true`
+   * Returns selected fields: id, title, description
+   */
+  async getSystemRoadmapsByCareerPath(careerPathId: number): Promise<{ id: number; title: string; description: string | null }[]> {
+    const roadmaps = await this.prisma.roadmap.findMany({
+      where: {
+        careerPathId: careerPathId,
+        userId: null,
+        isPublished: true,
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    if (!roadmaps || roadmaps.length === 0) {
+      throw new NotFoundException('No roadmaps found for this career');
+    }
+
+    return roadmaps.map((r) => ({ id: r.id, title: r.title, description: r.description }));
   }
 }

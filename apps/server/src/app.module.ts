@@ -8,9 +8,14 @@ import { CareerPathsModule } from './career-paths/career-paths.module';
 import { RoadmapsModule } from './roadmaps/roadmaps.module';
 import { SkillsModule } from './skills/skills.module';
 import { ProgressModule } from './progress/progress.module';
-
+import { ConfigModule } from '@nestjs/config';
+import { join } from 'path';
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: join(process.cwd(), '.env'), 
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -22,4 +27,4 @@ import { ProgressModule } from './progress/progress.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

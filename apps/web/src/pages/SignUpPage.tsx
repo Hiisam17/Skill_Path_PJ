@@ -121,7 +121,7 @@ export const SignUpPage: React.FC = () => {
 
   const handleSocialSignup = async (provider: "github" | "google") => {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
           // Nơi Supabase sẽ đá người dùng về sau khi đăng nhập thành công

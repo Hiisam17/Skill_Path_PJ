@@ -1,37 +1,15 @@
-/**
- * App Component
- * Main application router setup
- * Defines routes: login, sign-up, career-paths, roadmap, dashboard
- * Auth routes (login, sign-up) are public
- * All other routes are protected with ProtectedRoute
- */
-
 import { Routes, Route, Navigate } from "react-router-dom";
-import { LoginPage } from "./pages/LoginPage";
-import { SignUpPage } from "./pages/SignUpPage";
-import { CareerPathPage } from "./pages/CareerPathPage";
-import { RoadmapPage } from "./pages/RoadmapPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { LoginPage } from "@/pages/LoginPage";
+import { SignUpPage } from "@/pages/SignUpPage";
+import { CareerPathPage } from "@/pages/CareerPathPage";
+import { ExploreRoadmapsPage } from "@/pages/ExploreRoadmapsPage";
+import { RoadmapPage } from "@/pages/RoadmapPage";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 /**
- * App Root Component
- * Sets up React Router with all application routes
- *
- * Public Routes:
- * - / → Redirect to /login
- * - /login → LoginPage
- * - /sign-up → SignUpPage
- *
- * Protected Routes:
- * - /career-paths → CareerPathPage
- * - /roadmap → RoadmapPage
- * - /dashboard → DashboardPage
- *
- * Fallback:
- * - /* → Redirect to /login (404)
- *
- * @returns {JSX.Element} Router with all routes
+ * Main Application Component
+ * Manages routing and layout
  */
 function App() {
   return (
@@ -41,7 +19,7 @@ function App() {
       <Route path="/sign-up" element={<SignUpPage />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Protected Routes */}
+      {/* Các Route khác vẫn giữ nguyên vỏ bọc ProtectedRoute */}
       <Route
         path="/career-paths"
         element={
@@ -50,6 +28,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/explore-roadmaps" element={<ExploreRoadmapsPage />} />
       <Route
         path="/roadmap"
         element={
@@ -58,13 +37,11 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* ĐÃ SỬA: Bỏ vỏ bọc ProtectedRoute cho riêng trang Dashboard để bạn test */}
       <Route
         path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
+        element={<DashboardPage />}
       />
 
       {/* Fallback Route (404) */}

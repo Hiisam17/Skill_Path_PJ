@@ -1,110 +1,83 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import { AuthResponseDto, LoginDto, UserDto } from '../types';
+import { Injectable, UnauthorizedException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaService } from '../prisma/prisma.service';
 
-/**
- * AuthService handles user authentication and authorization
- * Manages login credentials, JWT token generation, and password verification
- */
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
-  ) {}
+  private supabase: SupabaseClient;
+  private readonly logger = new Logger(AuthService.name);
 
-  /**
-   * Authenticate user with email and password
-   * Validates credentials against stored hashed password and generates JWT token
-   *
-   * @param loginDto - Contains email and password from login request
-   * @returns AuthResponseDto with JWT token and user information
-   * @throws NotFoundException if user email not found
-   * @throws BadRequestException if password is incorrect
-   */
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
-    const { email, password } = loginDto;
-
-    // 1. Find user by email
-    const user = await (this.prisma as any).user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
-    }
-
-    // 2. Verify password using bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
-    if (!isPasswordValid) {
-      throw new BadRequestException('Invalid email or password');
-    }
-
-    // 3. Generate JWT token
-    const token = this.generateToken({
-      id: user.id,
-      email: user.email,
-      createdAt: user.createdAt,
-    });
-
-    // 4. Return token and user information
-    return {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        createdAt: user.createdAt,
-      },
-    };
+  constructor(private prisma: PrismaService) {
+    // Khởi tạo Supabase client ở Backend
+    this.supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_KEY!
+    );
   }
 
-  /**
-   * Generate JWT token for authenticated user
-   * Creates signed token with configurable expiry time
-   *
-   * @param user - User DTO containing id and email
-   * @returns Signed JWT token string
-   *
-   * @internal Used internally by login() - not exposed as direct endpoint
-   */
-  private generateToken(user: UserDto): string {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-    };
+  // 1. Hàm Đăng ký
+  async register(email: string, password: string, name?: string) {
+    this.logger.debug(`Register attempt for email=${email}`);
 
-    return this.jwtService.sign(payload);
-  }
+    // 1. Tạo tài khoản bên Supabase (Supabase tự lo email và password)
+    const { data, error } = await this.supabase.auth.signUp({
+      email,
+      password,
+    });
 
-  /**
-   * Verify JWT token and extract user information
-   * Used by JwtAuthGuard to validate request tokens
-   *
-   * @param token - JWT token string (without 'Bearer ' prefix)
-   * @returns Decoded token payload with user id and email
-   */
-  async validateToken(token: string): Promise<UserDto | null> {
-    try {
-      const payload = this.jwtService.verify(token);
+    if (error) {
+      this.logger.warn(`Supabase signUp failed for ${email}: ${error.message}`);
+      throw new BadRequestException(error.message);
+    }
 
-      const user = await (this.prisma as any).user.findUnique({
-        where: { id: payload.sub },
-      });
-
-      if (!user) {
-        return null;
+    // 2. Chỉ đồng bộ ID (và Name) sang Profile của Prisma
+    if (data.user) {
+      try {
+        await this.prisma.profile.create({
+          data: {
+            userId: data.user.id,   // Chỉ lấy ID
+            fullName: name || null, // Và lấy tên (nếu có)
+          },
+        });
+        this.logger.debug(`Profile created in DB for userId=${data.user.id}`);
+      } catch (dbError:any) {
+        console.error('❌ Lỗi Prisma chi tiết:', dbError.code, dbError.message);
+      throw new InternalServerErrorException('Lỗi đồng bộ hồ sơ: ' + dbError.message);
       }
-
-      return {
-        id: user.id,
-        email: user.email,
-        createdAt: user.createdAt,
-      };
-    } catch {
-      return null;
+    } else {
+      this.logger.warn(`Supabase returned no user during signUp for ${email}`);
     }
+
+    return {
+      message: 'Đăng ký thành công!',
+      user: data.user,
+    };
+  }
+
+  // 2. Hàm Đăng nhập
+  async login(email: string, password: string) {
+    this.logger.debug(`Login attempt for email=${email}`);
+    const { data, error } = await this.supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      this.logger.warn(`Supabase signInWithPassword failed for ${email}: ${error.message}`);
+      throw new UnauthorizedException('Sai email hoặc mật khẩu!');
+    }
+
+    if (!data || !data.session) {
+      this.logger.error(`No session returned from Supabase for ${email}. data=${JSON.stringify(data)}`);
+      throw new InternalServerErrorException('Đăng nhập thất bại: không nhận được session.');
+    }
+
+    this.logger.debug(`Login successful for email=${email}, userId=${data.user?.id}`);
+
+    // Trả về chuỗi JWT (Access Token) cho Frontend
+    return {
+      access_token: data.session.access_token,
+      user: data.user,
+    };
   }
 }

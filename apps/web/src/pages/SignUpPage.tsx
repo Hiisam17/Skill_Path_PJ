@@ -1,10 +1,10 @@
 import React, { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthLayout } from "@/components/AuthLayout";
-import { InputField } from "@/components/InputField";
-import { SocialButton } from "@/components/SocialButton";
+import { AuthLayout } from "@/components/layouts/AuthLayout";
+import { InputField } from "@/components/forms/InputField";
+import { SocialButton } from "@/components/auth/SocialButton";
 import { useAuth } from "@/context/AuthContext";
-
+import { supabase } from "@/lib/supabase";
 /**
  * SignUpPage - User registration page
  * Features:
@@ -78,26 +78,65 @@ export const SignUpPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // TODO: Implement backend signup API integration
-      // For now, auto-login with test credentials
+      // 1. Gọi API Đăng ký tới Backend NestJS của chúng ta
+      // (Nhớ đổi URL nếu bạn cấu hình port hoặc prefix khác nhé)
+      const response = await fetch("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.fullName, // Truyền đúng tên biến fullName mà NestJS đang đợi
+        }),
+      });
+
+      const data = await response.json();
+
+      // Nếu Backend báo lỗi (ví dụ: Trùng email)
+      if (!response.ok) {
+        throw new Error(data.message || "Đăng ký thất bại. Vui lòng thử lại.");
+      }
+
+      // 2. Sau khi Backend báo "Đăng ký thành công!", ta mới gọi hàm login của AuthContext 
+      // để tự động lấy token và đăng nhập cho user luôn.
       await login({
         email: formData.email,
         password: formData.password,
       });
-      navigate("/career-paths");
+      
+      // 3. Chuyển hướng sang trang lộ trình
+      navigate("/dashboard");
+      
     } catch (error) {
       setErrors({
         submit:
-          error instanceof Error ? error.message : "Sign up failed. Try again.",
+          error instanceof Error ? error.message : "Đã có lỗi xảy ra từ máy chủ.",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSocialSignup = (provider: "github" | "google") => {
-    // TODO: Implement OAuth flow
-    console.log(`Sign up with ${provider}`);
+  const handleSocialSignup = async (provider: "github" | "google") => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          // Nơi Supabase sẽ đá người dùng về sau khi đăng nhập thành công
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        console.error("Lỗi đăng nhập social:", error.message);
+        setErrors({ submit: "Không thể kết nối với " + provider });
+      }
+      // Lưu ý: Không cần navigate ở đây, vì Supabase sẽ tự động redirect cả trang web
+    } catch (error) {
+      console.error("Lỗi hệ thống:", error);
+    }
   };
 
   return (

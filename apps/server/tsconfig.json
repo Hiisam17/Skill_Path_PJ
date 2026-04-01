@@ -17,6 +17,11 @@
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@prisma/client": ["../../node_modules/@prisma/client"],
+      ".prisma/client": ["../../node_modules/.prisma/client"]
+    },
   }
+  
 }

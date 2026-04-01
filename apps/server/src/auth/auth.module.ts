@@ -1,21 +1,18 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PrismaModule } from '../prisma/prisma.module';
+import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { JwtStrategy } from './jwt.strategy';
+// Import PrismaModule nếu bạn chưa cấu hình nó là Global Module
+import { PrismaModule } from '../prisma/prisma.module'; 
 
 @Module({
   imports: [
-    PrismaModule,
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
-      signOptions: { expiresIn: '7d' },
-    }),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    PrismaModule, // Bắt buộc phải có để AuthService gọi được this.prisma
   ],
-  providers: [AuthService, JwtAuthGuard],
   controllers: [AuthController],
-  exports: [AuthService, JwtAuthGuard],
+  providers: [AuthService, JwtStrategy], // Khai báo Strategy ở đây
+  exports: [AuthService],
 })
 export class AuthModule {}

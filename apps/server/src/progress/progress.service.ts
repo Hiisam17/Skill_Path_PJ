@@ -82,25 +82,23 @@ export class ProgressService {
    * Prevents duplicate completions using upsert pattern
    *
    * @param userId - UUID of authenticated user
-   * @param skillId - UUID of the skill being marked as complete
+   * @param skillId - Number ID of the skill being marked as complete
    * @returns UserSkillProgressDto with updated completion record
    * @throws NotFoundException if user or skill not found
    *
    * Example:
-   * const progress = await progressService.completeSkill('user-id', 'skill-id')
-   * // Returns: { id: 'progress-id', userId: '...', skillId: '...', status: 'COMPLETED', completedAt: 2024-03-23T... }
+   * const progress = await progressService.completeSkill('user-id', 1)
    */
   async completeSkill(
     userId: string,
-    skillId: string,
+    skillId: number,
   ): Promise<UserSkillProgressDto> {
-    const skillIdNumber = Number(skillId);
-    if (!Number.isInteger(skillIdNumber) || skillIdNumber <= 0) {
+    if (!Number.isInteger(skillId) || skillId <= 0) {
       throw new NotFoundException(`Skill ${skillId} not found`);
     }
 
     const skill = await this.prisma.skill.findUnique({
-      where: { id: skillIdNumber },
+      where: { id: skillId },
       select: { id: true },
     });
 
@@ -114,7 +112,7 @@ export class ProgressService {
       where: {
         userId_skillId: {
           userId,
-          skillId: skillIdNumber,
+          skillId,
         },
       },
       update: {
@@ -123,7 +121,7 @@ export class ProgressService {
       },
       create: {
         userId,
-        skillId: skillIdNumber,
+        skillId,
         statusId: completedStatusId,
         completedAt: new Date(),
       },
@@ -150,14 +148,8 @@ export class ProgressService {
    *
    * @param userId - UUID of authenticated user
    * @returns ProgressDto with completion statistics
-   *
-   * Example:
-   * const progress = await progressService.getUserProgress('user-id')
-   * // Returns: { completedSkills: 3, totalSkills: 6, percentage: 50 }
    */
   async getUserProgress(userId: string): Promise<ProgressDto> {
-    const totalSkills = await this.prisma.skill.count();
-
     const completedStatusId = await this.ensureProgressStatus('COMPLETED');
 
     const completedSkills = await this.prisma.userSkillProgress.count({
@@ -166,6 +158,31 @@ export class ProgressService {
         statusId: completedStatusId,
       },
     });
+
+    const userRoadmap = await this.prisma.userRoadmap.findFirst({
+      where: { userId: userId },
+    });
+
+    let totalSkills = 6; 
+
+    if (userRoadmap) {
+      const skillsInRoadmap = await this.prisma.roadmapSkill.count({
+        where: {
+          section: { roadmapId: userRoadmap.roadmapId }
+        },
+      });
+      totalSkills = skillsInRoadmap > 0 ? skillsInRoadmap : totalSkills;
+    } else {
+      const firstRoadmap = await this.prisma.roadmap.findFirst();
+      if (firstRoadmap) {
+        const skillsInRoadmap = await this.prisma.roadmapSkill.count({
+          where: {
+            section: { roadmapId: firstRoadmap.id }
+          },
+        });
+        totalSkills = skillsInRoadmap > 0 ? skillsInRoadmap : totalSkills;
+      }
+    }
 
     const percentage =
       totalSkills === 0 ? 0 : Math.round((completedSkills / totalSkills) * 100);

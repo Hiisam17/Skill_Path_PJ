@@ -1,4 +1,4 @@
-import { Controller, Param, Post } from '@nestjs/common';
+import { Controller, Param, Post, Get, ParseIntPipe } from '@nestjs/common';
 import { UserSkillProgressDto } from '../types';
 import { ProgressService } from './progress.service';
 
@@ -8,9 +8,15 @@ export class ProgressController {
 
 	@Post(':skillId/complete')
 	async completeSkill(
-		@Param('skillId') skillId: string,
+		@Param('skillId', ParseIntPipe) skillId: number,
 	): Promise<UserSkillProgressDto> {
 		const userId = await this.progressService.getDemoUserId();
 		return this.progressService.completeSkill(userId, skillId);
+	}
+
+	@Get('users/progress')
+	async getUserProgress() {
+		const userId = await this.progressService.getDemoUserId();
+		return this.progressService.getUserProgress(userId);
 	}
 }

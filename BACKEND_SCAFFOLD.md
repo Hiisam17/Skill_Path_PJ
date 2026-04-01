@@ -46,7 +46,7 @@ apps/server/
 │   ├── career-paths/                    # Domain: Career path management
 │   │   ├── career-paths.module.ts
 │   │   ├── career-paths.service.ts      # findAll()
-│   │   ├── career-paths.controller.ts   # [TODO] GET /career-paths
+│   │   ├── career-paths.controller.ts   # [TODO]  /career-paths
 │   │   └── career-paths.service.spec.ts
 │   │
 │   ├── roadmaps/                        # Domain: Learning roadmaps

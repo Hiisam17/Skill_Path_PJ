@@ -5,28 +5,20 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
-/**
- * PrismaService - Wraps PrismaClient with NestJS lifecycle hooks
- * Handles database connection initialization and cleanup
- * Provides singleton access to Prisma ORM throughout the application
- *
- * Usage in services:
- * - constructor(private readonly prisma: PrismaService) {}
- * - Access models: this.prisma.user.findUnique(), this.prisma.skill.create(), etc.
- */
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  private logger = new Logger(PrismaService.name);
+  private readonly logger = new Logger(PrismaService.name);
   private readonly pool: Pool;
 
-  constructor() {
-    const connectionString = process.env.DATABASE_URL;
+  constructor(config: ConfigService) {
+    const connectionString = config.get<string>('DATABASE_URL') || process.env.DATABASE_URL;
 
     if (!connectionString) {
       throw new Error(
@@ -52,8 +44,9 @@ export class PrismaService
     });
 
     this.pool = pool;
+    this.logger.log('--- 🛡️ GIÁM ĐỊNH TẠI PRISMA SERVICE ---');
+    this.logger.log('✅ Đã cấu hình Driver Adapter thành công!');
   }
-
 
   /**
    * Connect to database when module initializes
@@ -62,10 +55,10 @@ export class PrismaService
   async onModuleInit(): Promise<void> {
     try {
       await this.$connect();
-      this.logger.log('Database connected successfully');
-    } catch (error) {
-      this.logger.error('Failed to connect to database', error);
-      throw error;
+      this.logger.log('✅ Database connected successfully');
+    } catch (e) {
+      this.logger.error('❌ Database connection failed', e);
+      throw e;
     }
   }
 

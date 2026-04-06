@@ -111,7 +111,6 @@ export const CareerPathPage = () => {
   const navigate = useNavigate()
   const [paths, setPaths] = useState<CareerPath[]>([])
   const [fetching, setFetching] = useState(true)
-  const [selectingId, setSelectingId] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Fetch career paths
@@ -149,15 +148,9 @@ export const CareerPathPage = () => {
     };
   }, []);
 
-  // Select roadmap
-  const handleSelect = async (careerPathId: string) => {
-    setSelectingId(careerPathId)
-    try {
-      await apiClient.post('/users/select-roadmap', { careerPathId })
-      navigate('/roadmap')
-    } catch {
-      setSelectingId(null)
-    }
+  // Select roadmap — navigate trực tiếp đến skill-tree (MVP)
+  const handleSelect = (careerPathId: string) => {
+    navigate(`/skill-tree?careerPathId=${careerPathId}`)
   }
 
   return (
@@ -454,7 +447,7 @@ export const CareerPathPage = () => {
                     path={path}
                     index={i}
                     onSelect={handleSelect}
-                    loading={selectingId === path.id}
+                    loading={false}
                   />
                 ))
               : (

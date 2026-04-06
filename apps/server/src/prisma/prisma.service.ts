@@ -1,34 +1,58 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
-import { Pool } from 'pg'; // Import thư viện pg
-import { PrismaPg } from '@prisma/adapter-pg'; // Import Adapter của Prisma
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
+  private readonly pool: Pool;
 
   constructor(config: ConfigService) {
-    const url = config.get<string>('DATABASE_URL');
+    const connectionString = config.get<string>('DATABASE_URL') || process.env.DATABASE_URL;
 
-    if (!url) {
-      throw new Error('❌ DATABASE_URL is missing in .env!');
+    if (!connectionString) {
+      throw new Error(
+        'DATABASE_URL is missing. Create apps/server/.env from .env.example first.',
+      );
     }
 
-    // 1. Khởi tạo một Pool kết nối từ chuỗi URL của Supabase
-    const pool = new Pool({ connectionString: url });
+    if (connectionString.includes('<') || connectionString.includes('>')) {
+      throw new Error(
+        'DATABASE_URL in apps/server/.env is still a placeholder. Replace it with a real PostgreSQL/Supabase connection string.',
+      );
+    }
 
-    // 2. Tạo Adapter kết nối giữa Prisma và thư viện pg
+    const pool = new Pool({ connectionString });
     const adapter = new PrismaPg(pool);
 
-    // 3. Truyền ĐÚNG thuộc tính "adapter" mà Prisma 7 yêu cầu
-    super({ adapter }); 
+    super({
+      adapter,
+      log:
+        process.env.NODE_ENV === 'development'
+          ? ['query', 'info', 'warn', 'error']
+          : ['warn', 'error'],
+    });
 
+    this.pool = pool;
     this.logger.log('--- 🛡️ GIÁM ĐỊNH TẠI PRISMA SERVICE ---');
     this.logger.log('✅ Đã cấu hình Driver Adapter thành công!');
   }
 
-  async onModuleInit() {
+  /**
+   * Connect to database when module initializes
+   * Called automatically by NestJS after dependency injection setup
+   */
+  async onModuleInit(): Promise<void> {
     try {
       await this.$connect();
       this.logger.log('✅ Database connected successfully');
@@ -38,7 +62,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
   }
 
-  async onModuleDestroy() {
-    await this.$disconnect();
+  /**
+   * Disconnect from database when module is destroyed
+   * Ensures graceful shutdown with proper resource cleanup
+   */
+  async onModuleDestroy(): Promise<void> {
+    try {
+      await this.$disconnect();
+      await this.pool.end();
+      this.logger.log('Database disconnected successfully');
+    } catch (error) {
+      this.logger.error('Failed to disconnect from database', error);
+    }
   }
 }

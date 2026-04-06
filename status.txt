@@ -1,0 +1,73 @@
+On branch feature/skill-tree
+Your branch is ahead of 'origin/feature/skill-tree' by 6 commits.
+  (use "git push" to publish your local commits)
+
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+  (use "git merge --abort" to abort the merge)
+
+Changes to be committed:
+	modified:   BACKEND_SCAFFOLD.md
+	modified:   apps/server/package.json
+	modified:   apps/server/prisma.config.ts
+	modified:   apps/server/prisma/schema.prisma
+	modified:   apps/server/src/app.module.ts
+	modified:   apps/server/src/auth/auth.controller.ts
+	modified:   apps/server/src/auth/auth.module.ts
+	modified:   apps/server/src/auth/auth.service.ts
+	modified:   apps/server/src/auth/jwt-auth.guard.ts
+	new file:   apps/server/src/auth/jwt.strategy.ts
+	modified:   apps/server/src/main.ts
+	modified:   apps/server/src/prisma/prisma.module.ts
+	modified:   apps/server/src/progress/progress.controller.spec.ts
+	modified:   apps/server/src/progress/progress.service.spec.ts
+	new file:   apps/server/src/roadmaps/dto/career-response.dto.ts
+	new file:   apps/server/src/roadmaps/dto/roadmap-summary-response.dto.ts
+	modified:   apps/server/src/roadmaps/roadmaps.service.ts
+	modified:   apps/server/tsconfig.json
+	new file:   apps/web/components.json
+	modified:   apps/web/package.json
+	modified:   apps/web/src/App.tsx
+	deleted:    apps/web/src/components/ProgressBar.tsx
+	renamed:    apps/web/src/components/ProtectedRoute.tsx -> apps/web/src/components/auth/ProtectedRoute.tsx
+	renamed:    apps/web/src/components/SocialButton.tsx -> apps/web/src/components/auth/SocialButton.tsx
+	renamed:    apps/web/src/components/InputField.tsx -> apps/web/src/components/forms/InputField.tsx
+	renamed:    apps/web/src/components/AuthLayout.tsx -> apps/web/src/components/layouts/AuthLayout.tsx
+	new file:   apps/web/src/components/ui/badge.tsx
+	new file:   apps/web/src/components/ui/button.tsx
+	new file:   apps/web/src/components/ui/card.tsx
+	new file:   apps/web/src/components/ui/input.tsx
+	new file:   apps/web/src/components/ui/progress.tsx
+	new file:   apps/web/src/components/ui/skeleton.tsx
+	modified:   apps/web/src/context/AuthContext.tsx
+	new file:   apps/web/src/lib/axios.ts
+	new file:   apps/web/src/lib/supabase.ts
+	new file:   apps/web/src/lib/utils.ts
+	modified:   apps/web/src/pages/CareerPathPage.tsx
+	modified:   apps/web/src/pages/DashboardPage.css
+	new file:   apps/web/src/pages/ExploreRoadmapsPage.tsx
+	modified:   apps/web/src/pages/LoginPage.tsx
+	modified:   apps/web/src/pages/SignUpPage.tsx
+	modified:   apps/web/src/services/api.ts
+	modified:   apps/web/vite.config.ts
+	modified:   package.json
+
+Unmerged paths:
+  (use "git add/rm <file>..." as appropriate to mark resolution)
+	deleted by them: apps/server/.env.example
+	deleted by them: apps/server/prisma/seed.ts
+	both modified:   apps/server/src/prisma/prisma.service.ts
+	both modified:   apps/server/src/progress/progress.controller.ts
+	both modified:   apps/server/src/progress/progress.module.ts
+	both modified:   apps/server/src/progress/progress.service.ts
+	both modified:   apps/server/src/roadmaps/roadmaps.controller.ts
+	both modified:   apps/server/src/roadmaps/roadmaps.module.ts
+	deleted by us:   apps/web/src/components/features/SkillList.tsx
+	both modified:   apps/web/src/index.css
+	both modified:   apps/web/src/pages/DashboardPage.tsx
+	both modified:   package-lock.json
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	status.txt
+

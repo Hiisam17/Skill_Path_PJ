@@ -10,7 +10,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import type { UserDto, LoginDto, AuthResponseDto } from "@/types";
+import type { UserDto, LoginDto } from "@/types";
 import { api, setAuthToken, clearAuthToken, getAuthToken } from "@/services/api";
 
 // ───── CONTEXT TYPE ─────

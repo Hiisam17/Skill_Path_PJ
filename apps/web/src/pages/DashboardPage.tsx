@@ -65,7 +65,6 @@ function generateSparklinePath(points: number[], width: number, height: number):
     y: padding + effectiveHeight - ((p - min) / range) * effectiveHeight,
   }));
 
-  // Create smooth curve using cubic bezier
   let line = `M${coords[0].x},${coords[0].y}`;
   for (let i = 1; i < coords.length; i++) {
     const prev = coords[i - 1];
@@ -129,7 +128,7 @@ export const DashboardPage: React.FC = () => {
     fetchProgress();
   }, []);
 
-  /* ── Skills data (Chuyển lên đầu để tránh lỗi sử dụng trước khi khai báo) ── */
+  /* ── Skills data ── */
   const [localSkills, setLocalSkills] = useState([
     { id: 1, icon: "◈", title: "GraphQL Mastery", desc: "Optimize your API layer with typed queries", xp: 200, isCompleted: false },
     { id: 2, icon: "🔐", title: "Auth Patterns", desc: "Implement OAuth2, JWT, and WebAuthn", xp: 350, isCompleted: false },
@@ -139,16 +138,12 @@ export const DashboardPage: React.FC = () => {
 
   /* ── Xử lý Click Hoàn thành Skill (Optimistic Update) ── */
   const handleCompleteSkill = async (skillId: number) => {
-    // 1. TẠO BACKUP: Lưu lại trạng thái cũ phòng khi API xịt
     const previousProgress = progress;
     const previousSkills = [...localSkills];
 
-    // 2. OPTIMISTIC UPDATE: Cập nhật UI NGAY LẬP TỨC
-    // Đổi màu nút thành "Completed"
     setLocalSkills(prev => prev.map(s => 
       s.id === skillId ? { ...s, isCompleted: true } : s
     ));
-    // Tăng vòng tròn phần trăm lên ngay tắp lự
     if (progress) {
       setProgress({
         ...progress,
@@ -156,17 +151,13 @@ export const DashboardPage: React.FC = () => {
       });
     }
 
-    // 3. GỌI API CHẠY NGẦM
     try {
-      const response = await api.post(`/skills/${skillId}/complete`);
-
+      await api.post(`/skills/${skillId}/complete`);
     } catch (error) {
       console.error("Lỗi khi lưu tiến độ:", error);
-      
-      // 4. ROLLBACK: Nếu mạng lag hoặc API lỗi, khôi phục lại UI ban đầu
       setProgress(previousProgress);
       setLocalSkills(previousSkills);
-      alert("Lỗi kết nối! Vui lòng thử lại."); // Trong thực tế nên dùng thư viện Toast (như react-hot-toast) cho đẹp
+      alert("Lỗi kết nối! Vui lòng thử lại.");
     }
   };
 
@@ -174,13 +165,11 @@ export const DashboardPage: React.FC = () => {
     ? Math.round((progress.completedSkills / progress.totalSkills) * 100)
     : 65;
 
-  // Sparkline path
   const { line: sparkLine, area: sparkArea } = generateSparklinePath(sparklinePoints, 800, 96);
 
   /* ── Navigation items ── */
   const navItems = [
     { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
-    // Roadmap should open career paths list per requested flow
     { path: "/career-paths", label: "Roadmap", icon: <RoadmapIcon /> },
     { path: "/career-paths", label: "Skill Tree", icon: <SkillTreeIcon /> },
     { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },

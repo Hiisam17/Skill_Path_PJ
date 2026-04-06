@@ -1,0 +1,19 @@
+.layout-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.layout-shell__content {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--topbar-height);
+  width: calc(100% - var(--sidebar-width));
+  min-height: calc(100vh - var(--topbar-height));
+  position: relative;
+}
+
+@media (max-width: 960px) {
+  .layout-shell__content {
+    margin-left: 0;
+    width: 100%;
+  }
+}

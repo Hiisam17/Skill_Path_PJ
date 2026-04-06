@@ -1,51 +1,32 @@
+/**
+ * App Component
+ * Demo router setup
+ * Bypasses authentication and exposes Skill Tree only
+ */
+
 import { Routes, Route, Navigate } from "react-router-dom";
-import { LoginPage } from "@/pages/LoginPage";
-import { SignUpPage } from "@/pages/SignUpPage";
-import { CareerPathPage } from "@/pages/CareerPathPage";
-import { ExploreRoadmapsPage } from "@/pages/ExploreRoadmapsPage";
-import { RoadmapPage } from "@/pages/RoadmapPage";
-import { DashboardPage } from "@/pages/DashboardPage";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { SkillsTreePage } from "./pages/SkillsTreePage";
+import Layout from "./components/Layout";
 
 /**
- * Main Application Component
- * Manages routing and layout
+ * App Root Component
+ * Sets up React Router in Skill Tree demo mode
+ *
+ * Route behavior:
+ * - / -> /skills-tree
+ * - /skills-tree -> SkillsTreePage
+ * - any other path -> /skills-tree
+ *
+ * @returns {JSX.Element} Router with all routes
  */
 function App() {
   return (
     <Routes>
-      {/* Auth Routes (Public) */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/sign-up" element={<SignUpPage />} />
-      <Route path="/" element={<Navigate to="/login" replace />} />
-
-      {/* Các Route khác vẫn giữ nguyên vỏ bọc ProtectedRoute */}
-      <Route
-        path="/career-paths"
-        element={
-          <ProtectedRoute>
-            <CareerPathPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/explore-roadmaps" element={<ExploreRoadmapsPage />} />
-      <Route
-        path="/roadmap"
-        element={
-          <ProtectedRoute>
-            <RoadmapPage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* ĐÃ SỬA: Bỏ vỏ bọc ProtectedRoute cho riêng trang Dashboard để bạn test */}
-      <Route
-        path="/dashboard"
-        element={<DashboardPage />}
-      />
-
-      {/* Fallback Route (404) */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route element={<Layout />}>
+        <Route path="/" element={<Navigate to="/skills-tree" replace />} />
+        <Route path="/skills-tree" element={<SkillsTreePage />} />
+        <Route path="*" element={<Navigate to="/skills-tree" replace />} />
+      </Route>
     </Routes>
   );
 }

@@ -10,6 +10,29 @@ import { PrismaService } from '../prisma/prisma.service';
 export class RoadmapsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private toLevel(title: string): string {
+    const normalized = title.toLowerCase();
+    if (normalized.includes('advanced')) return '3';
+    if (normalized.includes('intermediate')) return '2';
+    return '1';
+  }
+
+  private toDto(roadmap: { id: number; careerPathId: number | null; title: string }): RoadmapDto {
+    return {
+      id: String(roadmap.id),
+      careerPathId: roadmap.careerPathId === null ? '' : String(roadmap.careerPathId),
+      level: this.toLevel(roadmap.title),
+    };
+  }
+
+  async findAll(): Promise<RoadmapDto[]> {
+    const roadmaps = await this.prisma.roadmap.findMany({
+      orderBy: [{ careerPathId: 'asc' }, { id: 'asc' }],
+    });
+
+    return roadmaps.map((roadmap) => this.toDto(roadmap));
+  }
+
   /**
    * Find roadmap by its unique identifier
    * Retrieves roadmap details including associated skills and career path reference
@@ -23,11 +46,20 @@ export class RoadmapsService {
    * // Returns: { id: 'uuid', careerPathId: 'path-id', level: 'beginner' }
    */
   async findById(roadmapId: string): Promise<RoadmapDto> {
-    // TODO: Implement roadmap retrieval by ID
-    // 1. Query database for roadmap with given ID
-    // 2. Include associated career path information
-    // 3. Return road map with all metadata
-    throw new Error('Not implemented');
+    const roadmapIdNumber = Number(roadmapId);
+    if (!Number.isInteger(roadmapIdNumber) || roadmapIdNumber <= 0) {
+      throw new NotFoundException(`Roadmap ${roadmapId} not found`);
+    }
+
+    const roadmap = await this.prisma.roadmap.findUnique({
+      where: { id: roadmapIdNumber },
+    });
+
+    if (!roadmap) {
+      throw new NotFoundException(`Roadmap ${roadmapId} not found`);
+    }
+
+    return this.toDto(roadmap);
   }
 
   /**
@@ -46,11 +78,17 @@ export class RoadmapsService {
    * // ]
    */
   async findByCareerPath(careerPathId: string): Promise<RoadmapDto[]> {
-    // TODO: Implement roadmaps retrieval by career path
-    // 1. Query all roadmaps for given career path ID
-    // 2. Order by level (beginner → intermediate → advanced)
-    // 3. Return array of roadmap metadata
-    throw new Error('Not implemented');
+    const careerPathIdNumber = Number(careerPathId);
+    if (!Number.isInteger(careerPathIdNumber) || careerPathIdNumber <= 0) {
+      return [];
+    }
+
+    const roadmaps = await this.prisma.roadmap.findMany({
+      where: { careerPathId: careerPathIdNumber },
+      orderBy: { id: 'asc' },
+    });
+
+    return roadmaps.map((roadmap) => this.toDto(roadmap));
   }
 
   /**

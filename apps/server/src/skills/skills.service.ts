@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SkillDto } from '../types';
+import { SkillDto, UserSkillStatus } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -9,6 +9,17 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class SkillsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private mapProgressStatus(statusName?: string | null): UserSkillStatus {
+    const normalized = (statusName ?? '').trim().toUpperCase();
+    if (normalized === 'COMPLETED' || normalized === 'DONE') {
+      return UserSkillStatus.COMPLETED;
+    }
+    if (normalized === 'IN_PROGRESS' || normalized === 'IN PROGRESS') {
+      return UserSkillStatus.IN_PROGRESS;
+    }
+    return UserSkillStatus.NOT_STARTED;
+  }
 
   /**
    * Retrieve all skills in a roadmap with user's progress status
@@ -26,12 +37,58 @@ export class SkillsService {
    * //   { id: 'uuid2', roadmapId: '...', name: 'Linux', description: '...', orderIndex: 2, status: 'NOT_STARTED' },
    * // ]
    */
+  async findSkillsByRoadmap(
+    roadmapId: string,
+    userId: string,
+  ): Promise<SkillDto[]> {
+    const roadmapIdNumber = Number(roadmapId);
+    if (!Number.isInteger(roadmapIdNumber) || roadmapIdNumber <= 0) {
+      return [];
+    }
+
+    const roadmapSkills = await this.prisma.roadmapSkill.findMany({
+      where: {
+        section: {
+          roadmapId: roadmapIdNumber,
+        },
+        skillId: { not: null },
+      },
+      orderBy: [{ sectionId: 'asc' }, { stepNumber: 'asc' }],
+      include: {
+        skill: {
+          include: {
+            userProgress: {
+              where: { userId },
+              include: {
+                status: {
+                  select: { name: true },
+                },
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    return roadmapSkills
+      .filter((roadmapSkill) => roadmapSkill.skill)
+      .map((roadmapSkill) => {
+        const skill = roadmapSkill.skill!;
+        const progressStatusName = skill.userProgress[0]?.status?.name;
+
+        return {
+          id: String(skill.id),
+          roadmapId: String(roadmapIdNumber),
+          name: skill.name,
+          description: skill.description ?? '',
+          orderIndex: roadmapSkill.stepNumber,
+          status: this.mapProgressStatus(progressStatusName),
+        };
+      });
+  }
+
   async findByRoadmap(roadmapId: string, userId: string): Promise<SkillDto[]> {
-    // TODO: Implement skills retrieval with user progress
-    // 1. Query all skills for given roadmap ordered by orderIndex
-    // 2. LEFT JOIN with UserSkillProgress for current user
-    // 3. Include user's completion status (NOT_STARTED, IN_PROGRESS, COMPLETED)
-    // 4. Return skills with status information for frontend display
-    throw new Error('Not implemented');
+    return this.findSkillsByRoadmap(roadmapId, userId);
   }
 }

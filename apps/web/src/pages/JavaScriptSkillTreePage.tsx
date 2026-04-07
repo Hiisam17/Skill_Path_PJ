@@ -71,16 +71,26 @@ const TopicNode = ({ data }: any) => (
 );
 
 // Node phụ (Subtopic) - Khối màu trầm, tương tác hover sáng viền
-const SubtopicNode = ({ data }: any) => (
-  <div className="relative bg-[#222a3d] border border-gray-600 px-4 py-3 rounded-lg min-w-[140px] text-center hover:border-[#4cd7f6] hover:shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all group">
-    <Checkmark className="w-5 h-5 -top-2 -right-2 border-[1.5px] scale-75 opacity-80 group-hover:opacity-100" />
-    <Handle type="target" position={Position.Top} className="opacity-0" />
-    <Handle type="target" position={Position.Left} className="opacity-0" />
-    <span className="text-gray-300 font-semibold text-sm group-hover:text-white transition-colors">{data.label}</span>
-    <Handle type="source" position={Position.Bottom} className="opacity-0" />
-    <Handle type="source" position={Position.Right} className="opacity-0" />
-  </div>
-);
+const SubtopicNode = ({ data }: any) => {
+  const smallLabels = [
+    'var', 'let', 'const', 
+    'block', 'function', 'global', 
+    '==', '===', 'object.is', 
+    'call', 'apply', 'bind'
+  ];
+  const isSmall = smallLabels.includes(data.label.toLowerCase());
+  
+  return (
+    <div className={`relative bg-[#222a3d] border border-gray-600 px-4 py-3 rounded-lg text-center hover:border-[#4cd7f6] hover:shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all group ${isSmall ? 'min-w-[80px]' : 'min-w-[140px]'}`}>
+      <Checkmark className="w-5 h-5 -top-2 -right-2 border-[1.5px] scale-75 opacity-80 group-hover:opacity-100" />
+      <Handle type="target" position={Position.Top} className="opacity-0" />
+      <Handle type="target" position={Position.Left} className="opacity-0" />
+      <span className="text-gray-300 font-semibold text-sm group-hover:text-white transition-colors">{data.label}</span>
+      <Handle type="source" position={Position.Bottom} className="opacity-0" />
+      <Handle type="source" position={Position.Right} className="opacity-0" />
+    </div>
+  );
+};
 
 // Trục dọc (Vertical) - Đường dẫn Cyberpunk
 const VerticalNode = () => (
@@ -137,12 +147,26 @@ export const JavaScriptSkillTreePage: React.FC = () => {
       customStyle.width = (node.width || node.style?.width || 0) * SCALE_X;
     }
 
+    let x = node.position.x * SCALE_X;
+    let y = node.position.y * SCALE_Y;
+
+    // Tùy chỉnh vị trí thủ công cho một số Node bị đè
+    if (node.data?.label === 'Introduction to JavaScript') {
+      y -= 30; // đẩy lên
+    }
+    if (node.data?.label === 'All about Variables') {
+      y += 30; // đẩy xuống
+    }
+    if (node.data?.label === 'Classes') {
+      x -= 80; // lùi sang trái
+    }
+    if (node.data?.label === 'Working with APIs') {
+      x += 80; // tiến sang phải
+    }
+
     return {
       ...node,
-      position: {
-        x: node.position.x * SCALE_X,
-        y: node.position.y * SCALE_Y,
-      },
+      position: { x, y },
       style: customStyle,
     };
   });

@@ -4,6 +4,7 @@ import { SignUpPage } from "@/pages/SignUpPage";
 import { CareerPathPage } from "@/pages/CareerPathPage";
 import { RoadmapPage } from "@/pages/RoadmapPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { JavaScriptSkillTreePage } from "@/pages/JavaScriptSkillTreePage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 /**
@@ -36,6 +37,12 @@ function App() {
       <Route
         path="/dashboard"
         element={<DashboardPage />}
+      />
+
+      {/* Trang Roadmap JavaScript */}
+      <Route
+        path="/javascript-roadmap"
+        element={<JavaScriptSkillTreePage />}
       />
 
       {/* Fallback Route (404) */}

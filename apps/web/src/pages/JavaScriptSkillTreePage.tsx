@@ -62,11 +62,23 @@ const Checkmark = ({ className }: { className?: string }) => (
 const TopicNode = ({ data }: any) => (
   <div className="relative bg-[#171f33] border-2 border-[#4cd7f6] px-6 py-4 rounded-xl shadow-[0_0_20px_rgba(76,215,246,0.3)] min-w-[200px] text-center group hover:scale-105 transition-transform backdrop-blur-sm">
     <Checkmark />
-    <Handle type="target" position={Position.Top} className="opacity-0" />
+    {/* Top Handles */}
+    <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
+    <Handle id="w2" type="source" position={Position.Top} className="opacity-0" />
+    
     <span className="text-white font-black text-lg tracking-wide">{data.label}</span>
-    <Handle type="source" position={Position.Bottom} className="opacity-0" />
-    <Handle type="source" position={Position.Right} className="opacity-0" />
-    <Handle type="source" position={Position.Left} className="opacity-0" />
+    
+    {/* Bottom Handles */}
+    <Handle id="y1" type="target" position={Position.Bottom} className="opacity-0" />
+    <Handle id="y2" type="source" position={Position.Bottom} className="opacity-0" />
+    
+    {/* Right Handles */}
+    <Handle id="x1" type="target" position={Position.Right} className="opacity-0" />
+    <Handle id="x2" type="source" position={Position.Right} className="opacity-0" />
+    
+    {/* Left Handles */}
+    <Handle id="z1" type="target" position={Position.Left} className="opacity-0" />
+    <Handle id="z2" type="source" position={Position.Left} className="opacity-0" />
   </div>
 );
 
@@ -83,11 +95,21 @@ const SubtopicNode = ({ data }: any) => {
   return (
     <div className={`relative bg-[#222a3d] border border-gray-600 px-4 py-3 rounded-lg text-center hover:border-[#4cd7f6] hover:shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all group ${isSmall ? 'min-w-[80px]' : 'min-w-[140px]'}`}>
       <Checkmark className="w-5 h-5 -top-2 -right-2 border-[1.5px] scale-75 opacity-80 group-hover:opacity-100" />
-      <Handle type="target" position={Position.Top} className="opacity-0" />
-      <Handle type="target" position={Position.Left} className="opacity-0" />
+      
+      {/* Handles tương tự TopicNode */}
+      <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
+      <Handle id="w2" type="source" position={Position.Top} className="opacity-0" />
+      
       <span className="text-gray-300 font-semibold text-sm group-hover:text-white transition-colors">{data.label}</span>
-      <Handle type="source" position={Position.Bottom} className="opacity-0" />
-      <Handle type="source" position={Position.Right} className="opacity-0" />
+      
+      <Handle id="y1" type="target" position={Position.Bottom} className="opacity-0" />
+      <Handle id="y2" type="source" position={Position.Bottom} className="opacity-0" />
+      
+      <Handle id="x1" type="target" position={Position.Right} className="opacity-0" />
+      <Handle id="x2" type="source" position={Position.Right} className="opacity-0" />
+      
+      <Handle id="z1" type="target" position={Position.Left} className="opacity-0" />
+      <Handle id="z2" type="source" position={Position.Left} className="opacity-0" />
     </div>
   );
 };
@@ -95,8 +117,8 @@ const SubtopicNode = ({ data }: any) => {
 // Trục dọc (Vertical) - Đường dẫn Cyberpunk
 const VerticalNode = () => (
   <div className="w-full h-full border-l-[3px] border-dashed border-[#4cd7f6] opacity-40">
-    <Handle type="target" position={Position.Top} className="opacity-0" />
-    <Handle type="source" position={Position.Bottom} className="opacity-0" />
+    <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
+    <Handle id="y2" type="source" position={Position.Bottom} className="opacity-0" />
   </div>
 );
 
@@ -171,12 +193,29 @@ export const JavaScriptSkillTreePage: React.FC = () => {
     };
   });
 
-  // Chỉnh sửa các đường nối (Edges) cho hợp tone
-  const initialEdges = jsData.edges.map(edge => ({
-    ...edge,
-    animated: true, // Bật hiệu ứng dòng chảy dữ liệu
-    style: { stroke: '#4cd7f6', strokeWidth: 2, strokeDasharray: '5 5', opacity: 0.7 }
-  }));
+  // Chỉnh sửa các đường nối (Edges)
+  const initialEdges = jsData.edges.map(edge => {
+    // Xác định kiểu đường nối dựa trên handle
+    // x, z thường là rẽ ngang (smoothstep), w, y là dọc (default)
+    const isHorizontal = edge.sourceHandle?.startsWith('x') || edge.sourceHandle?.startsWith('z') ||
+                        edge.targetHandle?.startsWith('x') || edge.targetHandle?.startsWith('z');
+    
+    // Đọc style dashed từ JSON
+    const isDashed = edge.data?.edgeStyle === 'dashed' || 
+                    (edge.style?.strokeDasharray && edge.style.strokeDasharray !== '0');
+
+    return {
+      ...edge,
+      type: isHorizontal ? 'smoothstep' : 'default',
+      animated: true,
+      style: { 
+        stroke: '#4cd7f6', 
+        strokeWidth: 2, 
+        strokeDasharray: isDashed ? '5 5' : undefined,
+        opacity: 0.8 
+      }
+    };
+  });
 
   return (
     <div className="dashboard-layout">

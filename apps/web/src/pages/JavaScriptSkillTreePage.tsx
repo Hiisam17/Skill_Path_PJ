@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import ReactFlow, { 
   Background, 
   Controls, 
@@ -8,8 +9,41 @@ import ReactFlow, {
   BackgroundVariant
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import "./DashboardPage.css";
 
 import jsData from '../javascript.json'; 
+
+/* ── SVG Icon Components ── */
+const HomeIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 10.5L10 4l7 6.5" /><path d="M5 9.5V16a1 1 0 001 1h3v-4h2v4h3a1 1 0 001-1V9.5" />
+  </svg>
+);
+const RoadmapIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4v12" /><path d="M4 4h6l2 2-2 2H4" /><path d="M4 12h8l2-2-2-2" />
+  </svg>
+);
+const SkillTreeIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="10" cy="4" r="2" /><circle cx="5" cy="14" r="2" /><circle cx="15" cy="14" r="2" /><path d="M10 6v4M10 10l-5 2M10 10l5 2" />
+  </svg>
+);
+const JobMarketIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="7" width="14" height="10" rx="1.5" /><path d="M7 7V5.5A1.5 1.5 0 018.5 4h3A1.5 1.5 0 0113 5.5V7" />
+  </svg>
+);
+const SettingsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="10" cy="10" r="3" /><path d="M10 1.5v2M10 16.5v2M3.15 3.15l1.42 1.42M15.43 15.43l1.42 1.42M1.5 10h2M16.5 10h2M3.15 16.85l1.42-1.42M15.43 4.57l1.42-1.42" />
+  </svg>
+);
+const LogoutIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 3h3a1 1 0 011 1v12a1 1 0 01-1 1h-3" /><path d="M10 10H3m0 0l3-3m-3 3l3 3" />
+  </svg>
+); 
 
 /* =========================================
    CÁC CUSTOM NODES (Tùy chỉnh UI DevPath)
@@ -67,6 +101,14 @@ const TextNode = ({ data }: any) => (
    MAIN COMPONENT
 ========================================= */
 export const JavaScriptSkillTreePage: React.FC = () => {
+  const location = useLocation();
+
+  const navItems = [
+    { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
+    { path: "/roadmap", label: "Roadmap", icon: <RoadmapIcon /> },
+    { path: "/javascript-roadmap", label: "Skill Tree", icon: <SkillTreeIcon /> },
+    { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },
+  ];
   const nodeTypes = useMemo(() => ({
     topic: TopicNode,
     subtopic: SubtopicNode,
@@ -113,10 +155,56 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   }));
 
   return (
-    // Đổi màu nền tống thể sang màu tối của dự án
-    <div className="w-full h-screen bg-[#0b1326] flex flex-col font-sans">
-      
-      {/* Header Bar - Glassmorphism tối */}
+    <div className="dashboard-layout">
+      {/* ===================== SIDEBAR ===================== */}
+      <aside className="sidebar z-50">
+        <div className="sidebar-top">
+          <div className="sidebar-brand">
+            <h1>DevPath</h1>
+          </div>
+
+          <div className="sidebar-section-label">NAVIGATION</div>
+
+          <nav className="sidebar-nav">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={location.pathname === item.path ? "active" : ""}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="sidebar-bottom">
+          <div className="sidebar-bottom-links">
+            <a href="#settings">
+              <span className="nav-icon"><SettingsIcon /></span>
+              Settings
+            </a>
+            <Link to="/">
+              <span className="nav-icon"><LogoutIcon /></span>
+              Logout
+            </Link>
+          </div>
+
+          <div className="sidebar-user-card">
+            <div className="sidebar-avatar">JD</div>
+            <div className="sidebar-user-info">
+              <div className="sidebar-user-name">Architect Navigator</div>
+              <div className="sidebar-user-level">Lvl 24 Dev</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ===================== MAIN CONTENT ===================== */}
+      <main className="dashboard-main relative overflow-hidden bg-[#0b1326] flex flex-col font-sans">
+        
+        {/* Header Bar - Glassmorphism tối */}
       <header className="absolute top-0 left-0 right-0 z-10 bg-[#0b1326]/80 backdrop-blur-md border-b border-[#334155]/50 p-5 flex justify-between items-center shadow-lg">
         <h1 className="text-2xl font-black text-white tracking-tighter">
           <span className="text-transparent bg-clip-text bg-gradient-to-br from-[#4cd7f6] to-cyan-600">JS</span> Skill Tree
@@ -170,6 +258,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
         </ReactFlow>
       </div>
 
+      </main>
     </div>
   );
 };

@@ -29,11 +29,7 @@ function App() {
       />
       <Route
         path="/roadmap"
-        element={
-          <ProtectedRoute>
-            <RoadmapPage />
-          </ProtectedRoute>
-        }
+        element={<RoadmapPage />}
       />
 
       {/* ĐÃ SỬA: Bỏ vỏ bọc ProtectedRoute cho riêng trang Dashboard để bạn test */}

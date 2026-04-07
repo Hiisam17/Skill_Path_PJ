@@ -79,9 +79,31 @@ export const JavaScriptSkillTreePage: React.FC = () => {
     legend: () => null    
   }), []);
 
-  const initialNodes = jsData.nodes.map(node => ({
-    ...node,
-  }));
+  // Hệ số giãn cách (tăng lên để các Node không bị dính vào nhau)
+  const SCALE_X = 1.5;
+  const SCALE_Y = 1.5;
+
+  const initialNodes = jsData.nodes.map(node => {
+    // Cập nhật lại chiều dài/rộng cho các node là đường nối hoặc khối bao ngoài
+    let customStyle: any = { ...node.style };
+    
+    if (node.type === 'vertical') {
+      customStyle.height = (node.height || node.style?.height || 0) * SCALE_Y;
+    }
+    if (node.type === 'section') {
+      customStyle.height = (node.height || node.style?.height || 0) * SCALE_Y;
+      customStyle.width = (node.width || node.style?.width || 0) * SCALE_X;
+    }
+
+    return {
+      ...node,
+      position: {
+        x: node.position.x * SCALE_X,
+        y: node.position.y * SCALE_Y,
+      },
+      style: customStyle,
+    };
+  });
 
   // Chỉnh sửa các đường nối (Edges) cho hợp tone
   const initialEdges = jsData.edges.map(edge => ({

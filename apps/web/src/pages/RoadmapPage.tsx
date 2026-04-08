@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 type NodeItem = {
   id: string;
   label: React.ReactNode;
+  noStyle?: boolean;
 };
 
 type RowData = {
@@ -43,11 +44,16 @@ const LeftNode = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-const RightNode = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative group w-full min-w-[180px] max-w-[260px] bg-[#1E293B] border border-[#334155] text-gray-300 px-5 py-3 rounded-lg text-sm text-center z-10 shadow-lg hover:border-cyan-400 transition-colors before:absolute before:top-1/2 before:-left-44 before:w-44 before:border-t-2 before:border-dashed before:border-[#06B6D4] before:opacity-60 before:-z-10 flex flex-col items-center justify-center">
-    {children}
-  </div>
-);
+const RightNode = ({ children, noStyle }: { children: React.ReactNode; noStyle?: boolean }) => {
+  if (noStyle) {
+    return <div className="relative w-full z-10 flex flex-col items-center">{children}</div>;
+  }
+  return (
+    <div className="relative group w-full min-w-[180px] max-w-[260px] bg-[#1E293B] border border-[#334155] text-gray-300 px-5 py-3 rounded-lg text-sm text-center z-10 shadow-lg hover:border-cyan-400 transition-colors before:absolute before:top-1/2 before:-left-44 before:w-44 before:border-t-2 before:border-dashed before:border-[#06B6D4] before:opacity-60 before:-z-10 flex flex-col items-center justify-center">
+      {children}
+    </div>
+  );
+};
 
 const roadmapData: RowData[] = [
   {
@@ -88,7 +94,7 @@ const roadmapData: RowData[] = [
           <div className="flex flex-col gap-2 w-full relative">
             <span>Frontend Development</span>
             <div className="flex gap-2 justify-center mt-2 border-t border-dashed border-[#334155] pt-3 relative">
-               <div className="absolute -top-3 left-1/2 w-[1px] h-3 border-l border-dashed border-[#334155]"></div>
+              <div className="absolute -top-3 left-1/2 w-[1px] h-3 border-l border-dashed border-[#334155]"></div>
               <span className="bg-[#0F172A] border border-[#334155] rounded px-2 py-1 text-xs font-semibold">
                 HTML
               </span>
@@ -148,33 +154,101 @@ const roadmapData: RowData[] = [
       { id: "sub-sup", label: <Pair a="sub" b="sup" /> },
       { id: "links", label: "Links" },
     ],
-  },
-  {
-    id: "grouping-text",
-    centerNode: "Grouping text",
-    rightNodes: [{ id: "div-span", label: <Pair a="div" b="span" /> }],
-  },
-  {
-    id: "standard-attributes",
-    centerNode: "Standard attributes",
-    leftNodes: [
-      { id: "id-class", label: <Pair a="id" b="class" /> },
-      { id: "data-attr", label: "Data Attributes" },
-      { id: "style", label: "style" },
+    rightNodes: [
+      {
+        id: "grouping-text-branch",
+        noStyle: true,
+        label: (
+          <div className="flex flex-col items-center w-full relative">
+            {/* 2 SMALL NODES ABOVE GROUPING TEXT */}
+            <div className="flex gap-6 relative justify-center w-full max-w-[260px] mb-6">
+              <div className="relative z-20">
+                <div className="bg-[#1E293B] border border-[#334155] text-gray-300 px-4 py-2 rounded-lg text-sm text-center shadow-lg w-24 hover:border-cyan-400 transition-colors">div</div>
+                <div className="absolute top-full left-1/2 w-[2px] h-4 border-l-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+                <div className="absolute top-[calc(100%+16px)] left-1/2 w-[calc(50%+0.75rem)] h-[2px] border-t-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+              </div>
+              <div className="relative z-20">
+                <div className="bg-[#1E293B] border border-[#334155] text-gray-300 px-4 py-2 rounded-lg text-sm text-center shadow-lg w-24 hover:border-cyan-400 transition-colors">span</div>
+                <div className="absolute top-full left-1/2 w-[2px] h-4 border-l-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+                <div className="absolute top-[calc(100%+16px)] right-1/2 w-[calc(50%+0.75rem)] h-[2px] border-t-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+              </div>
+              {/* Vertical drop line down to Grouping Text */}
+              <div className="absolute top-[calc(100%+16px)] left-1/2 w-[2px] h-4 border-l-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+            </div>
+
+            {/* GROUPING TEXT (BIG NODE) */}
+            <div className="relative bg-[#1E293B] border-2 border-[#06B6D4] text-[#F8FAFC] px-6 py-4 rounded-xl font-bold w-full max-w-[260px] text-center shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform tracking-wider z-20 mb-16">
+              {/* Dashed line connecting to Central Spine */}
+              <div className="absolute top-1/2 -left-44 w-44 border-t-2 border-dashed border-[#06B6D4] opacity-60 -z-10"></div>
+              Grouping text
+
+              {/* Line down to Standard attributes (Lengthened) */}
+              <div className="absolute top-full left-1/2 w-[2px] h-[72px] border-l-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+            </div>
+
+            {/* STANDARD ATTRIBUTES (BIG NODE UNDERNEATH) */}
+            <div className="relative bg-[#1E293B] border-2 border-[#06B6D4] text-[#F8FAFC] px-6 py-4 rounded-xl font-bold w-full max-w-[260px] text-center shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform tracking-wider z-20">
+              Standard attributes
+
+              {/* CHILDREN of Standard attributes (ON THE LEFT to match screenshot without crossing center spine) */}
+              <div className="absolute top-1/2 right-full mr-6 flex flex-col gap-3 -translate-y-1/2 z-20">
+                {/* Horizontal connector from Standard Attributes */}
+                <div className="absolute top-1/2 -right-6 w-6 border-t-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+
+                {/* Vertical spine for the children */}
+                <div className="absolute top-[20px] bottom-[20px] -right-4 w-[2px] border-l-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+
+                <div className="relative bg-[#1E293B] border border-[#334155] text-gray-300 p-2 rounded-lg text-sm text-center shadow-lg w-32 hover:border-cyan-400 transition-colors">
+                  <div className="absolute top-1/2 -right-4 w-4 border-t-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+                  <Pair a="id" b="class" />
+                </div>
+                <div className="relative bg-[#1E293B] border border-[#334155] text-gray-300 py-2 rounded-lg text-sm text-center shadow-lg w-32 hover:border-cyan-400 transition-colors">
+                  <div className="absolute top-1/2 -right-4 w-4 border-t-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+                  Data Attributes
+                </div>
+                <div className="relative bg-[#1E293B] border border-[#334155] text-gray-300 py-2 rounded-lg text-sm text-center shadow-lg w-32 hover:border-cyan-400 transition-colors">
+                  <div className="absolute top-1/2 -right-4 w-4 border-t-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+                  style
+                </div>
+              </div>
+            </div>
+          </div>
+        ),
+      },
     ],
   },
   {
     id: "table-tag",
     centerNode: "Table Tag",
-  },
-  {
-    id: "lists-and-types",
-    centerNode: "Lists and Types",
     rightNodes: [
-      { id: "ordered", label: "Ordered lists" },
-      { id: "unordered", label: "Unordered lists" },
-      { id: "definition", label: "Definition lists" },
-      { id: "nested", label: "Nested lists" },
+      {
+        id: "lists-branch",
+        noStyle: true,
+        label: (
+          <div className="flex flex-col items-center w-full relative">
+            {/* LISTS AND TYPES (BIG NODE) */}
+            <div className="relative bg-[#1E293B] border-2 border-[#06B6D4] text-[#F8FAFC] px-6 py-4 rounded-xl font-bold w-full max-w-[260px] text-center shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform tracking-wider z-20">
+              {/* Horizontal line LEFT to Table Tag */}
+              <div className="absolute top-1/2 -left-44 w-44 border-t-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+
+              {/* Vertical line UP to reconnect with Standard Attributes */}
+              <div className="absolute bottom-1/2 left-1/2 w-[2px] h-[300px] border-l-2 border-dashed border-[#06B6D4] opacity-70 -z-10 bg-transparent"></div>
+
+              Lists and Types
+            </div>
+
+            {/* CHILDREN STACKED BELOW */}
+            <div className="flex flex-col gap-3 mt-6 relative w-48 z-20">
+              <div className="absolute -top-6 bottom-6 left-1/2 w-[2px] border-l-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+
+              <div className="bg-[#1E293B] border border-[#334155] text-gray-300 py-2 rounded-lg text-sm text-center shadow-lg hover:border-cyan-400 transition-colors">Ordered lists</div>
+              <div className="bg-[#1E293B] border border-[#334155] text-gray-300 py-2 rounded-lg text-sm text-center shadow-lg hover:border-cyan-400 transition-colors">Unordered lists</div>
+              <div className="bg-[#1E293B] border border-[#334155] text-gray-300 py-2 rounded-lg text-sm text-center shadow-lg hover:border-cyan-400 transition-colors">Definition lists</div>
+              <div className="bg-[#1E293B] border border-[#334155] text-gray-300 py-2 rounded-lg text-sm text-center shadow-lg hover:border-cyan-400 transition-colors">Nested lists</div>
+            </div>
+          </div>
+        )
+      }
     ],
   },
   {
@@ -182,14 +256,19 @@ const roadmapData: RowData[] = [
     centerNode: "Embedding Media",
     leftNodes: [
       {
-        id: "images",
+        id: "images-branch",
+        noStyle: true,
         label: (
-          <div className="flex flex-col gap-3 w-full">
-            <span>Images</span>
-            <div className="flex flex-col gap-1 border-t border-dashed border-[#334155] pt-3 relative">
-               <div className="absolute -top-3 left-1/2 w-[1px] h-3 border-l border-dashed border-[#334155]"></div>
-              <span className="bg-[#0F172A] border border-[#334155] rounded px-2 py-1 text-xs">Priority Hints</span>
-              <span className="bg-[#0F172A] border border-[#334155] rounded px-2 py-1 text-xs">img vs figure</span>
+          <div className="flex flex-col items-center w-full relative">
+            <div className="flex flex-col gap-3 mb-6 relative w-48 z-20">
+              <div className="absolute top-4 bottom-[-24px] left-1/2 w-[2px] border-l-2 border-dashed border-[#06B6D4] -z-10 opacity-70"></div>
+              <div className="bg-[#1E293B] border border-[#334155] text-gray-300 py-2 rounded-lg text-sm text-center shadow-lg hover:border-cyan-400 transition-colors">Priority Hints</div>
+              <div className="bg-[#1E293B] border border-[#334155] text-gray-300 py-2 rounded-lg text-sm text-center shadow-lg hover:border-cyan-400 transition-colors">img vs figure</div>
+            </div>
+
+            <div className="relative w-full max-w-[260px] bg-[#1E293B] border border-[#334155] text-gray-300 px-5 py-3 rounded-lg text-sm text-center z-20 shadow-lg hover:border-cyan-400 transition-colors">
+              <div className="absolute top-1/2 -right-44 w-44 border-t-2 border-dashed border-[#06B6D4] opacity-70 -z-10"></div>
+              Images
             </div>
           </div>
         ),
@@ -344,15 +423,21 @@ export const RoadmapPage = () => {
 
               {/* Center Column */}
               <div className="w-64 flex flex-col justify-center items-center relative z-20">
-                <div className="bg-[#1E293B] border-2 border-[#06B6D4] text-[#F8FAFC] px-6 py-4 rounded-xl font-bold w-full text-center shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:scale-105 transition-transform cursor-pointer tracking-wider">
+                {/* ERASER to break the central spine above Table Tag */}
+                {row.id === "table-tag" && (
+                  <div className="absolute bottom-[20px] left-1/2 -translate-x-1/2 w-[8px] h-[300px] bg-[#0b1326] z-[1]"></div>
+                )}
+                <div className="bg-[#1E293B] border-2 border-[#06B6D4] text-[#F8FAFC] px-6 py-4 rounded-xl font-bold w-full text-center shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:scale-105 transition-transform cursor-pointer tracking-wider relative z-10">
                   {row.centerNode}
                 </div>
               </div>
 
               {/* Right Column */}
-              <div className="flex-1 flex flex-col items-start pl-12 gap-4">
+              <div className="flex-1 flex flex-col items-start pl-12 gap-4 pt-12">
                 {row.rightNodes?.map((node) => (
-                  <RightNode key={node.id}>{node.label}</RightNode>
+                  <RightNode key={node.id} noStyle={node.noStyle}>
+                    {node.label}
+                  </RightNode>
                 ))}
               </div>
             </div>

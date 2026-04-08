@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ReactFlow, {
   Background,
@@ -44,6 +44,104 @@ const LogoutIcon = () => (
     <path d="M13 3h3a1 1 0 011 1v12a1 1 0 01-1 1h-3" /><path d="M10 10H3m0 0l3-3m-3 3l3 3" />
   </svg>
 );
+
+/* ── Drawer & Resource SVG Components ── */
+const ArticleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-400">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+    <polyline points="14 2 14 8 20 8"></polyline>
+    <line x1="16" y1="13" x2="8" y2="13"></line>
+    <line x1="16" y1="17" x2="8" y2="17"></line>
+    <polyline points="10 9 9 9 8 9"></polyline>
+  </svg>
+);
+
+const VideoIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400">
+    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+    <line x1="7" y1="2" x2="7" y2="22"></line>
+    <line x1="17" y1="2" x2="17" y2="22"></line>
+    <line x1="2" y1="12" x2="22" y2="12"></line>
+    <line x1="2" y1="7" x2="7" y2="7"></line>
+    <line x1="2" y1="17" x2="7" y2="17"></line>
+    <line x1="17" y1="17" x2="22" y2="17"></line>
+    <line x1="17" y1="7" x2="22" y2="7"></line>
+  </svg>
+);
+
+const FeedIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-400">
+    <path d="M4 11a9 9 0 0 1 9 9"></path>
+    <path d="M4 4a16 16 0 0 1 16 16"></path>
+    <circle cx="5" cy="19" r="1"></circle>
+  </svg>
+);
+
+/* ── Markdown Parsing & Mock Data ── */
+interface Resource {
+  type: string;
+  title: string;
+  url: string;
+}
+
+interface ParsedMarkdown {
+  title: string;
+  description: string[];
+  resources: Resource[];
+}
+
+const parseCustomMarkdown = (md: string): ParsedMarkdown => {
+  const lines = md.split('\n');
+  let title = '';
+  const description: string[] = [];
+  const resources: Resource[] = [];
+  
+  const resourceRegex = /-\s+\[@(.*?)@(.*?)\]\((.*?)\)/;
+
+  for (const line of lines) {
+    if (line.startsWith('# ')) {
+      title = line.replace('# ', '').trim();
+      continue;
+    }
+    
+    const match = line.match(resourceRegex);
+    if (match) {
+      resources.push({
+        type: match[1] || 'article',
+        title: match[2].trim(),
+        url: match[3].trim()
+      });
+      continue;
+    }
+
+    if (line.toLowerCase().includes('visit the following resources')) {
+      continue;
+    }
+
+    if (line.trim() !== '') {
+      description.push(line.trim());
+    }
+  }
+
+  return { title, description, resources };
+};
+
+const mockMarkdown = `
+# What is JavaScript?
+
+JavaScript, often abbreviated JS, is a programming language that is one of the core technologies of the World Wide Web, alongside HTML and CSS. It lets us add interactivity to pages e.g. you might have seen sliders, alerts, click interactions, popups, etc on different websites -- all of that is built using JavaScript. Apart from being used in the browser, it is also used in other non-browser environments as well such as Node.js for writing server-side code in JavaScript, Electron for writing desktop applications, React Native for mobile applications, and so on.
+
+Visit the following resources to learn more:
+
+- [@article@JavaScript MDN Docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+- [@article@The Modern JavaScript Tutorial](https://javascript.info/)
+- [@article@A Comprehensive Course on JavaScript with Quizzes and Exercises - CodeGuage](https://www.codeguage.com/courses/js/)
+- [@article@Exploring JS: JavaScript books for programmers](https://exploringjs.com/)
+- [@video@JavaScript Crash Course for Beginners](https://youtu.be/hdI2bqOjy3c?t=2)
+- [@video@Build a Netflix Landing Page Clone with HTML, CSS & JS](https://youtu.be/P7t13SGytRk?t=22)
+- [@video@Learn JavaScript - Full Course for Beginners](https://www.youtube.com/watch?v=PkZNo7MFNFg)
+- [@feed@Explore top posts about JavaScript](https://app.daily.dev/tags/javascript?ref=roadmapsh)
+`;
 
 /* =========================================
    CÁC CUSTOM NODES (Tùy chỉnh UI DevPath)
@@ -134,6 +232,22 @@ const TextNode = ({ data }: any) => (
 ========================================= */
 export const JavaScriptSkillTreePage: React.FC = () => {
   const location = useLocation();
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedNodeData, setSelectedNodeData] = useState<ParsedMarkdown | null>(null);
+
+  const handleNodeClick = (event: React.MouseEvent, node: any) => {
+    // Ngăn chặn sự kiện cho các node cấu trúc
+    if (node.type === 'vertical' || node.type === 'section' || node.type === 'legend') return;
+    
+    // Parse mock markdown string thành data
+    const parsedData = parseCustomMarkdown(mockMarkdown);
+    if (!parsedData.title) {
+      parsedData.title = node.data.label;
+    }
+    
+    setSelectedNodeData(parsedData);
+    setIsPanelOpen(true);
+  };
 
   const navItems = [
     { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
@@ -288,6 +402,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
             nodes={initialNodes}
             edges={initialEdges}
             nodeTypes={nodeTypes}
+            onNodeClick={handleNodeClick}
             fitView
             minZoom={0.1}
             maxZoom={1.5}
@@ -319,6 +434,84 @@ export const JavaScriptSkillTreePage: React.FC = () => {
               className="bg-[#171f33] border border-[#334155] rounded-xl shadow-2xl overflow-hidden"
             />
           </ReactFlow>
+        </div>
+
+        {/* Side Detail Panel (Drawer) */}
+        <div 
+          className={`absolute top-0 right-0 h-full w-full md:w-[420px] bg-[#171f33]/95 backdrop-blur-xl border-l border-[#334155] shadow-2xl transition-transform duration-300 ease-out z-50 flex flex-col ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        >
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between p-6 border-b border-[#334155]/60 bg-[#171f33]">
+            <h2 className="text-2xl font-black text-white tracking-tight">{selectedNodeData?.title || 'Node Details'}</h2>
+            <button 
+              onClick={() => setIsPanelOpen(false)}
+              className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          {/* Drawer Content Area */}
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar">
+            {/* Description */}
+            <div className="text-gray-300 leading-relaxed text-[15px] flex flex-col gap-4">
+              {selectedNodeData?.description.map((paragraph, idx) => (
+                <p key={idx}>{paragraph}</p>
+              ))}
+            </div>
+
+            {/* Resources */}
+            {selectedNodeData?.resources && selectedNodeData.resources.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-white font-bold mb-4 uppercase tracking-widest text-xs flex items-center gap-2">
+                  <span className="w-4 h-[3px] bg-[#4cd7f6] rounded shadow-[0_0_8px_rgba(76,215,246,0.5)]"></span>
+                  Free Resources
+                </h3>
+                <div className="flex flex-col gap-3">
+                  {selectedNodeData.resources.map((res, idx) => {
+                    let accentColor = 'border-[#334155]';
+                    let Icon = ArticleIcon;
+                    if (res.type === 'article') { accentColor = 'border-yellow-400/30'; Icon = ArticleIcon; }
+                    else if (res.type === 'video') { accentColor = 'border-purple-400/30'; Icon = VideoIcon; }
+                    else if (res.type === 'feed') { accentColor = 'border-pink-400/30'; Icon = FeedIcon; }
+
+                    return (
+                      <a 
+                        key={idx} 
+                        href={res.url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className={`group bg-[#222a3d]/80 border ${accentColor} hover:border-[#4cd7f6] rounded-xl p-4 flex items-start gap-4 transition-all duration-300 hover:bg-[#222a3d] hover:shadow-[0_4px_20px_rgba(76,215,246,0.15)] hover:-translate-y-0.5`}
+                      >
+                        <div className="mt-0.5 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
+                          <Icon />
+                        </div>
+                        <div className="flex-1 text-sm font-semibold text-gray-300 group-hover:text-white transition-colors">
+                          {res.title}
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sticky Footer */}
+          <div className="p-6 border-t border-[#334155]/60 bg-[#171f33] shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
+            <button 
+              className="w-full bg-gradient-to-r from-[#4cd7f6] to-cyan-500 text-[#0b1326] font-black tracking-wide py-3.5 px-4 rounded-xl shadow-[0_0_20px_rgba(76,215,246,0.25)] hover:shadow-[0_0_25px_rgba(76,215,246,0.4)] hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2"
+              onClick={() => setIsPanelOpen(false)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Mark as Done
+            </button>
+          </div>
         </div>
 
       </main>

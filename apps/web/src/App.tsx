@@ -6,6 +6,7 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SkillsTreePage } from "./pages/SkillsTreePage";
+import { FrontendRoadmapPage } from "./pages/FrontendRoadmapPage";
 import Layout from "./components/Layout";
 
 /**
@@ -25,6 +26,7 @@ function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Navigate to="/skills-tree" replace />} />
         <Route path="/skills-tree" element={<SkillsTreePage />} />
+        <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} />
         <Route path="*" element={<Navigate to="/skills-tree" replace />} />
       </Route>
     </Routes>

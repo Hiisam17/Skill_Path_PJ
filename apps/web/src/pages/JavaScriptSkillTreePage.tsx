@@ -222,10 +222,27 @@ const VerticalNode = () => (
 
 // Text thuần (Label, Title, Paragraph) - Chữ màu xám sáng
 const TextNode = ({ data }: any) => (
-  <div className="text-gray-400 font-black text-center p-2 text-2xl tracking-tight">
+  <div className="text-gray-400 font-bold text-center p-2 text-lg">
     {data.label}
   </div>
 );
+
+// Title đặc biệt cho "JavaScript"
+const MainTitleNode = ({ data }: any) => {
+  if (data.label === 'JavaScript') {
+    return (
+      <div className="text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-[#4cd7f6] to-[#26ffbb] py-4 px-2 select-none">
+        {data.label}
+      </div>
+    );
+  }
+  return (
+    <div className="text-gray-200 font-black text-3xl tracking-tight uppercase">
+      {data.label}
+    </div>
+  );
+};
+
 
 /* =========================================
    MAIN COMPONENT
@@ -259,7 +276,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
     topic: TopicNode,
     subtopic: SubtopicNode,
     vertical: VerticalNode,
-    title: TextNode,
+    title: MainTitleNode,
     paragraph: TextNode,
     label: TextNode,
     button: SubtopicNode,
@@ -271,7 +288,12 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   const SCALE_X = 1.5;
   const SCALE_Y = 1.5;
 
-  const initialNodes = jsData.nodes.map(node => {
+  // Danh sách ID các node cần xoá (roadmap.sh info)
+  const REMOVE_NODE_IDS = ['yHmHXymPNWwu8p1vvqD3o', 'R_Fs6rdl2XtQ9aLOubMqL'];
+
+  const initialNodes = jsData.nodes
+    .filter(node => !REMOVE_NODE_IDS.includes(node.id))
+    .map(node => {
     // Cập nhật lại chiều dài/rộng cho các node là đường nối hoặc khối bao ngoài
     let customStyle: any = { ...node.style };
 
@@ -360,12 +382,15 @@ export const JavaScriptSkillTreePage: React.FC = () => {
     .filter(Boolean);
   const mainTopicIdsSet = new Set(mainTopicIds);
 
-  // Lọc bớt các edge cũ kết nối với vertical nodes hoặc giữa các main topic
+  // Lọc bớt các edge cũ kết nối với vertical nodes hoặc giữa các main topic hoặc node bị xoá
   const verticalNodeIds = new Set(initialNodes.filter(n => n.type === 'vertical').map(n => n.id));
+  const removeNodesSet = new Set(REMOVE_NODE_IDS);
   
   processedEdges = processedEdges.filter(edge => {
     // Không dùng lại cạnh liên quan đến vertical node
     if (verticalNodeIds.has(edge.source) || verticalNodeIds.has(edge.target)) return false;
+    // Không dùng lại cạnh liên quan đến node bị xoá (roadmap.sh)
+    if (removeNodesSet.has(edge.source) || removeNodesSet.has(edge.target)) return false;
     // Không dùng lại cạnh nối giữa 2 main topic cũ (vì đã có flow mới)
     if (mainTopicIdsSet.has(edge.source) && mainTopicIdsSet.has(edge.target)) return false;
     return true;

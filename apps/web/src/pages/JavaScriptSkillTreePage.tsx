@@ -565,7 +565,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
         >
           {/* Drawer Header */}
           <div className="flex items-center justify-between p-7 border-b border-[#334155]/60 bg-[#171f33]">
-            <h2 className="text-5xl font-black text-white tracking-tight drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]">
+            <h2 className="text-3xl font-black !text-white tracking-tight drop-shadow-[0_0_20px_rgba(76,215,246,0.3)]">
               {selectedNodeData?.title || 'Node Details'}
             </h2>
             <button 

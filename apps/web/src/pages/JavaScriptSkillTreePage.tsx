@@ -14,7 +14,7 @@ import "./DashboardPage.css";
 import jsData from '../javascript.json';
 
 // Import all markdown files from the content folder
-const contentModules = import.meta.glob('../content/*.md', { as: 'raw', eager: true });
+const contentModules = import.meta.glob('../content/*.md', { query: '?raw', import: 'default', eager: true });
 
 // Map to store content by node ID
 const contentMap: Record<string, string> = {};

@@ -212,9 +212,9 @@ const SubtopicNode = ({ data }: any) => {
   );
 };
 
-// Trục dọc (Vertical) - Đường dẫn Cyberpunk
+// Trục dọc (Vertical) - Ẩn đi để nhường chỗ cho Custom Flow Line
 const VerticalNode = () => (
-  <div className="w-full h-full border-l-[3px] border-dashed border-[#4cd7f6] opacity-40">
+  <div className="w-full h-full opacity-0 pointer-events-none">
     <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
     <Handle id="y2" type="source" position={Position.Bottom} className="opacity-0" />
   </div>
@@ -308,7 +308,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   });
 
   // Chỉnh sửa các đường nối (Edges)
-  const initialEdges = jsData.edges.map(edge => {
+  let processedEdges = jsData.edges.map(edge => {
     // Xác định kiểu đường nối dựa trên handle
     // x, z thường là rẽ ngang (smoothstep), w, y là dọc (default)
     const isHorizontal = edge.sourceHandle?.startsWith('x') || edge.sourceHandle?.startsWith('z') ||
@@ -330,6 +330,94 @@ export const JavaScriptSkillTreePage: React.FC = () => {
       }
     };
   });
+
+  // Đường flow giữa các node chính: liền nhau không đứt đoạn, có nét đậm, nối liên tiếp
+  const mainFlowOrder = [
+    'Introduction to JavaScript',
+    'All about Variables',
+    'Data Types',
+    'Type Casting',
+    'Data Structures',
+    'Equality Comparisons',
+    'Loops and Iterations',
+    'Control Flow',
+    'Expressions & Operators',
+    'Functions',
+    'DOM APIs',
+    'Strict Mode',
+    'Using (this) keyword',
+    'Asynchronous JavaScript',
+    'Working with APIs',
+    'Classes',
+    'Iterators and Generators',
+    'Modules in JavaScript',
+    'Memory Management',
+    'Using Browser DevTools'
+  ];
+
+  const mainTopicIds = mainFlowOrder
+    .map(label => initialNodes.find(n => n.data?.label === label)?.id)
+    .filter(Boolean);
+  const mainTopicIdsSet = new Set(mainTopicIds);
+
+  // Lọc bớt các edge cũ kết nối với vertical nodes hoặc giữa các main topic
+  const verticalNodeIds = new Set(initialNodes.filter(n => n.type === 'vertical').map(n => n.id));
+  
+  processedEdges = processedEdges.filter(edge => {
+    // Không dùng lại cạnh liên quan đến vertical node
+    if (verticalNodeIds.has(edge.source) || verticalNodeIds.has(edge.target)) return false;
+    // Không dùng lại cạnh nối giữa 2 main topic cũ (vì đã có flow mới)
+    if (mainTopicIdsSet.has(edge.source) && mainTopicIdsSet.has(edge.target)) return false;
+    return true;
+  });
+
+  const customMainEdges: any[] = [];
+  for (let i = 0; i < mainTopicIds.length - 1; i++) {
+    const sourceId = mainTopicIds[i];
+    const targetId = mainTopicIds[i + 1];
+
+    if (sourceId && targetId) {
+      const sNode = initialNodes.find(n => n.id === sourceId);
+      const tNode = initialNodes.find(n => n.id === targetId);
+
+      let sourceHandle = 'y2'; // default bottom
+      let targetHandle = 'w1'; // default top
+      
+      if (sNode && tNode) {
+        const dx = tNode.position.x - sNode.position.x;
+        const dy = tNode.position.y - sNode.position.y;
+        
+        // Rẽ ngang nếu khoảng cách X lớn hơn Y
+        if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 100) {
+          sourceHandle = dx > 0 ? 'x2' : 'z2';
+          targetHandle = dx > 0 ? 'z1' : 'x1';
+        } else if (dy < -50 && Math.abs(dx) < 100) {
+          // Đi ngược lên trên (fallback)
+          sourceHandle = 'w2';
+          targetHandle = 'y1';
+        }
+      }
+
+      customMainEdges.push({
+        id: `custom-flow-${sourceId}-${targetId}`,
+        source: sourceId,
+        target: targetId,
+        type: 'smoothstep',
+        sourceHandle,
+        targetHandle,
+        animated: true,
+        style: {
+          stroke: '#4cd7f6', // Nét Cyan 
+          strokeWidth: 5,    // Nét đậm
+          strokeDasharray: 'none', // Liền nhau không đứt đoạn
+          opacity: 1
+        },
+        zIndex: 1000
+      });
+    }
+  }
+
+  const finalEdges = [...processedEdges, ...customMainEdges];
 
   return (
     <div className="dashboard-layout">
@@ -400,7 +488,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
         <div className="flex-1 w-full h-full relative">
           <ReactFlow
             nodes={initialNodes}
-            edges={initialEdges}
+            edges={finalEdges}
             nodeTypes={nodeTypes}
             onNodeClick={handleNodeClick}
             fitView

@@ -112,7 +112,7 @@ const parseCustomMarkdown = (md: string): ParsedMarkdown => {
   let title = '';
   const description: string[] = [];
   const resources: Resource[] = [];
-  
+
   const resourceRegex = /-\s+\[@(.*?)@(.*?)\]\((.*?)\)/;
 
   for (const line of lines) {
@@ -120,7 +120,7 @@ const parseCustomMarkdown = (md: string): ParsedMarkdown => {
       title = line.replace('# ', '').trim();
       continue;
     }
-    
+
     const match = line.match(resourceRegex);
     if (match) {
       resources.push({
@@ -149,41 +149,66 @@ const parseCustomMarkdown = (md: string): ParsedMarkdown => {
    CÁC CUSTOM NODES (Tùy chỉnh UI DevPath)
 ========================================= */
 
-// Checkmark icon component - Đổi sang màu Cyan đặc trưng
-const Checkmark = ({ className }: { className?: string }) => (
-  <div className={`absolute -top-3 -right-3 w-6 h-6 bg-[#4cd7f6] rounded-full border-2 border-[#171f33] flex items-center justify-center shadow-[0_0_10px_rgba(76,215,246,0.6)] z-10 ${className || ''}`}>
-    <svg className="w-3 h-3 text-[#171f33]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path>
-    </svg>
-  </div>
-);
+// Checkmark icon component - Cập nhật theo trạng thái
+const StatusIndicator = ({ status, className }: { status?: string, className?: string }) => {
+  if (status === 'not-started') return null;
 
-// Node chính (Topic) - Khối Bento tối màu, viền Cyan phát sáng
-const TopicNode = ({ data }: any) => (
-  <div className="relative bg-[#171f33] border-2 border-[#4cd7f6] px-6 py-4 rounded-xl shadow-[0_0_20px_rgba(76,215,246,0.3)] min-w-[200px] text-center group hover:scale-105 transition-transform backdrop-blur-sm">
-    <Checkmark />
-    {/* Top Handles */}
-    <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
-    <Handle id="w2" type="source" position={Position.Top} className="opacity-0" />
+  const isCompleted = status === 'completed';
+  const color = isCompleted ? '#4cd7f6' : '#fb923c'; // Cyan cho Completed, Orange cho In Progress
+  const glow = isCompleted ? 'rgba(76,215,246,0.6)' : 'rgba(251,146,60,0.6)';
 
-    <span className="text-white font-black text-lg tracking-wide drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{data.label}</span>
+  return (
+    <div
+      className={`absolute -top-3 -right-3 w-6 h-6 rounded-full border-2 border-[#171f33] flex items-center justify-center z-10 ${className || ''}`}
+      style={{ backgroundColor: color, boxShadow: `0 0 10px ${glow}` }}
+    >
+      {isCompleted ? (
+        <svg className="w-3 h-3 text-[#171f33]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path>
+        </svg>
+      ) : (
+        <div className="w-1.5 h-1.5 bg-[#171f33] rounded-full animate-pulse" />
+      )}
+    </div>
+  );
+};
 
-    {/* Bottom Handles */}
-    <Handle id="y1" type="target" position={Position.Bottom} className="opacity-0" />
-    <Handle id="y2" type="source" position={Position.Bottom} className="opacity-0" />
 
-    {/* Right Handles */}
-    <Handle id="x1" type="target" position={Position.Right} className="opacity-0" />
-    <Handle id="x2" type="source" position={Position.Right} className="opacity-0" />
+// Node chính (Topic) - Khối Bento tối màu, viền đổi màu theo trạng thái
+const TopicNode = ({ data }: any) => {
+  const status = data.status || 'not-started';
+  const borderColor = status === 'completed' ? 'border-[#4cd7f6]' :
+    status === 'in-progress' ? 'border-orange-400' : 'border-gray-700';
+  const shadow = status === 'completed' ? 'shadow-[0_0_20px_rgba(76,215,246,0.3)]' :
+    status === 'in-progress' ? 'shadow-[0_0_20px_rgba(251,146,60,0.2)]' : '';
 
-    {/* Left Handles */}
-    <Handle id="z1" type="target" position={Position.Left} className="opacity-0" />
-    <Handle id="z2" type="source" position={Position.Left} className="opacity-0" />
-  </div>
-);
+  return (
+    <div className={`relative bg-[#171f33] border-2 ${borderColor} ${shadow} px-6 py-4 rounded-xl min-w-[200px] text-center group hover:scale-105 transition-all backdrop-blur-sm`}>
+      <StatusIndicator status={status} />
+      {/* Top Handles */}
+      <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
+      <Handle id="w2" type="source" position={Position.Top} className="opacity-0" />
+
+      <span className={`${status === 'not-started' ? 'text-gray-500' : 'text-white'} font-black text-lg tracking-wide transition-colors`}>{data.label}</span>
+
+      {/* Bottom Handles */}
+      <Handle id="y1" type="target" position={Position.Bottom} className="opacity-0" />
+      <Handle id="y2" type="source" position={Position.Bottom} className="opacity-0" />
+
+      {/* Right Handles */}
+      <Handle id="x1" type="target" position={Position.Right} className="opacity-0" />
+      <Handle id="x2" type="source" position={Position.Right} className="opacity-0" />
+
+      {/* Left Handles */}
+      <Handle id="z1" type="target" position={Position.Left} className="opacity-0" />
+      <Handle id="z2" type="source" position={Position.Left} className="opacity-0" />
+    </div>
+  );
+};
 
 // Node phụ (Subtopic) - Khối màu trầm, tương tác hover sáng viền
 const SubtopicNode = ({ data }: any) => {
+  const status = data.status || 'not-started';
   const smallLabels = [
     'var', 'let', 'const',
     'block', 'function', 'global',
@@ -192,15 +217,18 @@ const SubtopicNode = ({ data }: any) => {
   ];
   const isSmall = smallLabels.includes(data.label.toLowerCase());
 
+  const borderColor = status === 'completed' ? 'border-[#4cd7f6]/60' :
+    status === 'in-progress' ? 'border-orange-400/60' : 'border-gray-600';
+
   return (
-    <div className={`relative bg-[#222a3d] border border-gray-600 px-4 py-3 rounded-lg text-center hover:border-[#4cd7f6] hover:shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all group ${isSmall ? 'min-w-[80px]' : 'min-w-[140px]'}`}>
-      <Checkmark className="w-5 h-5 -top-2 -right-2 border-[1.5px] scale-75 opacity-80 group-hover:opacity-100" />
+    <div className={`relative bg-[#222a3d] border ${borderColor} px-4 py-3 rounded-lg text-center hover:border-[#4cd7f6] hover:shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all group ${isSmall ? 'min-w-[80px]' : 'min-w-[140px]'}`}>
+      <StatusIndicator status={status} className="w-5 h-5 -top-2 -right-2 border-[1.5px] scale-75 opacity-80 group-hover:opacity-100" />
 
       {/* Handles tương tự TopicNode */}
       <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
       <Handle id="w2" type="source" position={Position.Top} className="opacity-0" />
 
-      <span className="text-gray-300 font-semibold text-sm group-hover:text-white transition-colors">{data.label}</span>
+      <span className={`${status === 'not-started' ? 'text-gray-500' : 'text-gray-200'} font-semibold text-sm group-hover:text-white transition-colors`}>{data.label}</span>
 
       <Handle id="y1" type="target" position={Position.Bottom} className="opacity-0" />
       <Handle id="y2" type="source" position={Position.Bottom} className="opacity-0" />
@@ -252,29 +280,43 @@ const MainTitleNode = ({ data }: any) => {
 export const JavaScriptSkillTreePage: React.FC = () => {
   const location = useLocation();
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [selectedNodeData, setSelectedNodeData] = useState<ParsedMarkdown | null>(null);
+  const [selectedNodeData, setSelectedNodeData] = useState<ParsedMarkdown & { id: string } | null>(null);
+
+  // State quản lý trạng thái của từng node
+  const [nodeStatuses, setNodeStatuses] = useState<Record<string, 'not-started' | 'in-progress' | 'completed'>>({});
 
   const handleNodeClick = (event: React.MouseEvent, node: any) => {
     // Ngăn chặn sự kiện cho các node cấu trúc
     if (node.type === 'vertical' || node.type === 'section' || node.type === 'legend') return;
-    
+
     // Lấy nội dung từ contentMap dựa trên ID của node
     const markdownContent = contentMap[node.id];
-    
+
+    let parsedData: any;
     if (markdownContent) {
-      const parsedData = parseCustomMarkdown(markdownContent);
-      setSelectedNodeData(parsedData);
-      setIsPanelOpen(true);
+      parsedData = parseCustomMarkdown(markdownContent);
     } else {
       // Fallback nếu không có nội dung md
-      setSelectedNodeData({
+      parsedData = {
         title: node.data.label,
         description: ["Content for this topic is coming soon!"],
         resources: []
-      });
-      setIsPanelOpen(true);
+      };
+    }
+
+    setSelectedNodeData({ ...parsedData, id: node.id });
+    setIsPanelOpen(true);
+  };
+
+  const updateStatus = (status: 'not-started' | 'in-progress' | 'completed') => {
+    if (selectedNodeData) {
+      setNodeStatuses(prev => ({
+        ...prev,
+        [selectedNodeData.id]: status
+      }));
     }
   };
+
 
   const navItems = [
     { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
@@ -304,40 +346,40 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   const initialNodes = jsData.nodes
     .filter(node => !REMOVE_NODE_IDS.includes(node.id))
     .map(node => {
-    // Cập nhật lại chiều dài/rộng cho các node là đường nối hoặc khối bao ngoài
-    let customStyle: any = { ...node.style };
+      // Cập nhật lại chiều dài/rộng cho các node là đường nối hoặc khối bao ngoài
+      let customStyle: any = { ...node.style };
 
-    if (node.type === 'vertical') {
-      customStyle.height = (node.height || node.style?.height || 0) * SCALE_Y;
-    }
-    if (node.type === 'section') {
-      customStyle.height = (node.height || node.style?.height || 0) * SCALE_Y;
-      customStyle.width = (node.width || node.style?.width || 0) * SCALE_X;
-    }
+      if (node.type === 'vertical') {
+        customStyle.height = (node.height || node.style?.height || 0) * SCALE_Y;
+      }
+      if (node.type === 'section') {
+        customStyle.height = (node.height || node.style?.height || 0) * SCALE_Y;
+        customStyle.width = (node.width || node.style?.width || 0) * SCALE_X;
+      }
 
-    let x = node.position.x * SCALE_X;
-    let y = node.position.y * SCALE_Y;
+      let x = node.position.x * SCALE_X;
+      let y = node.position.y * SCALE_Y;
 
-    // Tùy chỉnh vị trí thủ công cho một số Node bị đè
-    if (node.data?.label === 'Introduction to JavaScript') {
-      y -= 30; // đẩy lên
-    }
-    if (node.data?.label === 'All about Variables') {
-      y += 30; // đẩy xuống
-    }
-    if (node.data?.label === 'Classes') {
-      x -= 80; // lùi sang trái
-    }
-    if (node.data?.label === 'Working with APIs') {
-      x += 80; // tiến sang phải
-    }
+      // Tùy chỉnh vị trí thủ công cho một số Node bị đè
+      if (node.data?.label === 'Introduction to JavaScript') {
+        y -= 30; // đẩy lên
+      }
+      if (node.data?.label === 'All about Variables') {
+        y += 30; // đẩy xuống
+      }
+      if (node.data?.label === 'Classes') {
+        x -= 80; // lùi sang trái
+      }
+      if (node.data?.label === 'Working with APIs') {
+        x += 80; // tiến sang phải
+      }
 
-    return {
-      ...node,
-      position: { x, y },
-      style: customStyle,
-    };
-  });
+      return {
+        ...node,
+        position: { x, y },
+        style: customStyle,
+      };
+    });
 
   // Chỉnh sửa các đường nối (Edges)
   let processedEdges = jsData.edges.map(edge => {
@@ -395,7 +437,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   // Lọc bớt các edge cũ kết nối với vertical nodes hoặc giữa các main topic hoặc node bị xoá
   const verticalNodeIds = new Set(initialNodes.filter(n => n.type === 'vertical').map(n => n.id));
   const removeNodesSet = new Set(REMOVE_NODE_IDS);
-  
+
   processedEdges = processedEdges.filter(edge => {
     // Không dùng lại cạnh liên quan đến vertical node
     if (verticalNodeIds.has(edge.source) || verticalNodeIds.has(edge.target)) return false;
@@ -417,11 +459,11 @@ export const JavaScriptSkillTreePage: React.FC = () => {
 
       let sourceHandle = 'y2'; // default bottom
       let targetHandle = 'w1'; // default top
-      
+
       if (sNode && tNode) {
         const dx = tNode.position.x - sNode.position.x;
         const dy = tNode.position.y - sNode.position.y;
-        
+
         // Rẽ ngang nếu khoảng cách X lớn hơn Y
         if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 100) {
           sourceHandle = dx > 0 ? 'x2' : 'z2';
@@ -453,6 +495,18 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   }
 
   const finalEdges = [...processedEdges, ...customMainEdges];
+
+  // Merge status vào nodes để React Flow cập nhật UI
+  const nodes = useMemo(() => {
+    return initialNodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        status: nodeStatuses[node.id] || 'not-started'
+      }
+    }));
+  }, [nodeStatuses, initialNodes]);
+
 
   return (
     <div className="dashboard-layout">
@@ -522,7 +576,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
         {/* React Flow Canvas */}
         <div className="flex-1 w-full h-full relative">
           <ReactFlow
-            nodes={initialNodes}
+            nodes={nodes}
             edges={finalEdges}
             nodeTypes={nodeTypes}
             onNodeClick={handleNodeClick}
@@ -560,41 +614,73 @@ export const JavaScriptSkillTreePage: React.FC = () => {
         </div>
 
         {/* Side Detail Panel (Drawer) */}
-        <div 
+        <div
           className={`absolute top-0 right-0 h-full w-full md:w-[420px] bg-[#171f33]/98 backdrop-blur-2xl border-l border-[#4cd7f6]/30 shadow-2xl transition-transform duration-300 ease-out z-50 flex flex-col ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
         >
           {/* Drawer Header */}
-          <div className="flex items-center justify-between p-7 border-b border-[#334155]/60 bg-[#171f33]">
-            <h2 className="text-3xl font-black !text-white tracking-tight drop-shadow-[0_0_20px_rgba(76,215,246,0.3)]">
-              {selectedNodeData?.title || 'Node Details'}
-            </h2>
-            <button 
-              onClick={() => setIsPanelOpen(false)}
-              className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all"
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+          <div className="flex flex-col gap-4 p-7 border-b border-[#334155]/60 bg-[#171f33]">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[2px]">CORE</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#4cd7f6]/20 flex items-center justify-center text-[#4cd7f6]">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                  </div>
+                  <h2 className="text-3xl font-black !text-white tracking-tight">
+                    {selectedNodeData?.title || 'Node Details'}
+                  </h2>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPanelOpen(false)}
+                className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all self-start"
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            {/* Status Badge at Top Left */}
+            <div className="flex">
+              {(() => {
+                const status = selectedNodeData ? (nodeStatuses[selectedNodeData.id] || 'not-started') : 'not-started';
+                const config = {
+                  'not-started': { label: 'NOT STARTED', color: 'text-orange-400', border: 'border-orange-400/50', bg: 'bg-orange-400/10' },
+                  'in-progress': { label: 'IN PROGRESS', color: 'text-cyan-400', border: 'border-cyan-400/50', bg: 'bg-cyan-400/10' },
+                  'completed': { label: 'COMPLETED', color: 'text-green-400', border: 'border-green-400/50', bg: 'bg-green-400/10' }
+                } as const;
+                const { label, color, border, bg } = config[status];
+                return (
+                  <span className={`px-3 py-1 rounded-full border ${border} ${bg} ${color} text-[10px] font-black tracking-widest`}>
+                    {label}
+                  </span>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Drawer Content Area */}
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar">
-            {/* Description */}
-            <div className="text-gray-100 leading-relaxed text-[15px] flex flex-col gap-4">
-              {selectedNodeData?.description.map((paragraph, idx) => (
-                <p key={idx}>{paragraph}</p>
-              ))}
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 custom-scrollbar">
+            {/* Description Section */}
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-[2px] mb-4">OVERVIEW</h3>
+              <div className="text-gray-100 leading-relaxed text-[15px] flex flex-col gap-4">
+                {selectedNodeData?.description.map((paragraph, idx) => (
+                  <p key={idx}>{paragraph}</p>
+                ))}
+              </div>
             </div>
 
-            {/* Resources */}
+            {/* Resources Section */}
             {selectedNodeData?.resources && selectedNodeData.resources.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-white font-bold mb-4 uppercase tracking-widest text-xs flex items-center gap-2">
-                  <span className="w-4 h-[3px] bg-[#4cd7f6] rounded shadow-[0_0_8px_rgba(76,215,246,0.5)]"></span>
-                  Free Resources
-                </h3>
+              <div>
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-[2px] mb-4">LEARNING RESOURCES</h3>
                 <div className="flex flex-col gap-3">
                   {selectedNodeData.resources.map((res, idx) => {
                     let accentColor = 'border-[#334155]';
@@ -604,10 +690,10 @@ export const JavaScriptSkillTreePage: React.FC = () => {
                     else if (res.type === 'feed') { accentColor = 'border-pink-400/30'; Icon = FeedIcon; }
 
                     return (
-                      <a 
-                        key={idx} 
-                        href={res.url} 
-                        target="_blank" 
+                      <a
+                        key={idx}
+                        href={res.url}
+                        target="_blank"
                         rel="noreferrer"
                         className={`group bg-[#222a3d]/80 border ${accentColor} hover:border-[#4cd7f6] rounded-xl p-4 flex items-start gap-4 transition-all duration-300 hover:bg-[#222a3d] hover:shadow-[0_4px_20px_rgba(76,215,246,0.15)] hover:-translate-y-0.5`}
                       >
@@ -625,17 +711,36 @@ export const JavaScriptSkillTreePage: React.FC = () => {
             )}
           </div>
 
-          {/* Sticky Footer */}
-          <div className="p-6 border-t border-[#334155]/60 bg-[#171f33] shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
-            <button 
-              className="w-full bg-gradient-to-r from-[#4cd7f6] to-cyan-500 text-[#0b1326] font-black tracking-wide py-3.5 px-4 rounded-xl shadow-[0_0_20px_rgba(76,215,246,0.25)] hover:shadow-[0_0_25px_rgba(76,215,246,0.4)] hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2"
-              onClick={() => setIsPanelOpen(false)}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              Mark as Done
-            </button>
+          {/* Change Status Footer */}
+          <div className="p-7 border-t border-[#334155]/60 bg-[#171f33] flex flex-col gap-4 shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-[2px]">CHANGE STATUS:</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {(['not-started', 'in-progress', 'completed'] as const).map((status) => {
+                const isSelected = selectedNodeData && nodeStatuses[selectedNodeData.id] === status || (!selectedNodeData?.id && status === 'not-started') || (selectedNodeData && !nodeStatuses[selectedNodeData.id] && status === 'not-started');
+
+                const labels = {
+                  'not-started': 'Not Started',
+                  'in-progress': 'In Progress',
+                  'completed': 'Completed'
+                };
+
+                return (
+                  <button
+                    key={status}
+                    onClick={() => updateStatus(status)}
+                    className={`
+                      py-3.5 px-2 rounded-xl text-[13px] font-black transition-all duration-300 border-2
+                      ${isSelected
+                        ? 'bg-[#1e293b] border-orange-400 text-orange-400 shadow-[0_0_15px_rgba(251,146,60,0.2)]'
+                        : 'bg-[#1e293b]/40 border-transparent text-gray-500 hover:bg-[#1e293b] hover:text-gray-300'
+                      }
+                    `}
+                  >
+                    {labels[status]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

@@ -13,6 +13,23 @@ import "./DashboardPage.css";
 
 import jsData from '../javascript.json';
 
+// Import all markdown files from the content folder
+const contentModules = import.meta.glob('../content/*.md', { as: 'raw', eager: true });
+
+// Map to store content by node ID
+const contentMap: Record<string, string> = {};
+
+Object.entries(contentModules).forEach(([path, content]) => {
+  const filename = path.split('/').pop() || '';
+  if (filename.includes('@')) {
+    const id = filename.split('@')[1].replace('.md', '');
+    contentMap[id] = content as string;
+  } else if (filename === 'what-is-javascript.md') {
+    // Special case for Introduction to JavaScript
+    contentMap['6khAD6mzZ9S96JJuC5_j6'] = content as string;
+  }
+});
+
 /* ── SVG Icon Components ── */
 const HomeIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -126,22 +143,7 @@ const parseCustomMarkdown = (md: string): ParsedMarkdown => {
   return { title, description, resources };
 };
 
-const mockMarkdown = `
-# What is JavaScript?
-
-JavaScript, often abbreviated JS, is a programming language that is one of the core technologies of the World Wide Web, alongside HTML and CSS. It lets us add interactivity to pages e.g. you might have seen sliders, alerts, click interactions, popups, etc on different websites -- all of that is built using JavaScript. Apart from being used in the browser, it is also used in other non-browser environments as well such as Node.js for writing server-side code in JavaScript, Electron for writing desktop applications, React Native for mobile applications, and so on.
-
-Visit the following resources to learn more:
-
-- [@article@JavaScript MDN Docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-- [@article@The Modern JavaScript Tutorial](https://javascript.info/)
-- [@article@A Comprehensive Course on JavaScript with Quizzes and Exercises - CodeGuage](https://www.codeguage.com/courses/js/)
-- [@article@Exploring JS: JavaScript books for programmers](https://exploringjs.com/)
-- [@video@JavaScript Crash Course for Beginners](https://youtu.be/hdI2bqOjy3c?t=2)
-- [@video@Build a Netflix Landing Page Clone with HTML, CSS & JS](https://youtu.be/P7t13SGytRk?t=22)
-- [@video@Learn JavaScript - Full Course for Beginners](https://www.youtube.com/watch?v=PkZNo7MFNFg)
-- [@feed@Explore top posts about JavaScript](https://app.daily.dev/tags/javascript?ref=roadmapsh)
-`;
+// mockMarkdown đã được thay thế bằng contentMap động
 
 /* =========================================
    CÁC CUSTOM NODES (Tùy chỉnh UI DevPath)
@@ -256,14 +258,22 @@ export const JavaScriptSkillTreePage: React.FC = () => {
     // Ngăn chặn sự kiện cho các node cấu trúc
     if (node.type === 'vertical' || node.type === 'section' || node.type === 'legend') return;
     
-    // Parse mock markdown string thành data
-    const parsedData = parseCustomMarkdown(mockMarkdown);
-    if (!parsedData.title) {
-      parsedData.title = node.data.label;
-    }
+    // Lấy nội dung từ contentMap dựa trên ID của node
+    const markdownContent = contentMap[node.id];
     
-    setSelectedNodeData(parsedData);
-    setIsPanelOpen(true);
+    if (markdownContent) {
+      const parsedData = parseCustomMarkdown(markdownContent);
+      setSelectedNodeData(parsedData);
+      setIsPanelOpen(true);
+    } else {
+      // Fallback nếu không có nội dung md
+      setSelectedNodeData({
+        title: node.data.label,
+        description: ["Content for this topic is coming soon!"],
+        resources: []
+      });
+      setIsPanelOpen(true);
+    }
   };
 
   const navItems = [

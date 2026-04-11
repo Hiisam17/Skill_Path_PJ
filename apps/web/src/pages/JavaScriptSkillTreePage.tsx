@@ -164,7 +164,7 @@ const TopicNode = ({ data }: any) => (
     <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
     <Handle id="w2" type="source" position={Position.Top} className="opacity-0" />
 
-    <span className="text-white font-black text-lg tracking-wide">{data.label}</span>
+    <span className="text-white font-black text-lg tracking-wide drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{data.label}</span>
 
     {/* Bottom Handles */}
     <Handle id="y1" type="target" position={Position.Bottom} className="opacity-0" />
@@ -222,7 +222,7 @@ const VerticalNode = () => (
 
 // Text thuần (Label, Title, Paragraph) - Chữ màu xám sáng
 const TextNode = ({ data }: any) => (
-  <div className="text-gray-400 font-bold text-center p-2 text-lg">
+  <div className="text-gray-200 font-bold text-center p-2 text-lg drop-shadow-[0_0_5px_rgba(255,255,255,0.1)]">
     {data.label}
   </div>
 );
@@ -496,8 +496,8 @@ export const JavaScriptSkillTreePage: React.FC = () => {
 
         {/* Header Bar - Glassmorphism tối */}
         <header className="absolute top-0 left-0 right-0 z-10 bg-[#0b1326]/80 backdrop-blur-md border-b border-[#334155]/50 p-5 flex justify-between items-center shadow-lg">
-          <h1 className="text-2xl font-black text-white tracking-tighter">
-            <span className="text-transparent bg-clip-text bg-gradient-to-br from-[#4cd7f6] to-cyan-600">JS</span> Skill Tree
+          <h1 className="text-2xl font-black tracking-tighter">
+            <span className="text-transparent bg-clip-text bg-gradient-to-br from-[#4cd7f6] to-cyan-400 drop-shadow-[0_0_8px_rgba(76,215,246,0.5)]">JS Skill Tree</span>
           </h1>
           <div className="flex gap-4">
             <button className="bg-[#1E293B] border border-[#334155] text-cyan-400 px-4 py-2 rounded-full font-bold text-sm shadow hover:border-cyan-400 transition-colors">
@@ -551,16 +551,18 @@ export const JavaScriptSkillTreePage: React.FC = () => {
 
         {/* Side Detail Panel (Drawer) */}
         <div 
-          className={`absolute top-0 right-0 h-full w-full md:w-[420px] bg-[#171f33]/95 backdrop-blur-xl border-l border-[#334155] shadow-2xl transition-transform duration-300 ease-out z-50 flex flex-col ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`absolute top-0 right-0 h-full w-full md:w-[420px] bg-[#171f33]/98 backdrop-blur-2xl border-l border-[#4cd7f6]/30 shadow-2xl transition-transform duration-300 ease-out z-50 flex flex-col ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
         >
           {/* Drawer Header */}
-          <div className="flex items-center justify-between p-6 border-b border-[#334155]/60 bg-[#171f33]">
-            <h2 className="text-2xl font-black text-white tracking-tight">{selectedNodeData?.title || 'Node Details'}</h2>
+          <div className="flex items-center justify-between p-7 border-b border-[#334155]/60 bg-[#171f33]">
+            <h2 className="text-5xl font-black text-white tracking-tight drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]">
+              {selectedNodeData?.title || 'Node Details'}
+            </h2>
             <button 
               onClick={() => setIsPanelOpen(false)}
               className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
@@ -570,7 +572,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
           {/* Drawer Content Area */}
           <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar">
             {/* Description */}
-            <div className="text-gray-300 leading-relaxed text-[15px] flex flex-col gap-4">
+            <div className="text-gray-100 leading-relaxed text-[15px] flex flex-col gap-4">
               {selectedNodeData?.description.map((paragraph, idx) => (
                 <p key={idx}>{paragraph}</p>
               ))}
@@ -602,7 +604,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
                         <div className="mt-0.5 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
                           <Icon />
                         </div>
-                        <div className="flex-1 text-sm font-semibold text-gray-300 group-hover:text-white transition-colors">
+                        <div className="flex-1 text-sm font-semibold text-gray-200 group-hover:text-white transition-colors">
                           {res.title}
                         </div>
                       </a>

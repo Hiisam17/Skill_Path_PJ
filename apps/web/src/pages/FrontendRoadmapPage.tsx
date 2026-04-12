@@ -1,10 +1,10 @@
 /**
  * FrontendRoadmapPage
  * Centered tree layout imitating roadmap.sh frontend-beginner chart,
- * but retaining our Dashboard dark theme, styling, and Drawer.
+ * with chronological learning and localStorage progress sync.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./FrontendRoadmapPage.css";
 
 /* ── Import tất cả file markdown trong thư mục content ── */
@@ -96,15 +96,39 @@ function ResourceTypeIcon({ type }: { type: string }) {
   );
 }
 
+/* ── Logic ── */
+function checkIsLocked(nodeOrder: number, statuses: Record<string, Status>): boolean {
+  if (nodeOrder === 1) return false;
+
+  // Git(4) & GitHub(5) depend on JS(3)
+  if (nodeOrder === 4 || nodeOrder === 5) {
+    const jsNode = ALL_NODES.find(n => n.order === 3)!;
+    return statuses[jsNode.id] !== "COMPLETED";
+  }
+
+  // npm(6) depends on BOTH Git(4) AND GitHub(5)
+  if (nodeOrder === 6) {
+    const gitNode = ALL_NODES.find(n => n.order === 4)!;
+    const githubNode = ALL_NODES.find(n => n.order === 5)!;
+    return statuses[gitNode.id] !== "COMPLETED" || statuses[githubNode.id] !== "COMPLETED";
+  }
+
+  // Normal chronological dependence on order - 1
+  const prevNode = ALL_NODES.find(n => n.order === nodeOrder - 1);
+  if (!prevNode) return false;
+  return statuses[prevNode.id] !== "COMPLETED";
+}
+
 /* ── Drawer ── */
 interface DrawerProps {
   node: FrontendNode | null;
   status: Status;
+  isLocked: boolean;
   onClose: () => void;
   onStatusChange: (id: string, s: Status) => void;
 }
 
-function NodeDrawer({ node, status, onClose, onStatusChange }: DrawerProps) {
+function NodeDrawer({ node, status, isLocked, onClose, onStatusChange }: DrawerProps) {
   if (!node) return null;
   const raw = getContent(node.id);
   const { description, resources } = parseMarkdown(raw);
@@ -130,7 +154,11 @@ function NodeDrawer({ node, status, onClose, onStatusChange }: DrawerProps) {
               <span className="frm-drawer-icon">{node.icon}</span>
               {node.label}
             </h2>
-            <span className={`frm-badge ${statusClass[status]}`}>{statusLabel[status]}</span>
+            {isLocked ? (
+              <span className="frm-badge frm-badge--orange">Locked</span>
+            ) : (
+              <span className={`frm-badge ${statusClass[status]}`}>{statusLabel[status]}</span>
+            )}
           </div>
           <button className="frm-drawer-close" onClick={onClose} aria-label="Close">
             <svg viewBox="0 0 24 24" fill="none" width="20" height="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -140,6 +168,15 @@ function NodeDrawer({ node, status, onClose, onStatusChange }: DrawerProps) {
         </div>
 
         <div className="frm-drawer-body">
+          {isLocked && (
+            <div style={{ background: "rgba(255,184,115,0.1)", border: "1px solid rgba(255,184,115,0.4)", padding: "16px", borderRadius: "8px", color: "#ffb873", display: "flex", gap: "12px", alignItems: "center" }}>
+              <span style={{ fontSize: "20px" }}>🔒</span>
+              <p style={{ margin: 0, fontSize: "14px", fontWeight: 500 }}>
+                This step is currently locked. You must complete the previous prerequisites before starting this topic.
+              </p>
+            </div>
+          )}
+
           {description && (
             <section className="frm-drawer-section">
               <h3 className="frm-drawer-section-title">Overview</h3>
@@ -178,8 +215,10 @@ function NodeDrawer({ node, status, onClose, onStatusChange }: DrawerProps) {
             {(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] as Status[]).map((s) => (
               <button
                 key={s}
+                disabled={isLocked}
                 onClick={() => onStatusChange(node.id, s)}
-                className={`frm-status-btn frm-status-btn--${s.toLowerCase().replace("_", "-")} ${status === s ? "active" : ""}`}
+                style={{ opacity: isLocked ? 0.3 : 1, cursor: isLocked ? "not-allowed" : "pointer" }}
+                className={`frm-status-btn frm-status-btn--${s.toLowerCase().replace("_", "-")} ${status === s && !isLocked ? "active" : ""}`}
               >
                 {statusLabel[s]}
               </button>
@@ -193,30 +232,53 @@ function NodeDrawer({ node, status, onClose, onStatusChange }: DrawerProps) {
 
 /* ── Main Page ── */
 export default function FrontendRoadmapPage() {
-  const [statuses, setStatuses] = useState<Record<string, Status>>(() =>
-    Object.fromEntries(ALL_NODES.map((n) => [n.id, "NOT_STARTED"]))
-  );
+  const [statuses, setStatuses] = useState<Record<string, Status>>(() => {
+    try {
+      const saved = localStorage.getItem("frontendRoadmapProgress");
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return Object.fromEntries(ALL_NODES.map((n) => [n.id, "NOT_STARTED"]));
+  });
+
   const [selected, setSelected] = useState<FrontendNode | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("frontendRoadmapProgress", JSON.stringify(statuses));
+  }, [statuses]);
 
   const handleStatusChange = (id: string, s: Status) => {
     setStatuses((prev) => ({ ...prev, [id]: s }));
-    setSelected((prev) => (prev?.id === id ? { ...prev } : prev));
   };
 
+  // Prevent users from clicking "Completed" dynamically if locked
   const completedCount = Object.values(statuses).filter((s) => s === "COMPLETED").length;
 
   const renderCard = (node: FrontendNode) => {
+    const isLocked = checkIsLocked(node.order, statuses);
     const status = statuses[node.id];
-    const statusCardClass: Record<Status, string> = {
-      COMPLETED:   "frm-node-card--completed",
-      IN_PROGRESS: "frm-node-card--in-progress",
-      NOT_STARTED: "frm-node-card--not-started",
-    };
+    
+    let statusCardClass = "frm-node-card--not-started";
+    let pillClass = "frm-pill--not-started";
+    let statusString = "Not Started";
+
+    if (isLocked) {
+      statusCardClass = "frm-node-card--locked";
+      pillClass = "frm-pill--locked";
+      statusString = "Locked";
+    } else if (status === "COMPLETED") {
+      statusCardClass = "frm-node-card--completed";
+      pillClass = "frm-pill--completed";
+      statusString = "✓ Completed";
+    } else if (status === "IN_PROGRESS") {
+      statusCardClass = "frm-node-card--in-progress";
+      pillClass = "frm-pill--in-progress";
+      statusString = "In Progress";
+    }
 
     return (
       <button
         key={node.id}
-        className={`frm-node-card ${statusCardClass[status]}`}
+        className={`frm-node-card ${statusCardClass}`}
         onClick={() => setSelected(node)}
       >
         <div className="frm-node-card-top">
@@ -227,9 +289,8 @@ export default function FrontendRoadmapPage() {
           <span className="frm-node-icon">{node.icon}</span>
           <h3 className="frm-node-name">{node.label}</h3>
         </div>
-        <div className={`frm-node-status-pill frm-pill--${status.toLowerCase().replace("_", "-")}`}>
-          {status === "COMPLETED" && "✓ "}
-          {status === "IN_PROGRESS" ? "In Progress" : status === "COMPLETED" ? "Completed" : "Not Started"}
+        <div className={`frm-node-status-pill ${pillClass}`}>
+          {statusString}
         </div>
       </button>
     );
@@ -300,6 +361,7 @@ export default function FrontendRoadmapPage() {
         <NodeDrawer
           node={selected}
           status={statuses[selected.id]}
+          isLocked={checkIsLocked(selected.order, statuses)}
           onClose={() => setSelected(null)}
           onStatusChange={handleStatusChange}
         />

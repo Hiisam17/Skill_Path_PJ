@@ -8,6 +8,7 @@ interface ProgressData {
   completedSkills: number;
   totalSkills: number;
   percentage: number;
+  roadmapName?: string;
 }
 
 /* ── SVG Icon Components ── */
@@ -115,12 +116,39 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     const fetchProgress = async () => {
+      let lsProgressData = null;
+      try {
+        const saved = localStorage.getItem("frontendRoadmapProgress");
+        if (saved) {
+           const statuses = JSON.parse(saved);
+           const completedSkills = Object.values(statuses).filter(s => s === "COMPLETED").length;
+           const totalSkills = Math.max(Object.keys(statuses).length, 9);
+           lsProgressData = {
+               completedSkills,
+               totalSkills,
+               percentage: Math.round((completedSkills / totalSkills) * 100),
+               roadmapName: "Frontend Developer"
+           };
+        }
+      } catch (err) {}
+
       try {
         const response = await api.get("/users/progress");
         const data = response.data;
-        setProgress(data);
+        // If API succeeds but local storage has more progress, we could merge. 
+        // For now, if we have local progress, prioritize it for the demo showcase.
+        if (lsProgressData && lsProgressData.completedSkills > 0) {
+          setProgress(lsProgressData);
+        } else {
+          setProgress({ ...data, roadmapName: "Fullstack Architect" });
+        }
       } catch (err) {
-        console.error("Lỗi khi tải tiến độ:", err);
+        // Fallback to local storage
+        if (lsProgressData) {
+          setProgress(lsProgressData);
+        } else {
+          console.error("Lỗi khi tải tiến độ:", err);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -263,7 +291,7 @@ export const DashboardPage: React.FC = () => {
                 <ProgressRing percentage={progressPercentage} />
               )}
               <div className="card-progress-bottom">
-                <span className="card-progress-bottom-left">Current Roadmap: Fullstack Architect</span>
+                <span className="card-progress-bottom-left">Current Roadmap: {progress?.roadmapName || "Fullstack Architect"}</span>
                 <span className="card-progress-bottom-right">Lvl 4/6</span>
               </div>
             </div>

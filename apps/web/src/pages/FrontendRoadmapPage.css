@@ -231,6 +231,20 @@
   background: linear-gradient(180deg, rgba(255, 184, 115, 0.06) 0%, transparent 60%);
 }
 
+.frm-node-card--locked {
+  border-color: var(--border-card);
+  filter: grayscale(80%);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.frm-node-card--locked > * {
+  opacity: 0.5;
+}
+.frm-node-card--locked:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .frm-node-card-top {
   display: flex;
   align-items: center;
@@ -298,6 +312,11 @@
 .frm-pill--not-started {
   background: var(--orange-dim);
   color: var(--orange);
+}
+
+.frm-pill--locked {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
 }
 
 /* ===============================================

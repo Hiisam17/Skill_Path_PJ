@@ -6,6 +6,7 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SkillsTreePage } from "./pages/SkillsTreePage";
+import { CareerPathPage } from "./pages/CareerPathPage";
 import { FrontendRoadmapPage } from "./pages/FrontendRoadmapPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -28,9 +29,10 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/sign-up" element={<SignUpPage />} />
-      
+
       <Route element={<Layout />}>
         <Route path="/" element={<Navigate to="/skills-tree" replace />} />
+        <Route path="/career-path" element={<CareerPathPage />} />
         <Route path="/skills-tree" element={<SkillsTreePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} />

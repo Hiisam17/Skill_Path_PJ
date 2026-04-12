@@ -35,8 +35,8 @@ export class AuthService {
       try {
         await this.prisma.profile.create({
           data: {
-            userId: data.user.id,   // Chỉ lấy ID
-            fullName: name || null, // Và lấy tên (nếu có)
+            userId: data.user.id,   
+            fullName: name || null, 
           },
         });
         this.logger.debug(`Profile created in DB for userId=${data.user.id}`);

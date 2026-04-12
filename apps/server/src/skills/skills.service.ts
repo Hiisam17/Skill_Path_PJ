@@ -24,36 +24,22 @@ export class SkillsService {
   /**
    * Retrieve all skills in a roadmap with user's progress status
    * Returns ordered list of skills user should learn, with current completion status
-   * Skills maintain a specific order (orderIndex) for progressive learning
-   *
-   * @param roadmapId - UUID of the roadmap to fetch skills from
-   * @param userId - UUID of authenticated user (to fetch their progress status)
-   * @returns Array of SkillDto objects ordered by orderIndex with user's completion status
-   *
-   * Example:
-   * const skills = await skillsService.findByRoadmap('roadmap-id', 'user-id')
-   * // Returns: [
-   * //   { id: 'uuid1', roadmapId: '...', name: 'Git', description: '...', orderIndex: 1, status: 'COMPLETED' },
-   * //   { id: 'uuid2', roadmapId: '...', name: 'Linux', description: '...', orderIndex: 2, status: 'NOT_STARTED' },
-   * // ]
    */
   async findSkillsByRoadmap(
-    roadmapId: string,
+    roadmapId: number, // ĐÃ ĐỔI: Nhận trực tiếp number
     userId: string,
   ): Promise<SkillDto[]> {
-    const roadmapIdNumber = Number(roadmapId);
-    if (!Number.isInteger(roadmapIdNumber) || roadmapIdNumber <= 0) {
-      return [];
-    }
+    
+    // ĐÃ XÓA: Đoạn code check Number.isInteger() vì Controller đã làm việc đó
 
     const roadmapSkills = await this.prisma.roadmapSkill.findMany({
       where: {
         section: {
-          roadmapId: roadmapIdNumber,
+          roadmapId: roadmapId,
         },
         skillId: { not: null },
       },
-      orderBy: [{ sectionId: 'asc' }, { stepNumber: 'asc' }],
+      orderBy: [{ sectionId: 'asc' }, { id: 'asc' }],
       include: {
         skill: {
           include: {
@@ -72,23 +58,25 @@ export class SkillsService {
     });
 
     return roadmapSkills
-      .filter((roadmapSkill) => roadmapSkill.skill)
+      .filter((roadmapSkill) => roadmapSkill.skill !== null) 
       .map((roadmapSkill) => {
-        const skill = roadmapSkill.skill!;
+        const skill = roadmapSkill.skill!; 
         const progressStatusName = skill.userProgress[0]?.status?.name;
 
         return {
           id: String(skill.id),
-          roadmapId: String(roadmapIdNumber),
+          roadmapId: String(roadmapId),
           name: skill.name,
           description: skill.description ?? '',
-          orderIndex: roadmapSkill.stepNumber,
+          // ĐÃ SỬA: Thay stepNumber bằng id của bảng RoadmapSkill
+          orderIndex: roadmapSkill.id, 
           status: this.mapProgressStatus(progressStatusName),
         };
       });
   }
 
-  async findByRoadmap(roadmapId: string, userId: string): Promise<SkillDto[]> {
+  // ĐÃ SỬA: roadmapId thành type number
+  async findByRoadmap(roadmapId: number, userId: string): Promise<SkillDto[]> {
     return this.findSkillsByRoadmap(roadmapId, userId);
   }
 }

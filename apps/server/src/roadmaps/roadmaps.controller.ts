@@ -6,24 +6,11 @@ import { RoadmapSummaryResponseDto } from './dto/roadmap-summary-response.dto';
 
 @Controller()
 export class RoadmapsController {
-	constructor(private readonly roadmapsService: RoadmapsService) {}
+	constructor(private readonly roadmapsService: RoadmapsService) { }
 
-	@Get('roadmaps')
-	async findAll(): Promise<RoadmapDto[]> {
-		return this.roadmapsService.findAll();
-	}
-
-	@Get('roadmaps/career-path/:careerPathId')
-	async findByCareerPath(
-		@Param('careerPathId') careerPathId: string,
-	): Promise<RoadmapDto[]> {
-		return this.roadmapsService.findByCareerPath(careerPathId);
-	}
-
-	@Get('roadmaps/:roadmapId')
-	async findById(@Param('roadmapId') roadmapId: string): Promise<RoadmapDto> {
-		return this.roadmapsService.findById(roadmapId);
-	}
+	// ==========================================
+	// NHÁNH 1: API CHO CAREER PATHS
+	// ==========================================
 
 	// Public endpoint: GET /career-paths
 	@Get('career-paths')
@@ -34,8 +21,37 @@ export class RoadmapsController {
 	// Public endpoint: GET /career-paths/:careerId/roadmaps
 	@Get('career-paths/:careerId/roadmaps')
 	async getRoadmapsByCareer(
-		@Param('careerId', ParseIntPipe) careerPathId: number,
+		@Param('careerId', ParseIntPipe) careerId: number,
 	): Promise<RoadmapSummaryResponseDto[]> {
-		return this.roadmapsService.getSystemRoadmapsByCareerPath(careerPathId);
+		return this.roadmapsService.getSystemRoadmapsByCareerPath(careerId);
+	}
+
+	// ==========================================
+	// NHÁNH 2: API CHO ROADMAPS
+	// ==========================================
+
+	@Get('roadmaps')
+	async findAll(): Promise<RoadmapDto[]> {
+		return this.roadmapsService.findAll();
+	}
+
+	@Get('roadmaps/career-path/:careerPathId')
+	async findByCareerPath(
+		@Param('careerPathId', ParseIntPipe) careerPathId: number,
+	): Promise<RoadmapDto[]> {
+		return this.roadmapsService.findByCareerPath(careerPathId);
+	}
+	@Get('roadmaps/:roadmapId/flow')
+	async getRoadmapFlow(
+		@Param('roadmapId', ParseIntPipe) roadmapId: number,
+	) {
+		return this.roadmapsService.getRoadmapFlow(roadmapId);
+	}
+
+	@Get('roadmaps/:roadmapId')
+	async findById(
+		@Param('roadmapId', ParseIntPipe) roadmapId: number,
+	): Promise<RoadmapDto> {
+		return this.roadmapsService.findById(roadmapId);
 	}
 }

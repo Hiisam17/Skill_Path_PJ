@@ -120,17 +120,17 @@ export const DashboardPage: React.FC = () => {
       try {
         const saved = localStorage.getItem("frontendRoadmapProgress");
         if (saved) {
-           const statuses = JSON.parse(saved);
-           const completedSkills = Object.values(statuses).filter(s => s === "COMPLETED").length;
-           const totalSkills = Math.max(Object.keys(statuses).length, 9);
-           lsProgressData = {
-               completedSkills,
-               totalSkills,
-               percentage: Math.round((completedSkills / totalSkills) * 100),
-               roadmapName: "Frontend Developer"
-           };
+          const statuses = JSON.parse(saved);
+          const completedSkills = Object.values(statuses).filter(s => s === "COMPLETED").length;
+          const totalSkills = Math.max(Object.keys(statuses).length, 9);
+          lsProgressData = {
+            completedSkills,
+            totalSkills,
+            percentage: Math.round((completedSkills / totalSkills) * 100),
+            roadmapName: "Frontend Developer"
+          };
         }
-      } catch (err) {}
+      } catch (err) { }
 
       try {
         const response = await api.get("/users/progress");
@@ -169,7 +169,7 @@ export const DashboardPage: React.FC = () => {
     const previousProgress = progress;
     const previousSkills = [...localSkills];
 
-    setLocalSkills(prev => prev.map(s => 
+    setLocalSkills(prev => prev.map(s =>
       s.id === skillId ? { ...s, isCompleted: true } : s
     ));
     if (progress) {
@@ -365,14 +365,13 @@ export const DashboardPage: React.FC = () => {
                   <p className="skill-card-desc">{skill.desc}</p>
                   <div className="skill-card-bottom">
                     <span className="skill-xp-badge">{skill.xp} XP</span>
-                    <button 
+                    <button
                       onClick={() => handleCompleteSkill(skill.id)}
                       disabled={skill.isCompleted}
-                      className={`skill-start-btn transition-all duration-300 ${
-                        skill.isCompleted 
-                          ? "bg-[#4cd7f6] text-[#171f33] opacity-80 cursor-not-allowed font-bold" 
-                          : ""
-                      }`}
+                      className={`skill-start-btn transition-all duration-300 ${skill.isCompleted
+                        ? "bg-[#4cd7f6] text-[#171f33] opacity-80 cursor-not-allowed font-bold"
+                        : ""
+                        }`}
                     >
                       {skill.isCompleted ? "✓ Completed" : "Start"}
                     </button>

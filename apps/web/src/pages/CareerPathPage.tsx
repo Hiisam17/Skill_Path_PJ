@@ -39,6 +39,15 @@ const MOCK_DESCRIPTIONS = [
   'Deploy, scale, and manage cloud infrastructure with DevOps best practices.',
 ]
 
+const DEFAULT_PATHS: CareerPath[] = [
+  { id: 'frontend-roadmap', title: 'Frontend Developer', description: 'Master HTML, CSS, JavaScript, and modern frameworks to build interactive web interfaces.' },
+  { id: 'backend-roadmap', title: 'Backend Developer', description: 'Design APIs, optimize databases, and architect scalable server-side systems.' },
+  { id: 'fullstack-roadmap', title: 'Full-Stack Developer', description: 'Master both frontend and backend to build complete, end-to-end applications.' },
+  { id: 'ai-engineer', title: 'AI Engineer', description: 'Dive into ML models, neural networks, and deploy AI solutions at production scale.' },
+  { id: 'devops-roadmap', title: 'DevOps Engineer', description: 'Deploy, scale, and manage cloud infrastructure with robust CI/CD practices.' },
+  { id: 'cyber-security', title: 'Cyber Security', description: 'Protect systems, conduct penetration testing, and build secure infrastructures.' },
+]
+
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
@@ -132,12 +141,12 @@ export const CareerPathPage = () => {
           }));
 
           // Nạp dữ liệu đã xử lý vào State
-          setPaths(mappedPaths);
+          setPaths(mappedPaths.length > 0 ? mappedPaths : DEFAULT_PATHS);
         }
       })
       .catch((err) => {
         console.error('❌ Lỗi khi tải danh sách Career Paths:', err);
-        // Giữ nguyên logic cũ: UI sẽ hiển thị 0 cards một cách gọn gàng
+        if (!cancelled) setPaths(DEFAULT_PATHS);
       })
       .finally(() => {
         if (!cancelled) setFetching(false);
@@ -150,7 +159,11 @@ export const CareerPathPage = () => {
 
   // Select roadmap — navigate trực tiếp đến skill-tree (MVP)
   const handleSelect = (careerPathId: string) => {
-    navigate(`/skill-tree?careerPathId=${careerPathId}`)
+    if (careerPathId === 'frontend-roadmap') {
+      navigate('/frontend-roadmap')
+    } else {
+      navigate(`/skill-tree?careerPathId=${careerPathId}`)
+    }
   }
 
   return (

@@ -107,7 +107,7 @@ export const SignUpPage: React.FC = () => {
       });
       
       // 3. Chuyển hướng sang trang lộ trình
-      navigate("/dashboard");
+      navigate("/career-paths");
       
     } catch (error) {
       setErrors({
@@ -125,7 +125,7 @@ export const SignUpPage: React.FC = () => {
         provider: provider,
         options: {
           // Nơi Supabase sẽ đá người dùng về sau khi đăng nhập thành công
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/career-paths`,
         },
       });
 

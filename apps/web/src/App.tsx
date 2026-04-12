@@ -33,13 +33,20 @@ function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route
+        path="/career-paths"
+        element={
+          <ProtectedRoute>
+            <CareerPathPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         element={
           <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
         }
       >
-        <Route path="/career-paths" element={<CareerPathPage />} />
         <Route path="/javascript-roadmap" element={<JavaScriptSkillTreePage />} />
         <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />

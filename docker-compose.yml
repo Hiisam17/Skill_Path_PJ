@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./apps/server
+      dockerfile: Dockerfile
+    container_name: roadmap_server_prod
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./apps/server/.env
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+
+        - VITE_API_URL=${VITE_API_URL} 
+    container_name: roadmap_web_prod
+    ports:
+      - "80:80" 
+    depends_on:
+      - server
+    restart: unless-stopped

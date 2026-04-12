@@ -23,7 +23,7 @@ out/
 .env
 .env.local
 .env.*.local
-
+.env.development
 # Logs
 logs/
 *.log

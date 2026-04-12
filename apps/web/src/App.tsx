@@ -32,31 +32,6 @@ function App() {
       <Route path="/sign-up" element={<SignUpPage />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Các Route khác vẫn giữ nguyên vỏ bọc ProtectedRoute */}
-      <Route
-        path="/career-paths"
-        element={
-          <ProtectedRoute>
-            <CareerPathPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/javascript-roadmap"
-        element={
-          <ProtectedRoute>
-            <JavaScriptSkillTreePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/frontend-roadmap"
-        element={
-          <ProtectedRoute>
-            <FrontendRoadmapPage />
-          </ProtectedRoute>
-        }
-      />
       <Route
         element={
           <ProtectedRoute>
@@ -64,10 +39,10 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route
-          path="/dashboard"
-          element={<DashboardPage />}
-        />
+        <Route path="/career-paths" element={<CareerPathPage />} />
+        <Route path="/javascript-roadmap" element={<JavaScriptSkillTreePage />} />
+        <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
       </Route>
 
       {/* Fallback Route (404) */}

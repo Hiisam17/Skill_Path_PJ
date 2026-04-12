@@ -78,8 +78,6 @@ export const SignUpPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // 1. Gọi API Đăng ký tới Backend NestJS của chúng ta
-      // (Nhớ đổi URL nếu bạn cấu hình port hoặc prefix khác nhé)
       const response = await fetch("http://localhost:3000/api/auth/register", {
         method: "POST",
         headers: {
@@ -106,7 +104,6 @@ export const SignUpPage: React.FC = () => {
         password: formData.password,
       });
       
-      // 3. Chuyển hướng sang trang lộ trình
       navigate("/dashboard");
       
     } catch (error) {

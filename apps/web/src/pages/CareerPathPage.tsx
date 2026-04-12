@@ -401,8 +401,8 @@ export const CareerPathPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
             {[
               { value: '200k+', label: 'DEVELOPERS' },
-              { value: '50+',   label: 'CAREER PATHS' },
-              { value: '1M+',   label: 'SKILLS MASTERED' },
+              { value: '50+', label: 'CAREER PATHS' },
+              { value: '1M+', label: 'SKILLS MASTERED' },
             ].map(({ value, label }) => (
               <div key={label} className="flex flex-col gap-1">
                 <span
@@ -442,21 +442,21 @@ export const CareerPathPage = () => {
             ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
             : paths.length > 0
               ? paths.map((path, i) => (
-                  <PathCard
-                    key={path.id}
-                    path={path}
-                    index={i}
-                    onSelect={handleSelect}
-                    loading={false}
-                  />
-                ))
+                <PathCard
+                  key={path.id}
+                  path={path}
+                  index={i}
+                  onSelect={handleSelect}
+                  loading={false}
+                />
+              ))
               : (
-                  /* Empty state */
-                  <div className="col-span-3 text-center py-16 text-[#94A3B8]">
-                    <Brain className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p>No career paths available yet. Check back soon!</p>
-                  </div>
-                )}
+                /* Empty state */
+                <div className="col-span-3 text-center py-16 text-[#94A3B8]">
+                  <Brain className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                  <p>No career paths available yet. Check back soon!</p>
+                </div>
+              )}
         </div>
 
         {/* View All Paths Button */}

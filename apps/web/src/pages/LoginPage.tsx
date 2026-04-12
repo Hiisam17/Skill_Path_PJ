@@ -48,7 +48,6 @@ export const LoginPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Gọi hàm login từ Context - hàm này sẽ fetch tới http://localhost:3000/api/auth/login
       await login({
         email: formData.email,
         password: formData.password,
@@ -64,7 +63,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  // Xử lý đăng nhập bằng Google/GitHub qua Supabase
   const handleSocialLogin = async (provider: "github" | "google") => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({

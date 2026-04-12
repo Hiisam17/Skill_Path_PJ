@@ -1,31 +1,23 @@
 /**
  * App Component
  * Demo router setup
- * Bypasses authentication and exposes Skill Tree only
  */
-
 import { Routes, Route, Navigate } from "react-router-dom";
-import { SkillsTreePage } from "./pages/SkillsTreePage";
-import Layout from "./components/Layout";
+import SkillsTreePage from "./pages/SkillsTreePage";
+import Layout from "./components/layouts/Layout";
 
-/**
- * App Root Component
- * Sets up React Router in Skill Tree demo mode
- *
- * Route behavior:
- * - / -> /skills-tree
- * - /skills-tree -> SkillsTreePage
- * - any other path -> /skills-tree
- *
- * @returns {JSX.Element} Router with all routes
- */
 function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to="/skills-tree" replace />} />
-        <Route path="/skills-tree" element={<SkillsTreePage />} />
-        <Route path="*" element={<Navigate to="/skills-tree" replace />} />
+        {/* Tự động chuyển hướng về roadmap id 2 khi vào trang chủ */}
+        <Route path="/" element={<Navigate to="/skills-tree/2" replace />} />
+
+        {/* CẬP NHẬT: Thêm :id để nhận roadmapId từ URL */}
+        <Route path="/skills-tree/:id" element={<SkillsTreePage />} />
+
+        {/* Các đường dẫn lạ đều quay về roadmap id 2 */}
+        <Route path="*" element={<Navigate to="/skills-tree/2" replace />} />
       </Route>
     </Routes>
   );

@@ -4,7 +4,7 @@ JavaScript is a programming language that makes websites interactive. It lets yo
 
 Visit the following resources to learn more:
 
-- [@roadmap@Visit Dedicated JavaScript Roadmap](https://roadmap.sh/javascript)
+- [@roadmap@Visit Dedicated JavaScript Roadmap](/javascript-roadmap)
 - [@book@JavaScript from Beginner to Professional](https://www.gurukultti.org/admin/notice/javascript.pdf)
 - [@article@The Modern JavaScript Tutorial](https://javascript.info/)
 - [@article@Build 30 Javascript projects in 30 days](https://javascript30.com/)

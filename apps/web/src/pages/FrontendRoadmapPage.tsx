@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import "./FrontendRoadmapPage.css";
 
 /* ── Import tất cả file markdown trong thư mục content ── */
@@ -61,15 +62,15 @@ interface FrontendNode {
 }
 
 const ALL_NODES: FrontendNode[] = [
-  { id: "yWG2VUkaF5IJVVut6AiSy", label: "HTML",       icon: "🌐", category: "Core",       order: 1 },
-  { id: "ZhJhf1M2OphYbEmduFq-9", label: "CSS",        icon: "🎨", category: "Core",       order: 2 },
-  { id: "ODcfFEorkfJNupoQygM53", label: "JavaScript",  icon: "⚡", category: "Core",       order: 3 },
-  { id: "R_I4SGYqLk5zze5I1zS_E", label: "Git",        icon: "🔀", category: "Version Control", order: 4 },
-  { id: "qmTVMJDsEhNIkiwE_UTYu", label: "GitHub",     icon: "🐙", category: "Version Control", order: 5 },
-  { id: "ib_FHinhrw8VuSet-xMF7", label: "npm",        icon: "📦", category: "Package Manager", order: 6 },
-  { id: "tG5v3O4lNIFc2uCnacPak", label: "React",      icon: "⚛️", category: "Framework",  order: 7 },
-  { id: "eghnfG4p7i-EDWfp3CQXC", label: "Tailwind",   icon: "💨", category: "Styling",    order: 8 },
-  { id: "hVQ89f6G0LXEgHIOKHDYq", label: "Vitest",     icon: "🧪", category: "Testing",    order: 9 },
+  { id: "yWG2VUkaF5IJVVut6AiSy", label: "HTML", icon: "🌐", category: "Core", order: 1 },
+  { id: "ZhJhf1M2OphYbEmduFq-9", label: "CSS", icon: "🎨", category: "Core", order: 2 },
+  { id: "ODcfFEorkfJNupoQygM53", label: "JavaScript", icon: "⚡", category: "Core", order: 3 },
+  { id: "R_I4SGYqLk5zze5I1zS_E", label: "Git", icon: "🔀", category: "Version Control", order: 4 },
+  { id: "qmTVMJDsEhNIkiwE_UTYu", label: "GitHub", icon: "🐙", category: "Version Control", order: 5 },
+  { id: "ib_FHinhrw8VuSet-xMF7", label: "npm", icon: "📦", category: "Package Manager", order: 6 },
+  { id: "tG5v3O4lNIFc2uCnacPak", label: "React", icon: "⚛️", category: "Framework", order: 7 },
+  { id: "eghnfG4p7i-EDWfp3CQXC", label: "Tailwind", icon: "💨", category: "Styling", order: 8 },
+  { id: "hVQ89f6G0LXEgHIOKHDYq", label: "Vitest", icon: "🧪", category: "Testing", order: 9 },
 ];
 
 function getNode(id: string) {
@@ -136,12 +137,12 @@ function NodeDrawer({ node, status, isLocked, onClose, onStatusChange }: DrawerP
   const statusLabel: Record<Status, string> = {
     NOT_STARTED: "Not Started",
     IN_PROGRESS: "In Progress",
-    COMPLETED:   "Completed",
+    COMPLETED: "Completed",
   };
   const statusClass: Record<Status, string> = {
     NOT_STARTED: "frm-badge--orange",
     IN_PROGRESS: "frm-badge--purple",
-    COMPLETED:   "frm-badge--cyan",
+    COMPLETED: "frm-badge--cyan",
   };
 
   return (
@@ -188,22 +189,34 @@ function NodeDrawer({ node, status, isLocked, onClose, onStatusChange }: DrawerP
             <section className="frm-drawer-section">
               <h3 className="frm-drawer-section-title">Learning Resources</h3>
               <ul className="frm-resource-list">
-                {resources.map((r, i) => (
-                  <li key={i}>
-                    <a href={r.url} target="_blank" rel="noreferrer" className="frm-resource-card">
-                      <span className="frm-resource-icon">
-                        <ResourceTypeIcon type={r.type} />
-                      </span>
-                      <span className="frm-resource-info">
-                        <span className="frm-resource-label">{r.label}</span>
-                        <span className="frm-resource-type">{r.type}</span>
-                      </span>
-                      <svg viewBox="0 0 24 24" fill="none" width="14" height="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="frm-resource-arrow">
-                        <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
-                      </svg>
-                    </a>
-                  </li>
-                ))}
+                {resources.map((r, i) => {
+                  const isInternal = r.url.startsWith("/");
+                  const LinkComponent = isInternal ? Link : "a";
+                  const linkProps = isInternal ? { to: r.url } as any : { href: r.url, target: "_blank", rel: "noreferrer" };
+
+                  return (
+                    <li key={i}>
+                      <LinkComponent {...linkProps} className="frm-resource-card">
+                        <span className="frm-resource-icon">
+                          <ResourceTypeIcon type={r.type} />
+                        </span>
+                        <span className="frm-resource-info">
+                          <span className="frm-resource-label">{r.label}</span>
+                          <span className="frm-resource-type">{r.type}</span>
+                        </span>
+                        {isInternal ? (
+                          <svg viewBox="0 0 24 24" fill="none" width="14" height="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="frm-resource-arrow">
+                            <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" fill="none" width="14" height="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="frm-resource-arrow">
+                            <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
+                          </svg>
+                        )}
+                      </LinkComponent>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}
@@ -256,7 +269,7 @@ export default function FrontendRoadmapPage() {
   const renderCard = (node: FrontendNode) => {
     const isLocked = checkIsLocked(node.order, statuses);
     const status = statuses[node.id];
-    
+
     let statusCardClass = "frm-node-card--not-started";
     let pillClass = "frm-pill--not-started";
     let statusString = "Not Started";
@@ -322,14 +335,14 @@ export default function FrontendRoadmapPage() {
 
       <div className="frm-roadmap-wrap">
         <div className="frm-tree-container">
-          
+
           {/* Top segment */}
           {renderCard(getNode("HTML"))}
           <div className="frm-v-line" />
-          
+
           {renderCard(getNode("CSS"))}
           <div className="frm-v-line" />
-          
+
           {renderCard(getNode("JavaScript"))}
 
           {/* Fork for Git & GitHub */}
@@ -345,15 +358,15 @@ export default function FrontendRoadmapPage() {
           {/* Bottom segment */}
           {renderCard(getNode("npm"))}
           <div className="frm-v-line" />
-          
+
           {renderCard(getNode("React"))}
           <div className="frm-v-line" />
-          
+
           {renderCard(getNode("Tailwind"))}
           <div className="frm-v-line" />
-          
+
           {renderCard(getNode("Vitest"))}
-          
+
         </div>
       </div>
 

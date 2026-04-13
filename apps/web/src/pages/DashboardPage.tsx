@@ -4,13 +4,22 @@ import "./DashboardPage.css";
 import { api } from "@/services/api";
 
 /* ── Types ── */
-interface ProgressData {
+interface RoadmapProgress {
+  roadmapId: string;
+  roadmapName: string;
   completedSkills: number;
   totalSkills: number;
   percentage: number;
-  roadmapName?: string;
 }
 
+interface MultiProgress {
+  overall: {
+    completedSkills: number;
+    totalSkills: number;
+    percentage: number;
+  };
+  roadmaps: RoadmapProgress[];
+}
 
 const ArrowUpIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -51,7 +60,7 @@ function generateSparklinePath(points: number[], width: number, height: number):
 }
 
 /* ── Circular Progress Ring ── */
-const ProgressRing: React.FC<{ percentage: number }> = ({ percentage }) => {
+const ProgressRing: React.FC<{ percentage: number; label?: string }> = ({ percentage, label }) => {
   const radius = 112;
   const center = 128;
   const circumference = 2 * Math.PI * radius;
@@ -72,51 +81,120 @@ const ProgressRing: React.FC<{ percentage: number }> = ({ percentage }) => {
       </svg>
       <div className="progress-ring-text">
         <span className="progress-ring-value">{percentage}%</span>
-        <span className="progress-ring-sublabel">ROADMAP DONE</span>
+        <span className="progress-ring-sublabel">{label || "OVERALL"}</span>
       </div>
     </div>
   );
 };
 
+/* ── Roadmap accent color helper ── */
+const ROADMAP_COLORS = [
+  { accent: "var(--accent-cyan)", bg: "rgba(76, 215, 246, 0.12)", border: "rgba(76, 215, 246, 0.3)" },
+  { accent: "var(--accent-purple)", bg: "rgba(192, 193, 255, 0.12)", border: "rgba(192, 193, 255, 0.3)" },
+  { accent: "var(--accent-orange)", bg: "rgba(255, 184, 115, 0.12)", border: "rgba(255, 184, 115, 0.3)" },
+  { accent: "#22c55e", bg: "rgba(34, 197, 94, 0.12)", border: "rgba(34, 197, 94, 0.3)" },
+  { accent: "#f472b6", bg: "rgba(244, 114, 182, 0.12)", border: "rgba(244, 114, 182, 0.3)" },
+];
+
+const ROADMAP_ICONS = ["🗺️", "🛤️", "🧭", "🚀", "⚡"];
+
 /* ── Main Dashboard Page ── */
 export const DashboardPage: React.FC = () => {
-  const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [multiProgress, setMultiProgress] = useState<MultiProgress | null>(null);
+  const [selectedRoadmapIdx, setSelectedRoadmapIdx] = useState<number | null>(null); // null = overall
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchProgress = async () => {
-      let lsProgressData = null;
+      // ── Read all localStorage roadmap progress entries ──
+      const localRoadmaps: RoadmapProgress[] = [];
+
+      // Frontend Roadmap (uses UPPERCASE statuses: "COMPLETED")
       try {
         const saved = localStorage.getItem("frontendRoadmapProgress");
         if (saved) {
           const statuses = JSON.parse(saved);
           const completedSkills = Object.values(statuses).filter(s => s === "COMPLETED").length;
           const totalSkills = Math.max(Object.keys(statuses).length, 9);
-          lsProgressData = {
-            completedSkills,
-            totalSkills,
-            percentage: Math.round((completedSkills / totalSkills) * 100),
-            roadmapName: "Frontend Developer"
-          };
+          if (Object.keys(statuses).length > 0) {
+            localRoadmaps.push({
+              roadmapId: "local-frontend",
+              roadmapName: "Frontend Developer",
+              completedSkills,
+              totalSkills,
+              percentage: Math.round((completedSkills / totalSkills) * 100),
+            });
+          }
         }
-      } catch (err) { }
+      } catch { /* ignore */ }
+
+      // JavaScript Roadmap (uses lowercase statuses: "completed")
+      try {
+        const saved = localStorage.getItem("jsRoadmapProgress");
+        if (saved) {
+          const statuses: Record<string, string> = JSON.parse(saved);
+          const entries = Object.values(statuses);
+          const completedSkills = entries.filter(s => s === "completed").length;
+          const inProgressSkills = entries.filter(s => s === "in-progress").length;
+          // There are exactly 130 interactive nodes in the JavaScript roadmap
+          const totalSkills = Math.max(entries.length, 130);
+          if (completedSkills > 0 || inProgressSkills > 0) {
+            localRoadmaps.push({
+              roadmapId: "local-javascript",
+              roadmapName: "JavaScript",
+              completedSkills,
+              totalSkills,
+              percentage: Math.round((completedSkills / totalSkills) * 100),
+            });
+          }
+        }
+      } catch { /* ignore */ }
 
       try {
         const response = await api.get("/users/progress");
-        const data = response.data;
-        // If API succeeds but local storage has more progress, we could merge. 
-        // For now, if we have local progress, prioritize it for the demo showcase.
-        if (lsProgressData && lsProgressData.completedSkills > 0) {
-          setProgress(lsProgressData);
-        } else {
-          setProgress({ ...data, roadmapName: "Fullstack Architect" });
+        const data: MultiProgress = response.data;
+
+        // Merge localStorage roadmaps that don't already exist in API data
+        for (const lr of localRoadmaps) {
+          if (lr.completedSkills > 0) {
+            const nameKey = lr.roadmapName.toLowerCase();
+            const alreadyInApi = data.roadmaps.some(
+              r => r.roadmapName.toLowerCase().includes(nameKey)
+            );
+            if (!alreadyInApi) {
+              data.roadmaps.push(lr);
+              data.overall.completedSkills += lr.completedSkills;
+              data.overall.totalSkills += lr.totalSkills;
+            }
+          }
         }
-      } catch (err) {
-        // Fallback to local storage
-        if (lsProgressData) {
-          setProgress(lsProgressData);
+
+        // Recalculate overall percentage
+        if (data.overall.totalSkills > 0) {
+          data.overall.percentage = Math.round(
+            (data.overall.completedSkills / data.overall.totalSkills) * 100
+          );
+        }
+
+        setMultiProgress(data);
+      } catch {
+        // Full fallback to localStorage only
+        if (localRoadmaps.length > 0) {
+          const totalCompleted = localRoadmaps.reduce((s, r) => s + r.completedSkills, 0);
+          const totalSkills = localRoadmaps.reduce((s, r) => s + r.totalSkills, 0);
+          setMultiProgress({
+            overall: {
+              completedSkills: totalCompleted,
+              totalSkills,
+              percentage: totalSkills > 0 ? Math.round((totalCompleted / totalSkills) * 100) : 0,
+            },
+            roadmaps: localRoadmaps,
+          });
         } else {
-          console.error("Lỗi khi tải tiến độ:", err);
+          setMultiProgress({
+            overall: { completedSkills: 0, totalSkills: 0, percentage: 0 },
+            roadmaps: [],
+          });
         }
       } finally {
         setIsLoading(false);
@@ -135,36 +213,42 @@ export const DashboardPage: React.FC = () => {
 
   /* ── Xử lý Click Hoàn thành Skill (Optimistic Update) ── */
   const handleCompleteSkill = async (skillId: number) => {
-    const previousProgress = progress;
+    const previousProgress = multiProgress;
     const previousSkills = [...localSkills];
 
     setLocalSkills(prev => prev.map(s =>
       s.id === skillId ? { ...s, isCompleted: true } : s
     ));
-    if (progress) {
-      setProgress({
-        ...progress,
-        completedSkills: progress.completedSkills + 1
-      });
-    }
 
     try {
       await api.post(`/skills/${skillId}/complete`);
     } catch (error) {
       console.error("Lỗi khi lưu tiến độ:", error);
-      setProgress(previousProgress);
+      setMultiProgress(previousProgress);
       setLocalSkills(previousSkills);
       alert("Lỗi kết nối! Vui lòng thử lại.");
     }
   };
 
-  const progressPercentage = progress
-    ? Math.round((progress.completedSkills / progress.totalSkills) * 100)
-    : 65;
+  /* ── Determine what to show in the ring ── */
+  const activeDisplay = (() => {
+    if (!multiProgress) return { percentage: 0, label: "OVERALL", name: "Loading..." };
+    if (selectedRoadmapIdx === null) {
+      return {
+        percentage: multiProgress.overall.percentage,
+        label: "OVERALL",
+        name: `${multiProgress.roadmaps.length} Roadmap${multiProgress.roadmaps.length !== 1 ? "s" : ""} Active`,
+      };
+    }
+    const rm = multiProgress.roadmaps[selectedRoadmapIdx];
+    return {
+      percentage: rm.percentage,
+      label: "ROADMAP",
+      name: rm.roadmapName,
+    };
+  })();
 
   const { line: sparkLine, area: sparkArea } = generateSparklinePath(sparklinePoints, 800, 96);
-
-
 
   /* ── Milestones ── */
   const milestones = [
@@ -183,7 +267,6 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="dashboard-layout">
-
 
       {/* ===================== MAIN CONTENT ===================== */}
       <main className="dashboard-main">
@@ -206,13 +289,19 @@ export const DashboardPage: React.FC = () => {
             <div className="bento-card card-progress">
               <span className="card-progress-label">PROGRESS OVERVIEW</span>
               {isLoading ? (
-                <ProgressRing percentage={0} />
+                <ProgressRing percentage={0} label="LOADING" />
               ) : (
-                <ProgressRing percentage={progressPercentage} />
+                <ProgressRing percentage={activeDisplay.percentage} label={activeDisplay.label} />
               )}
               <div className="card-progress-bottom">
-                <span className="card-progress-bottom-left">Current Roadmap: {progress?.roadmapName || "Fullstack Architect"}</span>
-                <span className="card-progress-bottom-right">Lvl 4/6</span>
+                <span className="card-progress-bottom-left">{activeDisplay.name}</span>
+                <button
+                  className="card-progress-overall-btn"
+                  onClick={() => setSelectedRoadmapIdx(null)}
+                  style={{ opacity: selectedRoadmapIdx === null ? 0.5 : 1 }}
+                >
+                  Show Overall
+                </button>
               </div>
             </div>
 
@@ -264,6 +353,72 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* ── My Roadmaps Section ── */}
+          <section className="roadmaps-section">
+            <div className="roadmaps-section-header">
+              <div className="roadmaps-section-header-left">
+                <span className="section-label">MY PROGRESS</span>
+                <h3>Active Roadmaps</h3>
+              </div>
+              <Link to="/career-paths" className="explore-tree-btn">
+                Browse Paths
+              </Link>
+            </div>
+
+            {!isLoading && multiProgress && multiProgress.roadmaps.length > 0 ? (
+              <div className="roadmaps-cards-grid">
+                {multiProgress.roadmaps.map((rm, idx) => {
+                  const color = ROADMAP_COLORS[idx % ROADMAP_COLORS.length];
+                  const icon = ROADMAP_ICONS[idx % ROADMAP_ICONS.length];
+                  const isActive = selectedRoadmapIdx === idx;
+
+                  return (
+                    <button
+                      key={rm.roadmapId}
+                      className={`roadmap-progress-card ${isActive ? "roadmap-progress-card--active" : ""}`}
+                      style={{
+                        borderColor: isActive ? color.border : undefined,
+                        background: isActive ? color.bg : undefined,
+                      }}
+                      onClick={() => setSelectedRoadmapIdx(isActive ? null : idx)}
+                    >
+                      <div className="roadmap-card-top">
+                        <span className="roadmap-card-icon">{icon}</span>
+                        <span
+                          className="roadmap-card-pct"
+                          style={{ color: color.accent }}
+                        >
+                          {rm.percentage}%
+                        </span>
+                      </div>
+                      <h4 className="roadmap-card-name">{rm.roadmapName}</h4>
+                      <p className="roadmap-card-stats">
+                        {rm.completedSkills} / {rm.totalSkills} skills
+                      </p>
+                      <div className="roadmap-card-bar-track">
+                        <div
+                          className="roadmap-card-bar-fill"
+                          style={{
+                            width: `${rm.percentage}%`,
+                            background: color.accent,
+                          }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : !isLoading ? (
+              <div className="roadmaps-empty">
+                <span className="roadmaps-empty-icon">📭</span>
+                <p>You haven't started any roadmaps yet.</p>
+                <Link to="/career-paths" className="roadmaps-empty-cta">
+                  Explore Career Paths →
+                </Link>
+              </div>
+            ) : null}
+          </section>
 
           {/* ── Recommended Skills ── */}
           <section className="skills-section">

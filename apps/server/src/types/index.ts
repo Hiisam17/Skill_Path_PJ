@@ -115,6 +115,27 @@ export interface ProgressDto {
 }
 
 /**
+ * Progress data for a single roadmap
+ * Contains roadmap metadata alongside completion statistics
+ */
+export interface RoadmapProgressDto {
+  roadmapId: string;
+  roadmapName: string;
+  completedSkills: number;
+  totalSkills: number;
+  percentage: number;
+}
+
+/**
+ * Aggregated progress across all roadmaps a user is enrolled in
+ * Contains overall totals and per-roadmap breakdown
+ */
+export interface MultiRoadmapProgressDto {
+  overall: ProgressDto;
+  roadmaps: RoadmapProgressDto[];
+}
+
+/**
  * User skill progress record
  * Represents individual skill completion status and timestamp
  */

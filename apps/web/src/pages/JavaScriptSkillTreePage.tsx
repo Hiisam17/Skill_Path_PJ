@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import ReactFlow, {
   Background,
@@ -251,8 +251,21 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedNodeData, setSelectedNodeData] = useState<ParsedMarkdown & { id: string } | null>(null);
 
-  // State quản lý trạng thái của từng node
-  const [nodeStatuses, setNodeStatuses] = useState<Record<string, 'not-started' | 'in-progress' | 'completed'>>({});
+  // State quản lý trạng thái của từng node — đồng bộ với localStorage
+  const JS_PROGRESS_KEY = "jsRoadmapProgress";
+
+  const [nodeStatuses, setNodeStatuses] = useState<Record<string, 'not-started' | 'in-progress' | 'completed'>>(() => {
+    try {
+      const saved = localStorage.getItem(JS_PROGRESS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return {};
+  });
+
+  // Persist to localStorage whenever statuses change
+  useEffect(() => {
+    localStorage.setItem(JS_PROGRESS_KEY, JSON.stringify(nodeStatuses));
+  }, [nodeStatuses]);
 
   const handleNodeClick = (event: React.MouseEvent, node: any) => {
     // Ngăn chặn sự kiện cho các node cấu trúc

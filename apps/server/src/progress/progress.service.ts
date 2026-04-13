@@ -3,6 +3,8 @@ import {
   ProgressDto,
   UserSkillProgressDto,
   UserSkillStatus,
+  MultiRoadmapProgressDto,
+  RoadmapProgressDto,
 } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -191,6 +193,117 @@ export class ProgressService {
       completedSkills,
       totalSkills,
       percentage,
+    };
+  }
+
+  /**
+   * Calculate user's progress across ALL enrolled roadmaps
+   * Returns per-roadmap breakdown and aggregated overall stats
+   *
+   * @param userId - UUID of authenticated user
+   * @returns MultiRoadmapProgressDto with overall + per-roadmap progress
+   */
+  async getUserMultiRoadmapProgress(
+    userId: string,
+  ): Promise<MultiRoadmapProgressDto> {
+    const completedStatusId = await this.ensureProgressStatus('COMPLETED');
+
+    // Find all roadmaps the user is enrolled in
+    let userRoadmaps = await this.prisma.userRoadmap.findMany({
+      where: { userId },
+      include: {
+        roadmap: {
+          select: { id: true, title: true },
+        },
+      },
+    });
+
+    // Fallback: if user has no enrolled roadmaps, grab all system roadmaps
+    if (userRoadmaps.length === 0) {
+      const systemRoadmaps = await this.prisma.roadmap.findMany({
+        where: { userId: null },
+        select: { id: true, title: true },
+        orderBy: { id: 'asc' },
+      });
+
+      // Build virtual entries so the loop below works uniformly
+      userRoadmaps = systemRoadmaps.map((r) => ({
+        id: 0,
+        userId,
+        roadmapId: r.id,
+        currentStepOrder: null,
+        progressPercentage: null,
+        startedAt: null,
+        completedAt: null,
+        roadmap: r,
+      }));
+    }
+
+    const roadmapResults: RoadmapProgressDto[] = [];
+    let overallCompleted = 0;
+    let overallTotal = 0;
+
+    for (const ur of userRoadmaps) {
+      // Count total skills in this roadmap (via sections)
+      const totalSkills = await this.prisma.roadmapSkill.count({
+        where: {
+          section: { roadmapId: ur.roadmap.id },
+        },
+      });
+
+      // Get all skill IDs in this roadmap
+      const roadmapSkills = await this.prisma.roadmapSkill.findMany({
+        where: {
+          section: { roadmapId: ur.roadmap.id },
+        },
+        select: { skillId: true },
+      });
+
+      const skillIds = roadmapSkills
+        .map((rs) => rs.skillId)
+        .filter((id): id is number => id !== null);
+
+      // Count how many of these skills the user has completed
+      const completedSkills =
+        skillIds.length > 0
+          ? await this.prisma.userSkillProgress.count({
+              where: {
+                userId,
+                skillId: { in: skillIds },
+                statusId: completedStatusId,
+              },
+            })
+          : 0;
+
+      const safeTotalSkills = totalSkills > 0 ? totalSkills : 1;
+      const percentage = Math.round(
+        (completedSkills / safeTotalSkills) * 100,
+      );
+
+      roadmapResults.push({
+        roadmapId: String(ur.roadmap.id),
+        roadmapName: ur.roadmap.title,
+        completedSkills,
+        totalSkills: safeTotalSkills,
+        percentage,
+      });
+
+      overallCompleted += completedSkills;
+      overallTotal += safeTotalSkills;
+    }
+
+    const overallPercentage =
+      overallTotal === 0
+        ? 0
+        : Math.round((overallCompleted / overallTotal) * 100);
+
+    return {
+      overall: {
+        completedSkills: overallCompleted,
+        totalSkills: overallTotal,
+        percentage: overallPercentage,
+      },
+      roadmaps: roadmapResults,
     };
   }
 }

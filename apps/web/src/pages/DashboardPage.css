@@ -208,6 +208,25 @@
   color: var(--accent-cyan);
 }
 
+.card-progress-overall-btn {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent-cyan);
+  background: rgba(76, 215, 246, 0.1);
+  border: 1px solid rgba(76, 215, 246, 0.25);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card-progress-overall-btn:hover {
+  background: rgba(76, 215, 246, 0.2);
+  border-color: rgba(76, 215, 246, 0.5);
+}
+
 /* ---------- Card B: Earned Milestones ---------- */
 .card-milestones {
   grid-column: 5 / 13;
@@ -417,7 +436,175 @@
 }
 
 /* =============================================
-   ROW 2: Recommended Skills
+   ROW 2: Active Roadmaps
+   ============================================= */
+.roadmaps-section {
+  margin-top: 32px;
+}
+
+.roadmaps-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.roadmaps-section-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.roadmaps-section-header-left .section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-secondary);
+}
+
+.roadmaps-section-header-left h3 {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.roadmaps-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.roadmap-progress-card {
+  background: var(--bg-card-inner);
+  border: 1px solid rgba(61, 73, 76, 0.15);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.roadmap-progress-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  transition: background 0.3s ease;
+}
+
+.roadmap-progress-card--active::before {
+  background: currentColor;
+}
+
+.roadmap-progress-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.roadmap-progress-card--active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+
+.roadmap-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.roadmap-card-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.roadmap-card-pct {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.roadmap-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 4px 0 0;
+  line-height: 1.3;
+}
+
+.roadmap-card-stats {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.roadmap-card-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-element);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.roadmap-card-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Roadmaps empty state */
+.roadmaps-empty {
+  background: var(--bg-card-inner);
+  border: 1px dashed rgba(61, 73, 76, 0.3);
+  border-radius: 12px;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.roadmaps-empty-icon {
+  font-size: 40px;
+}
+
+.roadmaps-empty p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.roadmaps-empty-cta {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  padding: 8px 20px;
+  border: 1px solid rgba(76, 215, 246, 0.3);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.roadmaps-empty-cta:hover {
+  background: rgba(76, 215, 246, 0.1);
+  border-color: rgba(76, 215, 246, 0.6);
+}
+
+/* =============================================
+   ROW 3: Recommended Skills
    ============================================= */
 .skills-section {
   margin-top: 32px;
@@ -632,6 +819,16 @@
 .skill-card:nth-child(3) { animation-delay: 0.35s; }
 .skill-card:nth-child(4) { animation-delay: 0.45s; }
 
+.roadmap-progress-card {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.roadmap-progress-card:nth-child(1) { animation-delay: 0.1s; }
+.roadmap-progress-card:nth-child(2) { animation-delay: 0.2s; }
+.roadmap-progress-card:nth-child(3) { animation-delay: 0.3s; }
+.roadmap-progress-card:nth-child(4) { animation-delay: 0.4s; }
+.roadmap-progress-card:nth-child(5) { animation-delay: 0.5s; }
+
 /* =============================================
    RESPONSIVE (basic fallback for smaller screens)
    ============================================= */
@@ -645,6 +842,10 @@
   }
 
   .skills-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .roadmaps-cards-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -683,6 +884,10 @@
   }
 
   .skills-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmaps-cards-grid {
     grid-template-columns: 1fr;
   }
 

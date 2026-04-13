@@ -80,7 +80,8 @@ export const SignUpPage: React.FC = () => {
     try {
       // 1. Gọi API Đăng ký tới Backend NestJS của chúng ta
       // (Nhớ đổi URL nếu bạn cấu hình port hoặc prefix khác nhé)
-      const response = await fetch("http://localhost:3000/api/auth/register", {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+      const response = await fetch(`${apiUrl}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./FrontendRoadmapPage.css";
 
 /* ── Import tất cả file markdown trong thư mục content ── */
@@ -245,6 +245,7 @@ function NodeDrawer({ node, status, isLocked, onClose, onStatusChange }: DrawerP
 
 /* ── Main Page ── */
 export default function FrontendRoadmapPage() {
+  const navigate = useNavigate();
   const [statuses, setStatuses] = useState<Record<string, Status>>(() => {
     try {
       const saved = localStorage.getItem("frontendRoadmapProgress");
@@ -292,7 +293,13 @@ export default function FrontendRoadmapPage() {
       <button
         key={node.id}
         className={`frm-node-card ${statusCardClass}`}
-        onClick={() => setSelected(node)}
+        onClick={() => {
+          if (node.label === "JavaScript") {
+            navigate("/javascript-roadmap");
+          } else {
+            setSelected(node);
+          }
+        }}
       >
         <div className="frm-node-card-top">
           <span className="frm-node-step">Step {node.order}</span>

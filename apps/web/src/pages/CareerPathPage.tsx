@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import apiClient from '@/lib/axios'
+import { useAuth } from '@/context/AuthContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CareerPath {
@@ -42,10 +43,6 @@ const MOCK_DESCRIPTIONS = [
 const DEFAULT_PATHS: CareerPath[] = [
   { id: 'frontend-roadmap', title: 'Frontend Developer', description: 'Master HTML, CSS, JavaScript, and modern frameworks to build interactive web interfaces.' },
   { id: 'backend-roadmap', title: 'Backend Developer', description: 'Design APIs, optimize databases, and architect scalable server-side systems.' },
-  { id: 'fullstack-roadmap', title: 'Full-Stack Developer', description: 'Master both frontend and backend to build complete, end-to-end applications.' },
-  { id: 'ai-engineer', title: 'AI Engineer', description: 'Dive into ML models, neural networks, and deploy AI solutions at production scale.' },
-  { id: 'devops-roadmap', title: 'DevOps Engineer', description: 'Deploy, scale, and manage cloud infrastructure with robust CI/CD practices.' },
-  { id: 'cyber-security', title: 'Cyber Security', description: 'Protect systems, conduct penetration testing, and build secure infrastructures.' },
 ]
 
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
@@ -118,51 +115,25 @@ function PathCard({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const CareerPathPage = () => {
   const navigate = useNavigate()
+  const { isAuthenticated, logout, user } = useAuth()
   const [paths, setPaths] = useState<CareerPath[]>([])
   const [fetching, setFetching] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Fetch career paths
   useEffect(() => {
-    let cancelled = false;
-
-    apiClient
-      // Tạm dùng any[] để hứng dữ liệu gốc từ Backend trả về
-      .get<any[]>('/career-paths')
-      .then((res) => {
-        if (!cancelled) {
-          // Log ra để kiểm tra nếu cần
-          console.log('🎯 Dữ liệu Career Paths:', res.data);
-
-          // Data Mapping: Đổi tên trường cho khớp với Interface của giao diện
-          const mappedPaths = res.data.map((item) => ({
-            id: String(item.id), // Đổi số thành chuỗi
-            title: item.name,    // Đổi 'name' thành 'title'
-          }));
-
-          // Nạp dữ liệu đã xử lý vào State
-          setPaths(mappedPaths.length > 0 ? mappedPaths : DEFAULT_PATHS);
-        }
-      })
-      .catch((err) => {
-        console.error('❌ Lỗi khi tải danh sách Career Paths:', err);
-        if (!cancelled) setPaths(DEFAULT_PATHS);
-      })
-      .finally(() => {
-        if (!cancelled) setFetching(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    // By-pass the backend for now to strictly show only the 2 default paths defined
+    setPaths(DEFAULT_PATHS);
+    setFetching(false);
   }, []);
 
   // Select roadmap — navigate trực tiếp đến skill-tree (MVP)
   const handleSelect = (careerPathId: string) => {
-    if (careerPathId === 'frontend-roadmap') {
+    // Navigate to frontend roadmap if front-end is selected
+    if (careerPathId === 'frontend-roadmap' || careerPathId.toLowerCase().includes('front') || careerPathId === '1') {
       navigate('/frontend-roadmap')
     } else {
-      navigate(`/skill-tree?careerPathId=${careerPathId}`)
+      alert("Back-end roadmap thay vì chuyển trang thì hiện tại đang được bảo trì!"); // Theo yêu cầu, chỉ front-end mới nhảy
     }
   }
 
@@ -173,7 +144,10 @@ export const CareerPathPage = () => {
       <nav className="sticky top-0 z-50 bg-[#090E1A]/80 backdrop-blur-md border-b border-[#1F2937]/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
-          <span className="text-xl font-bold tracking-tight">
+          <span 
+            className="text-xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
+            onClick={() => navigate('/career-paths')}
+          >
             Dev<span className="text-[#00E5FF]">Path</span>
           </span>
 
@@ -192,17 +166,41 @@ export const CareerPathPage = () => {
 
           {/* Auth actions */}
           <div className="hidden md:flex items-center gap-3">
-            <button className="text-sm text-[#94A3B8] hover:text-white transition-colors px-3 py-1.5">
-              Log In
-            </button>
-            <Button
-              className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-semibold text-sm
-                         shadow-[0_0_15px_rgba(0,189,214,0.3)] hover:shadow-[0_0_20px_rgba(0,189,214,0.5)]
-                         transition-all duration-300"
-              size="sm"
-            >
-              Sign Up
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <div className="w-8 h-8 rounded-full bg-[#00BDD6] flex items-center justify-center text-[#090E1A] font-bold">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <Button
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  variant="outline"
+                  className="border-[#1F2937] text-[#94A3B8] hover:text-white hover:bg-[#111726] px-3 py-1.5 h-8 text-sm"
+                >
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="text-sm text-[#94A3B8] hover:text-white transition-colors px-3 py-1.5"
+                >
+                  Log In
+                </button>
+                <Button
+                  onClick={() => navigate('/sign-up')}
+                  className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-semibold text-sm
+                             shadow-[0_0_15px_rgba(0,189,214,0.3)] hover:shadow-[0_0_20px_rgba(0,189,214,0.5)]
+                             transition-all duration-300"
+                  size="sm"
+                >
+                  Sign Up
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -228,14 +226,45 @@ export const CareerPathPage = () => {
                 {link}
               </a>
             ))}
-            <hr className="border-[#1F2937]" />
-            <button className="text-sm text-[#94A3B8] hover:text-white text-left py-1">Log In</button>
-            <Button
-              className="bg-[#00BDD6] text-[#090E1A] font-semibold w-full"
-              size="sm"
-            >
-              Sign Up
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <hr className="border-[#1F2937]" />
+                <div className="flex items-center gap-3 py-2 px-2">
+                  <div className="w-8 h-8 rounded-full bg-[#00BDD6] flex items-center justify-center text-[#090E1A] font-bold">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-white text-sm">{user?.name || 'User'}</span>
+                </div>
+                <Button
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  variant="outline"
+                  className="w-full border-[#1F2937] text-white"
+                  size="sm"
+                >
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <>
+                <hr className="border-[#1F2937]" />
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="text-sm text-[#94A3B8] hover:text-white text-left py-1"
+                >
+                  Log In
+                </button>
+                <Button
+                  onClick={() => navigate('/sign-up')}
+                  className="bg-[#00BDD6] text-[#090E1A] font-semibold w-full"
+                  size="sm"
+                >
+                  Sign Up
+                </Button>
+              </>
+            )}
           </div>
         )}
       </nav>
@@ -546,7 +575,13 @@ export const CareerPathPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Logo */}
-            <span className="text-lg font-bold tracking-tight">
+            <span 
+              className="text-lg font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
+              onClick={() => {
+                navigate('/career-paths');
+                window.scrollTo(0, 0);
+              }}
+            >
               Dev<span className="text-[#00E5FF]">Path</span>
             </span>
 

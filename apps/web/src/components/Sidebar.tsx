@@ -39,7 +39,9 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-top">
         <div className="sidebar-brand">
-          <h1>DevPath</h1>
+          <NavLink to="/career-paths" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <h1>DevPath</h1>
+          </NavLink>
         </div>
 
         <div className="sidebar-section-label">NAVIGATION</div>

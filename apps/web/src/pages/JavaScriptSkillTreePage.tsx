@@ -502,8 +502,17 @@ export const JavaScriptSkillTreePage: React.FC = () => {
             nodeTypes={nodeTypes}
             onNodeClick={handleNodeClick}
             fitView
-            minZoom={0.1}
+            fitViewOptions={{ padding: 0.5 }}
+            minZoom={0.5}
             maxZoom={1.5}
+            panOnScroll={true}
+            panOnScrollMode="vertical"
+            zoomOnScroll={false}
+            zoomOnPinch={false}
+            zoomOnDoubleClick={false}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={true}
             className="bg-[#0b1326]"
           >
             {/* Nền lưới chấm tối màu */}

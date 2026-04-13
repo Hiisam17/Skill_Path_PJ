@@ -1,4 +1,5 @@
 import React, { type ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -26,11 +27,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-8">
         {/* Logo - positioned at top */}
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-cyan-300 to-cyan-500 bg-clip-text text-transparent">
-              DevPath
-            </span>
-          </h1>
+          <Link to="/career-paths" className="hover:opacity-80 transition-opacity">
+            <h1 className="text-3xl font-bold tracking-tight">
+              <span className="bg-gradient-to-r from-cyan-300 to-cyan-500 bg-clip-text text-transparent">
+                DevPath
+              </span>
+            </h1>
+          </Link>
         </div>
 
         {/* Auth Card */}

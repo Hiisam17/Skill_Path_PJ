@@ -220,6 +220,20 @@ function NodeDrawer({ node, status, isLocked, onClose, onStatusChange }: DrawerP
               </ul>
             </section>
           )}
+
+          {node.label === "JavaScript" && !isLocked && (
+            <div style={{ marginTop: "24px", marginBottom: "8px" }}>
+              <Link to="/javascript-roadmap" className="frm-resource-card" style={{ background: "rgba(76, 215, 246, 0.1)", borderColor: "#4cd7f6", textDecoration: "none" }}>
+                <span className="frm-resource-info" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "20px" }}>⚡</span>
+                  <span className="frm-resource-label" style={{ color: "#4cd7f6", fontWeight: "bold", fontSize: "15px" }}>Visit JavaScript roadmap</span>
+                </span>
+                <svg viewBox="0 0 24 24" fill="none" width="18" height="18" stroke="#4cd7f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ justifySelf: "flex-end" }}>
+                  <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                </svg>
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="frm-drawer-footer">
@@ -294,11 +308,7 @@ export default function FrontendRoadmapPage() {
         key={node.id}
         className={`frm-node-card ${statusCardClass}`}
         onClick={() => {
-          if (node.label === "JavaScript") {
-            navigate("/javascript-roadmap");
-          } else {
-            setSelected(node);
-          }
+          setSelected(node);
         }}
       >
         <div className="frm-node-card-top">

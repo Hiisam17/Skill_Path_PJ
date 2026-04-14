@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspaces",
+    "vercel-build": "npm run build --workspace=apps/web",
     "start": "npm start --workspaces",
     "test": "npm test --workspaces"
   },

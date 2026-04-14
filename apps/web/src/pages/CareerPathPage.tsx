@@ -17,7 +17,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import apiClient from '@/lib/axios'
 import { useAuth } from '@/context/AuthContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -169,7 +168,7 @@ export const CareerPathPage = () => {
             {isAuthenticated ? (
               <>
                 <div className="w-8 h-8 rounded-full bg-[#00BDD6] flex items-center justify-center text-[#090E1A] font-bold">
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  {(user as any)?.name?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <Button
                   onClick={() => {
@@ -231,9 +230,9 @@ export const CareerPathPage = () => {
                 <hr className="border-[#1F2937]" />
                 <div className="flex items-center gap-3 py-2 px-2">
                   <div className="w-8 h-8 rounded-full bg-[#00BDD6] flex items-center justify-center text-[#090E1A] font-bold">
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                    {(user as any)?.name?.charAt(0).toUpperCase() || 'U'}
                   </div>
-                  <span className="text-white text-sm">{user?.name || 'User'}</span>
+                  <span className="text-white text-sm">{(user as any)?.name || 'User'}</span>
                 </div>
                 <Button
                   onClick={() => {

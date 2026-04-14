@@ -267,7 +267,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
     localStorage.setItem(JS_PROGRESS_KEY, JSON.stringify(nodeStatuses));
   }, [nodeStatuses]);
 
-  const handleNodeClick = (event: React.MouseEvent, node: any) => {
+  const handleNodeClick = (_event: React.MouseEvent, node: any) => {
     // Ngăn chặn sự kiện cho các node cấu trúc
     if (node.type === 'vertical' || node.type === 'section' || node.type === 'legend') return;
 
@@ -417,9 +417,9 @@ export const JavaScriptSkillTreePage: React.FC = () => {
 
   processedEdges = processedEdges.filter(edge => {
     // Không dùng lại cạnh liên quan đến vertical node
-    if (verticalNodeIds.has(edge.source) || verticalNodeIds.has(edge.target)) return false;
+    if (verticalNodeIds.has(edge.source!) || verticalNodeIds.has(edge.target!)) return false;
     // Không dùng lại cạnh liên quan đến node bị xoá (roadmap.sh)
-    if (removeNodesSet.has(edge.source) || removeNodesSet.has(edge.target)) return false;
+    if (removeNodesSet.has(edge.source!) || removeNodesSet.has(edge.target!)) return false;
     // Không dùng lại cạnh nối giữa 2 main topic cũ (vì đã có flow mới)
     if (mainTopicIdsSet.has(edge.source) && mainTopicIdsSet.has(edge.target)) return false;
     return true;
@@ -519,7 +519,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
             minZoom={0.5}
             maxZoom={1.5}
             panOnScroll={true}
-            panOnScrollMode="vertical"
+            panOnScrollMode={"vertical" as any}
             zoomOnScroll={false}
             zoomOnPinch={false}
             zoomOnDoubleClick={false}

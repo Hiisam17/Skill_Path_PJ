@@ -82,7 +82,7 @@ export class SkillsService {
           roadmapId: String(roadmapIdNumber),
           name: skill.name,
           description: skill.description ?? '',
-          orderIndex: roadmapSkill.stepNumber,
+          orderIndex: roadmapSkill.stepNumber ?? 0,
           status: this.mapProgressStatus(progressStatusName),
         };
       });

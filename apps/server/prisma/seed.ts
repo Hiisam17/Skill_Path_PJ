@@ -211,9 +211,9 @@ async function main() {
     if (!roadmapSkill.skillId) continue;
 
     const statusId =
-      roadmapSkill.stepNumber <= 1
+      (roadmapSkill.stepNumber ?? 0) <= 1
         ? completedStatus.id
-        : roadmapSkill.stepNumber <= 3
+        : (roadmapSkill.stepNumber ?? 0) <= 3
           ? inProgressStatus.id
           : notStartedStatus.id;
 

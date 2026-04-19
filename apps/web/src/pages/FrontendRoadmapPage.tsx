@@ -269,6 +269,28 @@ export default function FrontendRoadmapPage() {
   });
 
   const [selected, setSelected] = useState<FrontendNode | null>(null);
+  const [gapNodes, setGapNodes] = useState<string[]>([]);
+  const [gapSummary, setGapSummary] = useState<{ jobTitle: string; companyName: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const activeGapStr = localStorage.getItem("activeGapAnalysis");
+      if (activeGapStr) {
+        const activeGap = JSON.parse(activeGapStr);
+        // Ensure this gap data is meant for THIS roadmap page
+        if (activeGap.roadmapPath === "/frontend-roadmap") {
+          setGapNodes(activeGap.gapNodes);
+          setGapSummary({ jobTitle: activeGap.jobTitle, companyName: activeGap.companyName });
+        }
+      }
+    } catch { }
+  }, []);
+
+  const handleResetGap = () => {
+    setGapNodes([]);
+    setGapSummary(null);
+    localStorage.removeItem("activeGapAnalysis");
+  };
 
   useEffect(() => {
     localStorage.setItem("frontendRoadmapProgress", JSON.stringify(statuses));
@@ -301,6 +323,11 @@ export default function FrontendRoadmapPage() {
       statusCardClass = "frm-node-card--in-progress";
       pillClass = "frm-pill--in-progress";
       statusString = "In Progress";
+    }
+
+    const isGap = gapNodes.includes(node.id) && status !== "COMPLETED";
+    if (isGap) {
+      statusCardClass += " frm-node-gap";
     }
 
     return (
@@ -350,6 +377,19 @@ export default function FrontendRoadmapPage() {
         </div>
       </div>
 
+      {gapSummary && (
+        <div className="frm-summary-banner">
+          <h3>{gapNodes.length} skills cần học để ứng tuyển {gapSummary.jobTitle} tại {gapSummary.companyName}</h3>
+          <div className="frm-summary-chips">
+            {gapNodes.map((id) => {
+              const nd = ALL_NODES.find(x => x.id === id);
+              return <span key={id} className="frm-summary-chip">{nd ? nd.label : id}</span>;
+            })}
+          </div>
+          <button className="frm-summary-reset-btn" onClick={handleResetGap}>Reset view</button>
+        </div>
+      )}
+
       <div className="frm-roadmap-wrap">
         <div className="frm-tree-container">
 
@@ -384,6 +424,21 @@ export default function FrontendRoadmapPage() {
 
           {renderCard(getNode("Vitest"))}
 
+        </div>
+      </div>
+
+      <div className="frm-legend">
+        <div className="frm-legend-item">
+          <span className="frm-legend-color not-started"></span>
+          <span>⬜ Chưa học</span>
+        </div>
+        <div className="frm-legend-item">
+          <span className="frm-legend-color completed"></span>
+          <span>🟢 Đã hoàn thành</span>
+        </div>
+        <div className="frm-legend-item">
+          <span className="frm-legend-color gap"></span>
+          <span>🟡 Cần học cho job này</span>
         </div>
       </div>
 

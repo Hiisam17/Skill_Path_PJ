@@ -10,6 +10,8 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import "./DashboardPage.css";
+// Re-use some styles from frontend roadmap for consistency
+import "./FrontendRoadmapPage.css"; 
 
 import jsData from '../javascript.json';
 
@@ -147,13 +149,16 @@ const StatusIndicator = ({ status, className }: { status?: string, className?: s
 // Node chính (Topic) - Khối Bento tối màu, viền đổi màu theo trạng thái
 const TopicNode = ({ data }: any) => {
   const status = data.status || 'not-started';
-  const borderColor = status === 'completed' ? 'border-[#4cd7f6]' :
+  const isGap = data.isGap;
+  const borderColor = isGap ? 'border-amber-500' :
+    status === 'completed' ? 'border-[#4cd7f6]' :
     status === 'in-progress' ? 'border-orange-400' : 'border-gray-700';
-  const shadow = status === 'completed' ? 'shadow-[0_0_20px_rgba(76,215,246,0.3)]' :
+  const shadow = isGap ? 'shadow-[0_0_25px_rgba(245,158,11,0.8)] animate-pulse' :
+    status === 'completed' ? 'shadow-[0_0_20px_rgba(76,215,246,0.3)]' :
     status === 'in-progress' ? 'shadow-[0_0_20px_rgba(251,146,60,0.2)]' : '';
 
   return (
-    <div className={`relative bg-[#171f33] border-2 ${borderColor} ${shadow} px-6 py-4 rounded-xl min-w-[200px] text-center group hover:scale-105 transition-all backdrop-blur-sm`}>
+    <div className={`relative bg-[#171f33] border-2 ${borderColor} ${shadow} px-6 py-4 rounded-xl min-w-[200px] text-center group hover:scale-105 transition-all backdrop-blur-sm ${isGap ? 'bg-amber-900/20' : ''}`}>
       <StatusIndicator status={status} />
       {/* Top Handles */}
       <Handle id="w1" type="target" position={Position.Top} className="opacity-0" />
@@ -186,12 +191,14 @@ const SubtopicNode = ({ data }: any) => {
     'call', 'apply', 'bind'
   ];
   const isSmall = smallLabels.includes(data.label.toLowerCase());
+  const isGap = data.isGap;
 
-  const borderColor = status === 'completed' ? 'border-[#4cd7f6]/60' :
+  const borderColor = isGap ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)] animate-pulse' :
+    status === 'completed' ? 'border-[#4cd7f6]/60' :
     status === 'in-progress' ? 'border-orange-400/60' : 'border-gray-600';
 
   return (
-    <div className={`relative bg-[#222a3d] border ${borderColor} px-4 py-3 rounded-lg text-center hover:border-[#4cd7f6] hover:shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all group ${isSmall ? 'min-w-[80px]' : 'min-w-[140px]'}`}>
+    <div className={`relative bg-[#222a3d] border ${borderColor} px-4 py-3 rounded-lg text-center hover:border-[#4cd7f6] hover:shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all group ${isSmall ? 'min-w-[80px]' : 'min-w-[140px]'} ${isGap ? 'bg-amber-900/20' : ''}`}>
       <StatusIndicator status={status} className="w-5 h-5 -top-2 -right-2 border-[1.5px] scale-75 opacity-80 group-hover:opacity-100" />
 
       {/* Handles tương tự TopicNode */}
@@ -250,6 +257,28 @@ const MainTitleNode = ({ data }: any) => {
 export const JavaScriptSkillTreePage: React.FC = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedNodeData, setSelectedNodeData] = useState<ParsedMarkdown & { id: string } | null>(null);
+  
+  const [gapNodes, setGapNodes] = useState<string[]>([]);
+  const [gapSummary, setGapSummary] = useState<{ jobTitle: string; companyName: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const activeGapStr = localStorage.getItem("activeGapAnalysis");
+      if (activeGapStr) {
+        const activeGap = JSON.parse(activeGapStr);
+        if (activeGap.roadmapPath === "/javascript-roadmap") {
+          setGapNodes(activeGap.gapNodes);
+          setGapSummary({ jobTitle: activeGap.jobTitle, companyName: activeGap.companyName });
+        }
+      }
+    } catch { }
+  }, []);
+
+  const handleResetGap = () => {
+    setGapNodes([]);
+    setGapSummary(null);
+    localStorage.removeItem("activeGapAnalysis");
+  };
 
   // State quản lý trạng thái của từng node — đồng bộ với localStorage
   const JS_PROGRESS_KEY = "jsRoadmapProgress";
@@ -479,10 +508,11 @@ export const JavaScriptSkillTreePage: React.FC = () => {
       ...node,
       data: {
         ...node.data,
-        status: nodeStatuses[node.id] || 'not-started'
+        status: nodeStatuses[node.id] || 'not-started',
+        isGap: gapNodes.includes(node.id) && (nodeStatuses[node.id] !== 'completed')
       }
     }));
-  }, [nodeStatuses, initialNodes]);
+  }, [nodeStatuses, gapNodes, initialNodes]);
 
 
   return (
@@ -506,6 +536,21 @@ export const JavaScriptSkillTreePage: React.FC = () => {
             </button>
           </div>
         </header>
+
+        {gapSummary && (
+          <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-20 w-max">
+            <div className="frm-summary-banner" style={{ margin: 0, boxShadow: '0 4px 30px rgba(0,0,0,0.5)' }}>
+              <h3>{gapNodes.length} skills cần học để ứng tuyển {gapSummary.jobTitle} tại {gapSummary.companyName}</h3>
+              <div className="frm-summary-chips">
+                {gapNodes.map((id) => {
+                  const nd = initialNodes.find(x => x.id === id);
+                  return <span key={id} className="frm-summary-chip">{nd ? nd.data.label : id}</span>;
+                })}
+              </div>
+              <button className="frm-summary-reset-btn" onClick={handleResetGap}>Reset view</button>
+            </div>
+          </div>
+        )}
 
         {/* React Flow Canvas */}
         <div className="flex-1 w-full h-full relative">

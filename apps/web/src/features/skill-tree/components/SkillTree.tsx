@@ -14,7 +14,13 @@ function ConnectionLine() {
   );
 }
 
-export default function SkillTree() {
+interface SkillTreeProps {
+  highlightedNodeIds?: string[];
+  summaryInfo?: { totalMissed: number; jobTitle: string; companyName: string; skillNames: string[] } | null;
+  onReset?: () => void;
+}
+
+export default function SkillTree({ highlightedNodeIds = [], summaryInfo = null, onReset }: SkillTreeProps) {
   const [skills, setSkills] = useState<SkillNodeUI[]>(BACKEND_ROADMAP_MOCK);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +109,20 @@ export default function SkillTree() {
         <p className="roadmap-header__subtitle">Master servers, databases, architecture and deployment.</p>
       </div>
 
+      {summaryInfo && (
+        <div className="roadmap-summary-banner">
+          <h3>{summaryInfo.totalMissed} skills cần học để ứng tuyển {summaryInfo.jobTitle} tại {summaryInfo.companyName}</h3>
+          <div className="roadmap-summary-chips">
+            {summaryInfo.skillNames.map((name, i) => (
+              <span key={i} className="roadmap-summary-chip">{name}</span>
+            ))}
+          </div>
+          {onReset && (
+            <button className="roadmap-summary-reset-btn" onClick={onReset}>Reset view</button>
+          )}
+        </div>
+      )}
+
       <div className="roadmap-path">
         <ConnectionLine />
 
@@ -121,7 +141,9 @@ export default function SkillTree() {
                 </div>
 
                 <button 
-                  className={`roadmap-node-card ${getStatusClass(skill.status)}`}
+                  className={`roadmap-node-card ${getStatusClass(skill.status)} ${
+                    highlightedNodeIds.includes(skill.id) && skill.status !== "COMPLETED" ? "node-gap" : ""
+                  }`}
                   onClick={() => setSelectedSkill(skill)}
                 >
                   <div className="roadmap-node-badge">{skill.category}</div>
@@ -131,6 +153,23 @@ export default function SkillTree() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="roadmap-legend">
+        <div style={{ display: 'flex', gap: '24px' }}>
+          <div className="roadmap-legend-item">
+            <span className="roadmap-legend-color not-started"></span>
+            <span>⬜ Chưa học</span>
+          </div>
+          <div className="roadmap-legend-item">
+            <span className="roadmap-legend-color completed"></span>
+            <span>🟢 Đã hoàn thành</span>
+          </div>
+          <div className="roadmap-legend-item">
+            <span className="roadmap-legend-color gap"></span>
+            <span>🟡 Cần học cho job này</span>
+          </div>
         </div>
       </div>
 

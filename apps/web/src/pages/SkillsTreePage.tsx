@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { SkillTree } from "@/features/skill-tree";
 import StatsPanel from "@/components/StatsPanel";
 import "./SkillsTreePage.css";
+
 export const SkillsTreePage = () => {
+
+
   return (
     <div className="skill-tree-page">
       <div className="skill-tree-page__glow-top" />

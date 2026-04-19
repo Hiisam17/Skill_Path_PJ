@@ -11,6 +11,8 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { JavaScriptSkillTreePage } from "@/pages/JavaScriptSkillTreePage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignUpPage } from "./pages/SignUpPage";
+import { SkillsTreePage } from "./pages/SkillsTreePage";
+import { JobMarketPage } from "./pages/JobMarketPage";
 import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
@@ -50,6 +52,8 @@ function App() {
         <Route path="/javascript-roadmap" element={<JavaScriptSkillTreePage />} />
         <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/skills-tree" element={<SkillsTreePage />} />
+        <Route path="/job-market" element={<JobMarketPage />} />
       </Route>
 
       {/* Fallback Route (404) */}

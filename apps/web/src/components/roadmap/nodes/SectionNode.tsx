@@ -5,8 +5,8 @@ export default function SectionNode({ data }: NodeProps) {
   const nodeName = String((data as any).label || (data as any).title || (data as any).name || 'Unnamed');
 
   return (
-    // Đổi màu vàng thành nền Slate tối, viền Xanh dương phát sáng nhẹ
-    <div className="w-full h-full bg-slate-900 border-2 border-blue-500 rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.3)] flex items-center justify-center p-2 text-white">
+    // BỔ SUNG: cursor-pointer, hover:bg-slate-800, hover:shadow-blue-500/50 và transition-all
+    <div className="w-full h-full bg-slate-900 border-2 border-blue-500 rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.3)] flex items-center justify-center p-2 text-white cursor-pointer hover:bg-slate-800 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-200">
       
       <Handle type="target" position={Position.Top} id="top" className="w-2 h-2 !bg-blue-400 border-none" />
       <Handle type="source" position={Position.Bottom} id="bottom" className="w-2 h-2 !bg-blue-400 border-none" />

@@ -6,7 +6,9 @@ import ReactFlow, {
   MiniMap,
   Handle,
   Position,
-  BackgroundVariant
+  BackgroundVariant,
+  PanOnScrollMode,
+  type Node
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import "./DashboardPage.css";
@@ -267,7 +269,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
     localStorage.setItem(JS_PROGRESS_KEY, JSON.stringify(nodeStatuses));
   }, [nodeStatuses]);
 
-  const handleNodeClick = (event: React.MouseEvent, node: any) => {
+  const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
     // Ngăn chặn sự kiện cho các node cấu trúc
     if (node.type === 'vertical' || node.type === 'section' || node.type === 'legend') return;
 
@@ -415,7 +417,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   const verticalNodeIds = new Set(initialNodes.filter(n => n.type === 'vertical').map(n => n.id));
   const removeNodesSet = new Set(REMOVE_NODE_IDS);
 
-  processedEdges = processedEdges.filter(edge => {
+  processedEdges = processedEdges.filter((edge: any) => {
     // Không dùng lại cạnh liên quan đến vertical node
     if (verticalNodeIds.has(edge.source) || verticalNodeIds.has(edge.target)) return false;
     // Không dùng lại cạnh liên quan đến node bị xoá (roadmap.sh)
@@ -519,7 +521,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
             minZoom={0.5}
             maxZoom={1.5}
             panOnScroll={true}
-            panOnScrollMode="vertical"
+            panOnScrollMode={PanOnScrollMode.Vertical}
             zoomOnScroll={false}
             zoomOnPinch={false}
             zoomOnDoubleClick={false}

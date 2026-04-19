@@ -10,6 +10,7 @@ import { SkillsModule } from './skills/skills.module';
 import { ProgressModule } from './progress/progress.module';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
+import { AiModule } from './ai/ai.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -23,6 +24,7 @@ import { join } from 'path';
     RoadmapsModule,
     SkillsModule,
     ProgressModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

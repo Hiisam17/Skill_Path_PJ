@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProgressController } from './progress.controller';
 import { ProgressService } from './progress.service';
-
+import { jest } from '@jest/globals';
 describe('ProgressController', () => {
   let controller: ProgressController;
 

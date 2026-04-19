@@ -26,11 +26,9 @@ export class SkillsService {
    * Returns ordered list of skills user should learn, with current completion status
    */
   async findSkillsByRoadmap(
-    roadmapId: number, // ĐÃ ĐỔI: Nhận trực tiếp number
+    roadmapId: number,
     userId: string,
   ): Promise<SkillDto[]> {
-    
-    // ĐÃ XÓA: Đoạn code check Number.isInteger() vì Controller đã làm việc đó
 
     const roadmapSkills = await this.prisma.roadmapSkill.findMany({
       where: {
@@ -77,25 +75,28 @@ export class SkillsService {
   async findByRoadmap(roadmapId: number, userId: string): Promise<SkillDto[]> {
     return this.findSkillsByRoadmap(roadmapId, userId);
   }
+  /**
+   * Retrieves skill details with associated active learning resources.
+   *
+   * @param id - The skill ID.
+   * @returns An object containing skill title, description, and formatted resources.
+   * @throws NotFoundException if the skill does not exist.
+   */
   async getSkillDetail(id: number) {
-    // Gọi 1 câu query duy nhất lấy Skill kèm theo Resources đang active
     const skill = await this.prisma.skill.findUnique({
       where: { id },
       include: {
         resources: {
-          where: { isActive: true }, 
-          include: { resourceType: true }, 
+          where: { isActive: true },
+          include: { resourceType: true },
         },
       },
     });
-    
-    // Quăng lỗi nếu không tìm thấy
+
     if (!skill) throw new NotFoundException('Skill not found');
 
-    // Đóng gói data chuẩn form { title, content, resources }
     return {
-      // Lưu ý: Nếu bảng Skill của bạn dùng cột 'name' thay vì 'title' thì sửa thành skill.name nhé
-      title: skill.name, 
+      title: skill.name,
       content: skill.description || '',
       resources: skill.resources.map(res => ({
         id: res.id,

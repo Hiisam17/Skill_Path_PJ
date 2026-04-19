@@ -3,6 +3,12 @@ import { SkillDto } from '../types';
 import { SkillsService } from './skills.service';
 import { ProgressService } from '../progress/progress.service';
 
+/**
+ * Controller for skill-related endpoints scoped under roadmaps.
+ * Provides skill listing and detail retrieval.
+ *
+ * NOTE: Uses demo user ID as a temporary measure until auth guard integration.
+ */
 @Controller('roadmaps')
 export class SkillsController {
   constructor(
@@ -10,13 +16,12 @@ export class SkillsController {
     private readonly progressService: ProgressService,
   ) { }
 
+  // TODO(auth): Replace demo user with @UseGuards(JwtAuthGuard) and @Request() req.user.id.
   @Get(':roadmapId/skills')
-  // TODO: add @UseGuards(JwtAuthGuard) when Dev A merges
   async getSkillsByRoadmap(
     @Param('roadmapId', ParseIntPipe) roadmapId: number,
   ): Promise<SkillDto[]> {
     const userId = await this.progressService.getDemoUserId();
-    // TODO: get userId from @Request() req.user.id after Dev A merges
     return this.skillsService.findSkillsByRoadmap(roadmapId, userId);
   }
   @Get(':id/detail')

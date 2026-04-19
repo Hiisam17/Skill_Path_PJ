@@ -2,11 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoadmapDto } from '../types';
 
+/**
+ * Service for managing roadmaps and career paths.
+ * Provides CRUD operations and React Flow data transformation.
+ */
 @Injectable()
 export class RoadmapsService {
   constructor(private readonly prisma: PrismaService) { }
 
-  // --- HELPER METHODS ---
+  /** Infers difficulty level from a roadmap title string. */
   private toLevel(title: string): string {
     const normalized = title.toLowerCase();
     if (normalized.includes('advanced')) return '3';
@@ -14,6 +18,7 @@ export class RoadmapsService {
     return '1';
   }
 
+  /** Maps a raw Prisma roadmap record to the public DTO shape. */
   private toDto(roadmap: { id: number; careerPathId: number | null; title: string }): RoadmapDto {
     return {
       id: String(roadmap.id),
@@ -22,8 +27,7 @@ export class RoadmapsService {
     };
   }
 
-  // --- CORE CRUD METHODS ---
-
+  /** Retrieves all roadmaps ordered by career path. */
   async findAll(): Promise<RoadmapDto[]> {
     const roadmaps = await this.prisma.roadmap.findMany({
       orderBy: [{ careerPathId: 'asc' }, { id: 'asc' }],
@@ -31,7 +35,11 @@ export class RoadmapsService {
     return roadmaps.map((roadmap) => this.toDto(roadmap));
   }
 
-  // Nhận thẳng `number`, không cần check string hay integer nữa
+  /**
+   * Finds a single roadmap by its ID.
+   *
+   * @throws NotFoundException if the roadmap does not exist.
+   */
   async findById(roadmapId: number): Promise<RoadmapDto> {
     const roadmap = await this.prisma.roadmap.findUnique({
       where: { id: roadmapId },
@@ -52,11 +60,11 @@ export class RoadmapsService {
     return roadmaps.map((roadmap) => this.toDto(roadmap));
   }
 
-  async findAllCareerPaths(): Promise<{ id: number; name: string }[]> {
+  async findAllCareerPaths(): Promise<{ id: number; name: string; description: string | null }[]> {
     const careerPaths = await this.prisma.careerPath.findMany({
-      select: { id: true, name: true }
+      select: { id: true, name: true, description: true }
     });
-    return careerPaths.map((c) => ({ id: c.id, name: c.name }));
+    return careerPaths.map((c) => ({ id: c.id, name: c.name, description: c.description }));
   }
 
   async getSystemRoadmapsByCareerPath(careerPathId: number): Promise<{ id: number; title: string; description: string | null }[]> {
@@ -78,13 +86,12 @@ export class RoadmapsService {
       throw new NotFoundException('No system roadmaps found for this career path');
     }
 
-    return roadmaps; // Đã map sẵn ở select, không cần .map() lại nữa
+    return roadmaps;
   }
 
-  // --- REACT FLOW ADAPTER METHOD ---
-
   /**
-   * Trả về dữ liệu phẳng (Nodes & Edges) cho Frontend vẽ React Flow
+   * Transforms a roadmap into React Flow nodes and edges for frontend visualization.
+   * Sections become primary nodes connected vertically; skills branch out from each section.
    */
   async getRoadmapFlow(roadmapId: number) {
     const roadmap = await this.prisma.roadmap.findUnique({

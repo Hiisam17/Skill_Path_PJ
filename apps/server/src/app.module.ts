@@ -11,12 +11,14 @@ import { ProgressModule } from './progress/progress.module';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { RoadmapSectionsModule } from './roadmap-sections/roadmap-sections.module';
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: join(process.cwd(), '.env.development'), 
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,

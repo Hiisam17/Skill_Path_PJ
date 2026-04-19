@@ -4,21 +4,21 @@ import { RoadmapsService } from './roadmaps.service';
 import { CareerResponseDto } from './dto/career-response.dto';
 import { RoadmapSummaryResponseDto } from './dto/roadmap-summary-response.dto';
 
+/**
+ * Unified controller for career path and roadmap endpoints.
+ * Serves both public career browsing and authenticated roadmap consumption.
+ */
 @Controller()
 export class RoadmapsController {
 	constructor(private readonly roadmapsService: RoadmapsService) { }
 
-	// ==========================================
-	// NHÁNH 1: API CHO CAREER PATHS
-	// ==========================================
-
-	// Public endpoint: GET /career-paths
+	/** Lists all available career paths. */
 	@Get('career-paths')
 	async getCareerPaths(): Promise<CareerResponseDto[]> {
 		return this.roadmapsService.findAllCareerPaths();
 	}
 
-	// Public endpoint: GET /career-paths/:careerId/roadmaps
+	/** Lists published system roadmaps for a given career path. */
 	@Get('career-paths/:careerId/roadmaps')
 	async getRoadmapsByCareer(
 		@Param('careerId', ParseIntPipe) careerId: number,
@@ -26,10 +26,7 @@ export class RoadmapsController {
 		return this.roadmapsService.getSystemRoadmapsByCareerPath(careerId);
 	}
 
-	// ==========================================
-	// NHÁNH 2: API CHO ROADMAPS
-	// ==========================================
-
+	/** Lists all roadmaps in the system. */
 	@Get('roadmaps')
 	async findAll(): Promise<RoadmapDto[]> {
 		return this.roadmapsService.findAll();

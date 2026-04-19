@@ -68,7 +68,7 @@ export const LoginPage: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/career-paths`,
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       });
       if (error) throw error;

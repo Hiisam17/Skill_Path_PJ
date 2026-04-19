@@ -461,7 +461,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
         targetHandle,
         animated: true,
         style: {
-          stroke: '#4cd7f6', // Nét Cyan 
+          stroke: '#4cd7f6', // Nét Cyan
           strokeWidth: 5,    // Nét đậm
           strokeDasharray: 'none', // Liền nhau không đứt đoạn
           opacity: 1

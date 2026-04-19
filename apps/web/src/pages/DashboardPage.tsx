@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./DashboardPage.css";
 import { api } from "@/services/api";
 
@@ -100,16 +100,20 @@ const ROADMAP_ICONS = ["🗺️", "🛤️", "🧭", "🚀", "⚡"];
 
 /* ── Main Dashboard Page ── */
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const [multiProgress, setMultiProgress] = useState<MultiProgress | null>(null);
   const [selectedRoadmapIdx, setSelectedRoadmapIdx] = useState<number | null>(null); // null = overall
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [localSkills, setLocalSkills] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [marketStats, setMarketStats] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchProgress = async () => {
-      // ── Read all localStorage roadmap progress entries ──
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+
       const localRoadmaps: RoadmapProgress[] = [];
 
-      // Frontend Roadmap (uses UPPERCASE statuses: "COMPLETED")
       try {
         const saved = localStorage.getItem("frontendRoadmapProgress");
         if (saved) {
@@ -128,7 +132,6 @@ export const DashboardPage: React.FC = () => {
         }
       } catch { /* ignore */ }
 
-      // JavaScript Roadmap (uses lowercase statuses: "completed")
       try {
         const saved = localStorage.getItem("jsRoadmapProgress");
         if (saved) {
@@ -136,7 +139,6 @@ export const DashboardPage: React.FC = () => {
           const entries = Object.values(statuses);
           const completedSkills = entries.filter(s => s === "completed").length;
           const inProgressSkills = entries.filter(s => s === "in-progress").length;
-          // There are exactly 130 interactive nodes in the JavaScript roadmap
           const totalSkills = Math.max(entries.length, 130);
           if (completedSkills > 0 || inProgressSkills > 0) {
             localRoadmaps.push({
@@ -150,17 +152,29 @@ export const DashboardPage: React.FC = () => {
         }
       } catch { /* ignore */ }
 
-      try {
-        const response = await api.get("/users/progress");
-        const data: MultiProgress = response.data;
+      const p1 = api.get("/users/progress");
+      const p2 = api.get("/dashboard/skills");
+      const p3 = Promise.resolve([
+        { icon: "🚀", label: "First Step", variant: "unlocked-cyan" as const },
+        { icon: "🌱", label: "Beginner", variant: "unlocked-purple" as const },
+        { icon: "🧭", label: "Explorer", variant: "unlocked-orange" as const },
+        { icon: "🏛️", label: "Architect", variant: "locked" as const },
+      ]);
+      const p4 = Promise.resolve([
+        { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
+        { name: "Rust", value: "+8.7%", color: "purple" as const },
+        { name: "Next.js", value: "+22.5%", color: "orange" as const },
+      ]);
 
-        // Merge localStorage roadmaps that don't already exist in API data
+      const results = await Promise.allSettled([p1, p2, p3, p4]);
+
+      // Handle Progress (p1)
+      if (results[0].status === "fulfilled") {
+        const data: MultiProgress = results[0].value.data;
         for (const lr of localRoadmaps) {
           if (lr.completedSkills > 0) {
             const nameKey = lr.roadmapName.toLowerCase();
-            const alreadyInApi = data.roadmaps.some(
-              r => r.roadmapName.toLowerCase().includes(nameKey)
-            );
+            const alreadyInApi = data.roadmaps.some(r => r.roadmapName.toLowerCase().includes(nameKey));
             if (!alreadyInApi) {
               data.roadmaps.push(lr);
               data.overall.completedSkills += lr.completedSkills;
@@ -168,17 +182,11 @@ export const DashboardPage: React.FC = () => {
             }
           }
         }
-
-        // Recalculate overall percentage
         if (data.overall.totalSkills > 0) {
-          data.overall.percentage = Math.round(
-            (data.overall.completedSkills / data.overall.totalSkills) * 100
-          );
+          data.overall.percentage = Math.round((data.overall.completedSkills / data.overall.totalSkills) * 100);
         }
-
         setMultiProgress(data);
-      } catch {
-        // Full fallback to localStorage only
+      } else {
         if (localRoadmaps.length > 0) {
           const totalCompleted = localRoadmaps.reduce((s, r) => s + r.completedSkills, 0);
           const totalSkills = localRoadmaps.reduce((s, r) => s + r.totalSkills, 0);
@@ -196,22 +204,32 @@ export const DashboardPage: React.FC = () => {
             roadmaps: [],
           });
         }
-      } finally {
-        setIsLoading(false);
       }
+
+      // Handle Skills (p2)
+      if (results[1].status === "fulfilled") {
+        setLocalSkills(results[1].value.data);
+      } else {
+        console.error("Failed to fetch skills data:", results[1].reason);
+      }
+
+      // Handle Milestones (p3)
+      if (results[2].status === "fulfilled") {
+        setMilestones(results[2].value);
+      }
+
+      // Handle Market Stats (p4)
+      if (results[3].status === "fulfilled") {
+        setMarketStats(results[3].value);
+      }
+
+      setIsLoading(false);
     };
-    fetchProgress();
+
+    fetchDashboardData();
   }, []);
 
-  /* ── Skills data ── */
-  const [localSkills, setLocalSkills] = useState([
-    { id: 1, icon: "◈", title: "GraphQL Mastery", desc: "Optimize your API layer with typed queries", xp: 200, isCompleted: false },
-    { id: 2, icon: "🔐", title: "Auth Patterns", desc: "Implement OAuth2, JWT, and WebAuthn", xp: 350, isCompleted: false },
-    { id: 3, icon: "⚡", title: "Serverless Edge", desc: "Deploying functions globally with low latency", xp: 150, isCompleted: false },
-    { id: 4, icon: "🧩", title: "Micro-Frontends", desc: "Scaling UI development across distributed teams", xp: 500, isCompleted: false },
-  ]);
-
-  /* ── Xử lý Click Hoàn thành Skill (Optimistic Update) ── */
+  /** Handles skill completion with optimistic update and API sync. */
   const handleCompleteSkill = async (skillId: number) => {
     const previousProgress = multiProgress;
     const previousSkills = [...localSkills];
@@ -223,10 +241,10 @@ export const DashboardPage: React.FC = () => {
     try {
       await api.post(`/skills/${skillId}/complete`);
     } catch (error) {
-      console.error("Lỗi khi lưu tiến độ:", error);
+      console.error('Failed to save progress:', error);
       setMultiProgress(previousProgress);
       setLocalSkills(previousSkills);
-      alert("Lỗi kết nối! Vui lòng thử lại.");
+      alert('Connection error! Please try again.');
     }
   };
 
@@ -250,20 +268,7 @@ export const DashboardPage: React.FC = () => {
 
   const { line: sparkLine, area: sparkArea } = generateSparklinePath(sparklinePoints, 800, 96);
 
-  /* ── Milestones ── */
-  const milestones = [
-    { icon: "🚀", label: "First Step", variant: "unlocked-cyan" as const },
-    { icon: "🌱", label: "Beginner", variant: "unlocked-purple" as const },
-    { icon: "🧭", label: "Explorer", variant: "unlocked-orange" as const },
-    { icon: "🏛️", label: "Architect", variant: "locked" as const },
-  ];
-
-  /* ── Market data ── */
-  const marketStats = [
-    { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
-    { name: "Rust", value: "+8.7%", color: "purple" as const },
-    { name: "Next.js", value: "+22.5%", color: "orange" as const },
-  ];
+  /* ── Milestones & Market Stats are now managed via state ── */
 
   return (
     <div className="dashboard-layout">
@@ -309,7 +314,7 @@ export const DashboardPage: React.FC = () => {
             <div className="bento-card card-milestones">
               <div className="card-header">
                 <span className="card-header-label">EARNED MILESTONES</span>
-                <a href="#milestones" className="card-header-link">View All</a>
+                <Link to="/career-paths" className="card-header-link">View All</Link>
               </div>
               <div className="milestones-row">
                 {milestones.map((m) => (
@@ -361,9 +366,12 @@ export const DashboardPage: React.FC = () => {
                 <span className="section-label">MY PROGRESS</span>
                 <h3>Active Roadmaps</h3>
               </div>
-              <Link to="/career-paths" className="explore-tree-btn">
+              <button 
+                onClick={() => navigate('/career-paths')} 
+                className="explore-tree-btn cursor-pointer"
+              >
                 Browse Paths
-              </Link>
+              </button>
             </div>
 
             {!isLoading && multiProgress && multiProgress.roadmaps.length > 0 ? (
@@ -374,14 +382,14 @@ export const DashboardPage: React.FC = () => {
                   const isActive = selectedRoadmapIdx === idx;
 
                   return (
-                    <button
+                    <div
                       key={rm.roadmapId}
-                      className={`roadmap-progress-card ${isActive ? "roadmap-progress-card--active" : ""}`}
+                      className={`roadmap-progress-card cursor-pointer ${isActive ? "roadmap-progress-card--active" : ""}`}
                       style={{
                         borderColor: isActive ? color.border : undefined,
                         background: isActive ? color.bg : undefined,
                       }}
-                      onClick={() => setSelectedRoadmapIdx(isActive ? null : idx)}
+                      onClick={() => navigate('/roadmaps/' + rm.roadmapId)}
                     >
                       <div className="roadmap-card-top">
                         <span className="roadmap-card-icon">{icon}</span>
@@ -405,7 +413,14 @@ export const DashboardPage: React.FC = () => {
                           }}
                         />
                       </div>
-                    </button>
+                      <div 
+                        className={`mt-4 text-sm font-bold text-center transition-opacity flex items-center justify-center gap-1 ${isActive ? "opacity-100" : "opacity-0 h-0 overflow-hidden mt-0"}`}
+                        style={{ color: color.accent }}
+                      >
+                        Continue Learning
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -460,9 +475,9 @@ export const DashboardPage: React.FC = () => {
         {/* ── Footer ── */}
         <footer className="dashboard-footer">
           <div className="footer-links">
-            <a href="#privacy">PRIVACY POLICY</a>
-            <a href="#terms">TERMS OF SERVICE</a>
-            <a href="#support">SUPPORT</a>
+            <Link to="#">PRIVACY POLICY</Link>
+            <Link to="#">TERMS OF SERVICE</Link>
+            <Link to="#">SUPPORT</Link>
           </div>
           <p className="footer-copyright">© 2024 DevPath. The Architectural Navigator.</p>
         </footer>

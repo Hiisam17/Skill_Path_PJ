@@ -9,24 +9,36 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * ProgressService tracks user's skill completion and learning progress
- * Manages skill completion records and calculates overall progress statistics
+ * Tracks user skill completion and calculates learning progress.
+ * Manages skill completion records and aggregates roadmap statistics.
  */
 @Injectable()
 export class ProgressService {
+  // 1. Khai báo biến lưu cache trên RAM (In-memory cache)
+  private completedStatusIdCache: number | null = null;
+
   constructor(private readonly prisma: PrismaService) {}
 
-  private async ensureProgressStatus(name: string): Promise<number> {
+  /** * Retrieves the ID for 'COMPLETED' status. 
+   * Uses in-memory caching to prevent redundant DB queries (Fixes N+1 Query).
+   */
+  public async getCompletedStatusId(): Promise<number> {
+    if (this.completedStatusIdCache !== null) {
+      return this.completedStatusIdCache;
+    }
+
     const status = await this.prisma.progressStatus.upsert({
-      where: { name },
+      where: { name: 'COMPLETED' },
       update: {},
-      create: { name },
+      create: { name: 'COMPLETED' },
       select: { id: true },
     });
 
+    this.completedStatusIdCache = status.id;
     return status.id;
   }
 
+  /** Maps a raw status name string to the UserSkillStatus enum. */
   private mapStatusNameToEnum(statusName?: string | null): UserSkillStatus {
     const normalized = (statusName ?? '').trim().toUpperCase();
     if (normalized === 'COMPLETED' || normalized === 'DONE') {
@@ -38,6 +50,12 @@ export class ProgressService {
     return UserSkillStatus.NOT_STARTED;
   }
 
+  /**
+   * Resolves a demo user ID for development/testing.
+   * Prefers DEMO_USER_ID env var, falls back to the most recently updated profile.
+   *
+   * @throws NotFoundException if no profile exists in the database.
+   */
   async getDemoUserId(): Promise<string> {
     const preferredUserId = process.env.DEMO_USER_ID;
 
@@ -47,9 +65,7 @@ export class ProgressService {
         select: { userId: true },
       });
 
-      if (byId) {
-        return byId.userId;
-      }
+      if (byId) return byId.userId;
 
       const created = await this.prisma.profile.create({
         data: {
@@ -79,17 +95,13 @@ export class ProgressService {
   }
 
   /**
-   * Mark a skill as completed by the user
-   * Records completion timestamp and updates skill status to COMPLETED
-   * Prevents duplicate completions using upsert pattern
+   * Marks a skill as completed for the given user.
+   * Uses upsert to prevent duplicate completion records.
    *
-   * @param userId - UUID of authenticated user
-   * @param skillId - Number ID of the skill being marked as complete
-   * @returns UserSkillProgressDto with updated completion record
-   * @throws NotFoundException if user or skill not found
-   *
-   * Example:
-   * const progress = await progressService.completeSkill('user-id', 1)
+   * @param userId - UUID of the user.
+   * @param skillId - ID of the skill to complete.
+   * @returns Updated skill progress record.
+   * @throws NotFoundException if the skill does not exist.
    */
   async completeSkill(
     userId: string,
@@ -99,6 +111,7 @@ export class ProgressService {
       throw new NotFoundException(`Skill ${skillId} not found`);
     }
 
+    // Kiểm tra xem Skill có tồn tại không
     const skill = await this.prisma.skill.findUnique({
       where: { id: skillId },
       select: { id: true },
@@ -108,7 +121,8 @@ export class ProgressService {
       throw new NotFoundException(`Skill ${skillId} not found`);
     }
 
-    const completedStatusId = await this.ensureProgressStatus('COMPLETED');
+    // Lấy ID status từ cache thay vì gọi DB liên tục
+    const completedStatusId = await this.getCompletedStatusId();
 
     const progress = await this.prisma.userSkillProgress.upsert({
       where: {
@@ -128,12 +142,9 @@ export class ProgressService {
         completedAt: new Date(),
       },
       include: {
-        status: {
-          select: { name: true },
-        },
+        status: { select: { name: true } },
       },
     });
-
     return {
       id: String(progress.id),
       userId: progress.userId,
@@ -144,43 +155,35 @@ export class ProgressService {
   }
 
   /**
-   * Calculate user's overall progress for their current roadmap
-   * Aggregates completion statistics and calculates percentage completion
-   * Used to display progress bar and motivation indicators
+   * Calculates the user's overall progress for their current roadmap.
    *
-   * @param userId - UUID of authenticated user
-   * @returns ProgressDto with completion statistics
+   * @param userId - UUID of the user.
+   * @returns Aggregated completion statistics including percentage.
    */
   async getUserProgress(userId: string): Promise<ProgressDto> {
-    const completedStatusId = await this.ensureProgressStatus('COMPLETED');
+    const completedStatusId = await this.getCompletedStatusId();
 
     const completedSkills = await this.prisma.userSkillProgress.count({
-      where: {
-        userId,
-        statusId: completedStatusId,
-      },
+      where: { userId, statusId: completedStatusId },
     });
 
     const userRoadmap = await this.prisma.userRoadmap.findFirst({
       where: { userId: userId },
     });
 
-    let totalSkills = 6; 
+    // 2. Fix Magic Number: Khởi tạo bằng 0
+    let totalSkills = 0;
 
     if (userRoadmap) {
       const skillsInRoadmap = await this.prisma.roadmapSkill.count({
-        where: {
-          section: { roadmapId: userRoadmap.roadmapId }
-        },
+        where: { section: { roadmapId: userRoadmap.roadmapId } },
       });
       totalSkills = skillsInRoadmap > 0 ? skillsInRoadmap : totalSkills;
     } else {
       const firstRoadmap = await this.prisma.roadmap.findFirst();
       if (firstRoadmap) {
         const skillsInRoadmap = await this.prisma.roadmapSkill.count({
-          where: {
-            section: { roadmapId: firstRoadmap.id }
-          },
+          where: { section: { roadmapId: firstRoadmap.id } },
         });
         totalSkills = skillsInRoadmap > 0 ? skillsInRoadmap : totalSkills;
       }
@@ -195,30 +198,77 @@ export class ProgressService {
       percentage,
     };
   }
-
   /**
-   * Calculate user's progress across ALL enrolled roadmaps
-   * Returns per-roadmap breakdown and aggregated overall stats
+   * Tính toán và cập nhật trực tiếp progressPercentage vào bảng UserRoadmap.
+   * LƯU Ý: Hàm này chỉ nên được gọi SAU KHI hệ thống đã flush dữ liệu tiến độ từ RAM xuống DB chính thức.
+   * * @param userId - UUID của user
+   * @param roadmapId - ID của Roadmap cần đồng bộ tiến độ
+   */
+  async syncRoadmapProgressPercentage(userId: string, roadmapId: number): Promise<void> {
+    const completedStatusId = await this.getCompletedStatusId();
+    const totalSkills = await this.prisma.roadmapSkill.count({
+      where: {
+        section: { roadmapId: roadmapId },
+      },
+    });
+
+    if (totalSkills === 0) return;
+
+    const roadmapSkills = await this.prisma.roadmapSkill.findMany({
+      where: { section: { roadmapId: roadmapId } },
+      select: { skillId: true },
+    });
+
+    const skillIds = roadmapSkills
+      .map((rs) => rs.skillId)
+      .filter((id): id is number => id !== null);
+
+    const completedSkills = await this.prisma.userSkillProgress.count({
+      where: {
+        userId: userId,
+        skillId: { in: skillIds },
+        statusId: completedStatusId,
+      },
+    });
+
+    // 4. Tính phần trăm và làm tròn
+    const progressPercentage = Math.round((completedSkills / totalSkills) * 100);
+
+    // 5. Cập nhật thẳng vào bảng UserRoadmap
+    // Dùng updateMany thay vì update để không bị lỗi throw Error nếu user chưa join roadmap
+    await this.prisma.userRoadmap.updateMany({
+      where: {
+        userId: userId,
+        roadmapId: roadmapId,
+      },
+      data: {
+        progressPercentage: progressPercentage,
+      },
+    });
+
+    // (Tùy chọn) Log ra console nếu bạn đang debug quá trình Flush DB
+    // console.log(`[Sync] User ${userId} - Roadmap ${roadmapId}: ${progressPercentage}%`);
+  } 
+  /**
+   * Calculates the user's progress across all enrolled roadmaps.
+   * Falls back to system roadmaps if the user has no enrollments.
    *
-   * @param userId - UUID of authenticated user
-   * @returns MultiRoadmapProgressDto with overall + per-roadmap progress
+   * @param userId - UUID of the user.
+   * @returns Per-roadmap breakdown and aggregated overall statistics.
    */
   async getUserMultiRoadmapProgress(
     userId: string,
   ): Promise<MultiRoadmapProgressDto> {
-    const completedStatusId = await this.ensureProgressStatus('COMPLETED');
+    const completedStatusId = await this.getCompletedStatusId();
 
-    // Find all roadmaps the user is enrolled in
     let userRoadmaps = await this.prisma.userRoadmap.findMany({
       where: { userId },
       include: {
-        roadmap: {
-          select: { id: true, title: true },
-        },
+        roadmap: { select: { id: true, title: true } },
       },
     });
 
-    // Fallback: if user has no enrolled roadmaps, grab all system roadmaps
+    // Fallback: use all system roadmaps if user has no enrollments.
     if (userRoadmaps.length === 0) {
       const systemRoadmaps = await this.prisma.roadmap.findMany({
         where: { userId: null },
@@ -226,7 +276,6 @@ export class ProgressService {
         orderBy: { id: 'asc' },
       });
 
-      // Build virtual entries so the loop below works uniformly
       userRoadmaps = systemRoadmaps.map((r) => ({
         id: 0,
         userId,
@@ -244,18 +293,12 @@ export class ProgressService {
     let overallTotal = 0;
 
     for (const ur of userRoadmaps) {
-      // Count total skills in this roadmap (via sections)
       const totalSkills = await this.prisma.roadmapSkill.count({
-        where: {
-          section: { roadmapId: ur.roadmap.id },
-        },
+        where: { section: { roadmapId: ur.roadmap.id } },
       });
 
-      // Get all skill IDs in this roadmap
       const roadmapSkills = await this.prisma.roadmapSkill.findMany({
-        where: {
-          section: { roadmapId: ur.roadmap.id },
-        },
+        where: { section: { roadmapId: ur.roadmap.id } },
         select: { skillId: true },
       });
 
@@ -263,7 +306,6 @@ export class ProgressService {
         .map((rs) => rs.skillId)
         .filter((id): id is number => id !== null);
 
-      // Count how many of these skills the user has completed
       const completedSkills =
         skillIds.length > 0
           ? await this.prisma.userSkillProgress.count({
@@ -276,9 +318,7 @@ export class ProgressService {
           : 0;
 
       const safeTotalSkills = totalSkills > 0 ? totalSkills : 1;
-      const percentage = Math.round(
-        (completedSkills / safeTotalSkills) * 100,
-      );
+      const percentage = Math.round((completedSkills / safeTotalSkills) * 100);
 
       roadmapResults.push({
         roadmapId: String(ur.roadmap.id),

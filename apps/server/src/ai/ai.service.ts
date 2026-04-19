@@ -20,22 +20,59 @@ export class AiService {
    */
   async analyzeJobDescription(jdText: string, validNodeIds: string[]): Promise<string[]> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const prompt = this.buildPrompt(jdText, validNodeIds);
 
-      this.logger.log('Sending request to Gemini...');
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      this.logger.log('Sending request to Gemini (with 10s timeout)...');
 
-      // Parse kết quả trả về từ dạng string JSON array sang mảng thực tế
-      // Làm sạch text (loại bỏ markdown block nếu model lỡ trả về)
-      const cleanText = text.replace(/```json|```/g, '').trim();
-      return JSON.parse(cleanText);
+      // 1. Tạo Promise Timeout 10 giây
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Gemini API Timeout (10 seconds)')), 10000);
+      });
+
+      // 2. Tạo Promise Call AI
+      const apiPromise = model.generateContent(prompt).then(async (result) => {
+        const response = await result.response;
+        return response.text();
+      });
+
+      // 3. Race - Lấy kết quả của cái nào xong trước
+      const text = await Promise.race([apiPromise, timeoutPromise]);
+
+      // 4. Parse output với độ chính xác và chịu lỗi cao
+      return this.parseAiResponse(text);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Gemini API Error: ${errorMessage}`);
-      throw new InternalServerErrorException('Failed to analyze JD with AI');
+      throw new InternalServerErrorException(errorMessage);
+    }
+  }
+
+  /**
+   * Trích xuất chắc chắn mảng JSON từ văn bản dù AI có trả về markdown hay văn bản thừa
+   */
+  private parseAiResponse(text: string): string[] {
+    try {
+      // Dùng Regex lấy chính xác chuỗi từ '[' đến ']'
+      const match = text.match(/\[(.*?)\]/s);
+      
+      if (!match) {
+        throw new Error('Không tìm thấy JSON Array trong response');
+      }
+
+      // Xây dựng lại mảng từ chuỗi Regex đã match
+      const arrayString = '[' + match[1] + ']';
+      const parsed = JSON.parse(arrayString);
+
+      if (!Array.isArray(parsed)) {
+        throw new Error('Kết quả trích xuất được không phải là mảng Array');
+      }
+
+      // Đảm bảo trả về mảng các ID string chuẩn
+      return parsed.map((item) => String(item).trim());
+    } catch (parseError) {
+      this.logger.error(`Parser Error. Raw AI Response:\n${text}`);
+      throw new Error('AI Output Parsing Failed');
     }
   }
 

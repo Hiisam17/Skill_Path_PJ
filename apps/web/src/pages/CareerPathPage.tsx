@@ -29,15 +29,7 @@ interface CareerPath {
 // ─── Icon Map ─────────────────────────────────────────────────────────────────
 const PATH_ICONS = [Code, Database, Brain, Shield, Smartphone, Cloud]
 
-// ─── Mock descriptions (fallback when API doesn't return one) ─────────────────
-const MOCK_DESCRIPTIONS = [
-  'Master modern frameworks, APIs, and system design to build scalable applications.',
-  'Design and optimize databases, handle big data, and architect robust data pipelines.',
-  'Dive into ML models, neural networks, and deploy AI solutions at production scale.',
-  'Protect systems, conduct penetration testing, and build secure infrastructures.',
-  'Build native and cross-platform apps with cutting-edge mobile technologies.',
-  'Deploy, scale, and manage cloud infrastructure with DevOps best practices.',
-]
+
 
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 function SkeletonCard() {
@@ -65,7 +57,7 @@ function PathCard({
   loading: boolean
 }) {
   const Icon = PATH_ICONS[index % PATH_ICONS.length]
-  const description = path.description ?? MOCK_DESCRIPTIONS[index % MOCK_DESCRIPTIONS.length]
+  const description = path.description || 'No description available for this career path.';
 
   return (
     <div
@@ -94,8 +86,8 @@ function PathCard({
         onClick={() => onSelect(path.id)}
         disabled={loading}
         className="flex items-center gap-1 text-[#00BDD6] text-sm font-medium
-                  hover:text-[#00E5FF] transition-colors duration-200
-                  disabled:opacity-50 disabled:cursor-not-allowed w-fit group/btn"
+                   hover:text-[#00E5FF] transition-colors duration-200
+                   disabled:opacity-50 disabled:cursor-not-allowed w-fit group/btn"
       >
         Start Learning
         <ChevronRight
@@ -111,6 +103,7 @@ export const CareerPathPage = () => {
   const navigate = useNavigate()
   const [paths, setPaths] = useState<CareerPath[]>([])
   const [fetching, setFetching] = useState(true)
+  const [selectingId, setSelectingId] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Fetch career paths
@@ -118,26 +111,21 @@ export const CareerPathPage = () => {
     let cancelled = false;
 
     apiClient
-      // Tạm dùng any[] để hứng dữ liệu gốc từ Backend trả về
       .get<any[]>('/career-paths')
       .then((res) => {
         if (!cancelled) {
-          // Log ra để kiểm tra nếu cần
-          console.log('🎯 Dữ liệu Career Paths:', res.data);
-
-          // Data Mapping: Đổi tên trường cho khớp với Interface của giao diện
+          // Map backend field names to frontend interface expectations.
           const mappedPaths = res.data.map((item) => ({
-            id: String(item.id), // Đổi số thành chuỗi
-            title: item.name,    // Đổi 'name' thành 'title'
+            id: String(item.id),
+            title: item.name,
+            description: item.description,
           }));
 
-          // Nạp dữ liệu đã xử lý vào State
           setPaths(mappedPaths);
         }
       })
       .catch((err) => {
-        console.error('❌ Lỗi khi tải danh sách Career Paths:', err);
-        // Giữ nguyên logic cũ: UI sẽ hiển thị 0 cards một cách gọn gàng
+        console.error('Failed to fetch career paths:', err);
       })
       .finally(() => {
         if (!cancelled) setFetching(false);
@@ -148,10 +136,20 @@ export const CareerPathPage = () => {
     };
   }, []);
 
-  // Select roadmap — navigate trực tiếp đến skill-tree (MVP)
-  const handleSelect = (careerPathId: string) => {
-    navigate(`/skill-tree?careerPathId=${careerPathId}`)
+  // Select roadmap
+  const handleSelect = async (careerPathId: string) => {
+    setSelectingId(careerPathId)
+    try {
+      const res = await apiClient.post('/users/select-roadmap', { careerPathId })
+      navigate(`/roadmaps/${res.data.roadmapId}`)
+    } catch {
+      setSelectingId(null)
+    }
   }
+
+  const handleExploreClick = () => {
+    navigate('/explore');
+  };
 
   return (
     <div className="min-h-screen bg-[#090E1A] text-white overflow-x-hidden">
@@ -227,19 +225,6 @@ export const CareerPathPage = () => {
         )}
       </nav>
 
-      {/* Quick link: View all career paths (navigates to ExploreRoadmapsPage) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-        <div className="flex justify-end">
-          <Button
-            variant="link"
-            className="text-[#94A3B8] hover:text-[#00E5FF]"
-            onClick={() => navigate('/explore-roadmaps')}
-          >
-            View all career-paths
-          </Button>
-        </div>
-      </div>
-
       {/* ══ HERO SECTION ════════════════════════════════════════════════════ */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -275,18 +260,17 @@ export const CareerPathPage = () => {
 
             {/* CTA buttons */}
             <div className="flex flex-wrap gap-4">
-              <a href="#roadmaps">
-                <Button
-                  id="explore-roadmaps-btn"
-                  className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-bold
-                             px-7 h-12 text-base rounded-lg
-                             shadow-[0_0_15px_rgba(0,189,214,0.4)] hover:shadow-[0_0_25px_rgba(0,189,214,0.6)]
-                             transition-all duration-300"
-                >
-                  Explore Roadmaps
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </a>
+              <Button
+                id="explore-roadmaps-btn"
+                onClick={handleExploreClick}
+                className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-bold
+                           px-7 h-12 text-base rounded-lg cursor-pointer
+                           shadow-[0_0_15px_rgba(0,189,214,0.4)] hover:shadow-[0_0_25px_rgba(0,189,214,0.6)]
+                           transition-all duration-300"
+              >
+                Explore Roadmaps
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
               <Button
                 id="how-it-works-btn"
                 variant="outline"
@@ -401,8 +385,8 @@ export const CareerPathPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
             {[
               { value: '200k+', label: 'DEVELOPERS' },
-              { value: '50+', label: 'CAREER PATHS' },
-              { value: '1M+', label: 'SKILLS MASTERED' },
+              { value: '50+',   label: 'CAREER PATHS' },
+              { value: '1M+',   label: 'SKILLS MASTERED' },
             ].map(({ value, label }) => (
               <div key={label} className="flex flex-col gap-1">
                 <span
@@ -442,27 +426,27 @@ export const CareerPathPage = () => {
             ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
             : paths.length > 0
               ? paths.map((path, i) => (
-                <PathCard
-                  key={path.id}
-                  path={path}
-                  index={i}
-                  onSelect={handleSelect}
-                  loading={false}
-                />
-              ))
+                  <PathCard
+                    key={path.id}
+                    path={path}
+                    index={i}
+                    onSelect={handleSelect}
+                    loading={selectingId === path.id}
+                  />
+                ))
               : (
-                /* Empty state */
-                <div className="col-span-3 text-center py-16 text-[#94A3B8]">
-                  <Brain className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                  <p>No career paths available yet. Check back soon!</p>
-                </div>
-              )}
+                  /* Empty state */
+                  <div className="col-span-3 text-center py-16 text-[#94A3B8]">
+                    <Brain className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p>No career paths available yet. Check back soon!</p>
+                  </div>
+                )}
         </div>
 
         {/* View All Paths Button */}
         <div className="mt-12 text-center">
           <Button
-            onClick={() => navigate('/explore-roadmaps')}
+            onClick={() => navigate('/explore')}
             variant="outline"
             className="border-[#00BDD6]/50 bg-[#0d1829]/50 text-[#00BDD6] hover:bg-[#00BDD6]/10 hover:border-[#00BDD6] hover:text-[#00E5FF] px-8 h-12 text-base rounded-full transition-all duration-300"
           >

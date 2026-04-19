@@ -1,28 +1,16 @@
 /**
- * API Service Layer
- * Single axios instance with centralized configuration
- * Handles base URL, request/response interceptors, token management
- *
- * Usage:
- * ```
- * import { api } from '@/services/api';
- * const careerPaths = await api.get('/career-paths');
- * ```
+ * Centralized API service layer.
+ * Single Axios instance with request/response interceptors and token management.
  */
 
 import axios from "axios";
 import type { AxiosInstance, AxiosError, AxiosResponse } from "axios";
 
-// ───── CONSTANTS ─────
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const TOKEN_KEY = "access_token";
 
-// ───── CREATE AXIOS INSTANCE ─────
-/**
- * Configured axios instance for all API calls
- * @type {AxiosInstance}
- */
+/** Configured Axios instance for all API calls. */
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -30,21 +18,14 @@ export const api: AxiosInstance = axios.create({
   },
 });
 
-// ───── REQUEST INTERCEPTOR ─────
-/**
- * Automatically attach JWT token to all requests
- * Reads token from localStorage under 'auth_token' key
- */
-// Tìm đoạn này trong api.ts của bạn
+// Attaches JWT token to requests, skipping auth and public endpoints.
 api.interceptors.request.use((config) => {
-  // 1. Kiểm tra nếu URL là login hoặc register thì KHÔNG đính kèm token
   const isAuthRoute = config.url?.includes('/auth/login') || config.url?.includes('/auth/register');
 
   if (isAuthRoute) {
-    return config; // Cho đi thẳng, không thêm Header Authorization
+    return config;
   }
 
-  // 2. Với các request khác mới lấy token từ LocalStorage
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -55,12 +36,7 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// ───── RESPONSE INTERCEPTOR ─────
-/**
- * Handle global errors:
- * - 401: Token expired or invalid → logout and redirect to login
- * - Other errors: Pass through to caller
- */
+// Handles 401 responses globally by clearing the stored token.
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
@@ -74,41 +50,27 @@ api.interceptors.response.use(
 );
 
 // ───── HELPER FUNCTIONS ─────
-/**
- * Save JWT token to localStorage
- * @param {string} token - JWT token from auth response
- */
+/** Persists the JWT token to localStorage. */
 export const setAuthToken = (token: string): void => {
   localStorage.setItem(TOKEN_KEY, token);
 };
 
-/**
- * Remove JWT token from localStorage (logout)
- */
+/** Removes the JWT token from localStorage. */
 export const clearAuthToken = (): void => {
   localStorage.removeItem(TOKEN_KEY);
 };
 
-/**
- * Get stored JWT token
- * @returns {string | null} Token or null if not found
- */
+/** Returns the stored JWT token, or null if absent. */
 export const getAuthToken = (): string | null => {
   return localStorage.getItem(TOKEN_KEY);
 };
 
-/**
- * Check if user is authenticated
- * @returns {boolean} true if token exists
- */
+/** Returns true if a JWT token exists in localStorage. */
 export const isAuthenticated = (): boolean => {
   return !!getAuthToken();
 };
 
-/**
- * Mark one skill as completed for the current user.
- * Uses existing shared axios instance.
- */
+/** Marks a skill as completed for the current user. */
 export const completeSkill = async (skillId: string): Promise<void> => {
   await api.post(`/skills/${skillId}/complete`);
 };

@@ -7,9 +7,13 @@ const MIN_SKILL_W = 180;  // Chiều rộng tối thiểu của Skill
 const MAX_SKILL_W = 350;  // Giới hạn chiều rộng tối đa kẻo bị tràn
 const SKILL_H = 45;
 const SKILL_GAP_Y = 15;
-const GAP_X = 80;         // Khoảng cách ngang giữa Section và cột Skill
-const ROW_MARGIN = 60;    // Khoảng cách dọc giữa các hàng
+const GAP_X = 80;
+const ROW_MARGIN = 60;
 
+/**
+ * Calculates positioned layout for roadmap nodes in an alternating left/right pattern.
+ * Section nodes are centered; skill nodes branch to alternating sides.
+ */
 export const getLayoutedElements = (nodes: RoadmapNode[], edges: Edge[], canvasWidth: number) => {
   const CENTER_X = canvasWidth / 2;
   
@@ -27,25 +31,23 @@ export const getLayoutedElements = (nodes: RoadmapNode[], edges: Edge[], canvasW
 
     const skillCount = relatedSkills.length;
 
-    // 1. TÍNH TOÁN CHIỀU RỘNG DỰA THEO CHỮ DÀI NHẤT
-    // 1. TÍNH TOÁN CHIỀU RỘNG DỰA THEO CHỮ DÀI NHẤT
+    // Calculate dynamic width based on longest skill label text.
     let maxTextLen = 0;
     relatedSkills.forEach(s => {
-      // Ép kiểu (as any) để TS không báo lỗi. 
-      // Đồng thời tự động quét các trường label, title, hoặc name xem bạn đang dùng cái nào.
+      // NOTE: Uses type assertion since node data shape varies between skill types.
       const text = String((s.data as any).label || (s.data as any).title || (s.data as any).name || '');
       const len = text.length;
       if (len > maxTextLen) maxTextLen = len;
     });
-    // Tính chiều rộng (Mỗi ký tự ~8px + 40px lề)
+    // Approximate width: ~8px per character + 40px padding.
     const currentSkillW = skillCount > 0 
       ? Math.max(MIN_SKILL_W, Math.min(MAX_SKILL_W, 40 + maxTextLen * 8)) 
       : 0;
 
-    // 2. TÍNH TOÁN CHIỀU CAO VÀ ĐIỂM CĂN GIỮA (CENTER Y)
+    // Calculate vertical center for aligning section and skill blocks.
     const skillBlockH = skillCount > 0 ? (skillCount * SKILL_H) + ((skillCount - 1) * SKILL_GAP_Y) : 0;
-    const rowH = Math.max(SECTION_H, skillBlockH); // Lấy cục nào cao hơn làm chuẩn
-    const centerY = currentY + rowH / 2; // TRỤC GIỮA CHUẨN XÁC
+    const rowH = Math.max(SECTION_H, skillBlockH);
+    const centerY = currentY + rowH / 2;
 
     // 3. XẾP TỌA ĐỘ CHO SECTION (Căn giữa theo centerY)
     const sectionX = CENTER_X - (SECTION_W / 2);
@@ -55,7 +57,7 @@ export const getLayoutedElements = (nodes: RoadmapNode[], edges: Edge[], canvasW
     layoutedNodes.push({
       ...section,
       position: { x: sectionX, y: sectionY },
-      style: { width: SECTION_W, height: SECTION_H } // Bơm kích thước thẳng vào UI
+      style: { width: SECTION_W, height: SECTION_H }
     });
 
     // 4. XẾP TỌA ĐỘ CHO SKILL BLOCK (Cũng căn giữa theo centerY)
@@ -64,30 +66,29 @@ export const getLayoutedElements = (nodes: RoadmapNode[], edges: Edge[], canvasW
         ? sectionX - GAP_X - currentSkillW 
         : sectionX + SECTION_W + GAP_X;
 
-      let currentSkillY = centerY - (skillBlockH / 2); // Bắt đầu từ đỉnh của Block đã được căn giữa
+      let currentSkillY = centerY - (skillBlockH / 2);
 
       relatedSkills.forEach(skill => {
         layoutedNodes.push({
           ...skill,
           position: { x: skillX, y: currentSkillY },
-          style: { width: currentSkillW, height: SKILL_H } // Bơm chiều rộng động vào UI
+          style: { width: currentSkillW, height: SKILL_H }
         });
         currentSkillY += SKILL_H + SKILL_GAP_Y;
       });
     }
 
-    // Xuống dòng cho cụm tiếp theo
     currentY += rowH + ROW_MARGIN;
   });
 
-  // 5. PHÂN LUỒNG MŨI TÊN (CỰC KỲ QUAN TRỌNG ĐỂ KHÔNG BỊ ĐÈ DÂY)
+  // Route edges between nodes with appropriate direction and styling.
   const styledEdges = edges.map((edge, idx) => {
     const sourceNode = nodes.find(n => n.id === edge.source);
     const targetNode = nodes.find(n => n.id === edge.target);
     const isSecToSec = sourceNode?.type === 'sectionNode' && targetNode?.type === 'sectionNode';
 
     if (isSecToSec) {
-      // Nối dọc: Đáy thằng trên -> Đỉnh thằng dưới
+      // Vertical edge: section-to-section (bottom → top).
       return {
         ...edge,
         type: 'step',
@@ -97,14 +98,13 @@ export const getLayoutedElements = (nodes: RoadmapNode[], edges: Edge[], canvasW
         style: { stroke: '#3b82f6', strokeWidth: Math.max(2, 6 - idx) }
       };
     } else {
-      // Nối ngang (Tỏa tia): Hông thằng Section -> Hông thằng Skill
+      // Horizontal edge: section-to-skill (side → side).
       const sectionIndex = sectionNodes.findIndex(n => n.id === edge.source);
       const isSkillOnLeft = sectionIndex % 2 === 0;
 
       return {
         ...edge,
         type: 'smoothstep',
-        // Nếu Skill bên trái -> Bắn dây từ cổng 'left' của Section vào cổng 'right' của Skill
         sourceHandle: isSkillOnLeft ? 'left' : 'right',
         targetHandle: isSkillOnLeft ? 'right' : 'left',
         animated: true,

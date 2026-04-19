@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 // https://vite.dev/config/
+// Force restart to clear module cache
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   resolve: {

@@ -1,46 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./DashboardPage.css";
 import { api } from "@/services/api";
 
 /* ── Types ── */
-interface ProgressData {
+interface RoadmapProgress {
+  roadmapId: string;
+  roadmapName: string;
   completedSkills: number;
   totalSkills: number;
   percentage: number;
 }
 
-/* ── SVG Icon Components ── */
-const HomeIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 10.5L10 4l7 6.5" /><path d="M5 9.5V16a1 1 0 001 1h3v-4h2v4h3a1 1 0 001-1V9.5" />
-  </svg>
-);
-const RoadmapIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 4v12" /><path d="M4 4h6l2 2-2 2H4" /><path d="M4 12h8l2-2-2-2" />
-  </svg>
-);
-const SkillTreeIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="10" cy="4" r="2" /><circle cx="5" cy="14" r="2" /><circle cx="15" cy="14" r="2" /><path d="M10 6v4M10 10l-5 2M10 10l5 2" />
-  </svg>
-);
-const JobMarketIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="7" width="14" height="10" rx="1.5" /><path d="M7 7V5.5A1.5 1.5 0 018.5 4h3A1.5 1.5 0 0113 5.5V7" />
-  </svg>
-);
-const SettingsIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="10" cy="10" r="3" /><path d="M10 1.5v2M10 16.5v2M3.15 3.15l1.42 1.42M15.43 15.43l1.42 1.42M1.5 10h2M16.5 10h2M3.15 16.85l1.42-1.42M15.43 4.57l1.42-1.42" />
-  </svg>
-);
-const LogoutIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M13 3h3a1 1 0 011 1v12a1 1 0 01-1 1h-3" /><path d="M10 10H3m0 0l3-3m-3 3l3 3" />
-  </svg>
-);
+interface MultiProgress {
+  overall: {
+    completedSkills: number;
+    totalSkills: number;
+    percentage: number;
+  };
+  roadmaps: RoadmapProgress[];
+}
+
 const ArrowUpIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 12V2M3 5l4-3 4 3" />
@@ -80,7 +60,7 @@ function generateSparklinePath(points: number[], width: number, height: number):
 }
 
 /* ── Circular Progress Ring ── */
-const ProgressRing: React.FC<{ percentage: number }> = ({ percentage }) => {
+const ProgressRing: React.FC<{ percentage: number; label?: string }> = ({ percentage, label }) => {
   const radius = 112;
   const center = 128;
   const circumference = 2 * Math.PI * radius;
@@ -101,141 +81,197 @@ const ProgressRing: React.FC<{ percentage: number }> = ({ percentage }) => {
       </svg>
       <div className="progress-ring-text">
         <span className="progress-ring-value">{percentage}%</span>
-        <span className="progress-ring-sublabel">ROADMAP DONE</span>
+        <span className="progress-ring-sublabel">{label || "OVERALL"}</span>
       </div>
     </div>
   );
 };
 
+/* ── Roadmap accent color helper ── */
+const ROADMAP_COLORS = [
+  { accent: "var(--accent-cyan)", bg: "rgba(76, 215, 246, 0.12)", border: "rgba(76, 215, 246, 0.3)" },
+  { accent: "var(--accent-purple)", bg: "rgba(192, 193, 255, 0.12)", border: "rgba(192, 193, 255, 0.3)" },
+  { accent: "var(--accent-orange)", bg: "rgba(255, 184, 115, 0.12)", border: "rgba(255, 184, 115, 0.3)" },
+  { accent: "#22c55e", bg: "rgba(34, 197, 94, 0.12)", border: "rgba(34, 197, 94, 0.3)" },
+  { accent: "#f472b6", bg: "rgba(244, 114, 182, 0.12)", border: "rgba(244, 114, 182, 0.3)" },
+];
+
+const ROADMAP_ICONS = ["🗺️", "🛤️", "🧭", "🚀", "⚡"];
+
 /* ── Main Dashboard Page ── */
 export const DashboardPage: React.FC = () => {
-  const location = useLocation();
-  const [progress, setProgress] = useState<ProgressData | null>(null);
+  const navigate = useNavigate();
+  const [multiProgress, setMultiProgress] = useState<MultiProgress | null>(null);
+  const [selectedRoadmapIdx, setSelectedRoadmapIdx] = useState<number | null>(null); // null = overall
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [localSkills, setLocalSkills] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [marketStats, setMarketStats] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchProgress = async () => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+
+      const localRoadmaps: RoadmapProgress[] = [];
+
       try {
-        const response = await api.get("/users/progress");
-        const data = response.data;
-        setProgress(data);
-      } catch (err) {
-        console.error("Lỗi khi tải tiến độ:", err);
-      } finally {
-        setIsLoading(false);
+        const saved = localStorage.getItem("frontendRoadmapProgress");
+        if (saved) {
+          const statuses = JSON.parse(saved);
+          const completedSkills = Object.values(statuses).filter(s => s === "COMPLETED").length;
+          const totalSkills = Math.max(Object.keys(statuses).length, 9);
+          if (Object.keys(statuses).length > 0) {
+            localRoadmaps.push({
+              roadmapId: "local-frontend",
+              roadmapName: "Frontend Developer",
+              completedSkills,
+              totalSkills,
+              percentage: Math.round((completedSkills / totalSkills) * 100),
+            });
+          }
+        }
+      } catch { /* ignore */ }
+
+      try {
+        const saved = localStorage.getItem("jsRoadmapProgress");
+        if (saved) {
+          const statuses: Record<string, string> = JSON.parse(saved);
+          const entries = Object.values(statuses);
+          const completedSkills = entries.filter(s => s === "completed").length;
+          const inProgressSkills = entries.filter(s => s === "in-progress").length;
+          const totalSkills = Math.max(entries.length, 130);
+          if (completedSkills > 0 || inProgressSkills > 0) {
+            localRoadmaps.push({
+              roadmapId: "local-javascript",
+              roadmapName: "JavaScript",
+              completedSkills,
+              totalSkills,
+              percentage: Math.round((completedSkills / totalSkills) * 100),
+            });
+          }
+        }
+      } catch { /* ignore */ }
+
+      const p1 = api.get("/users/progress");
+      const p2 = api.get("/dashboard/skills");
+      const p3 = Promise.resolve([
+        { icon: "🚀", label: "First Step", variant: "unlocked-cyan" as const },
+        { icon: "🌱", label: "Beginner", variant: "unlocked-purple" as const },
+        { icon: "🧭", label: "Explorer", variant: "unlocked-orange" as const },
+        { icon: "🏛️", label: "Architect", variant: "locked" as const },
+      ]);
+      const p4 = Promise.resolve([
+        { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
+        { name: "Rust", value: "+8.7%", color: "purple" as const },
+        { name: "Next.js", value: "+22.5%", color: "orange" as const },
+      ]);
+
+      const results = await Promise.allSettled([p1, p2, p3, p4]);
+
+      // Handle Progress (p1)
+      if (results[0].status === "fulfilled") {
+        const data: MultiProgress = results[0].value.data;
+        for (const lr of localRoadmaps) {
+          if (lr.completedSkills > 0) {
+            const nameKey = lr.roadmapName.toLowerCase();
+            const alreadyInApi = data.roadmaps.some(r => r.roadmapName.toLowerCase().includes(nameKey));
+            if (!alreadyInApi) {
+              data.roadmaps.push(lr);
+              data.overall.completedSkills += lr.completedSkills;
+              data.overall.totalSkills += lr.totalSkills;
+            }
+          }
+        }
+        if (data.overall.totalSkills > 0) {
+          data.overall.percentage = Math.round((data.overall.completedSkills / data.overall.totalSkills) * 100);
+        }
+        setMultiProgress(data);
+      } else {
+        if (localRoadmaps.length > 0) {
+          const totalCompleted = localRoadmaps.reduce((s, r) => s + r.completedSkills, 0);
+          const totalSkills = localRoadmaps.reduce((s, r) => s + r.totalSkills, 0);
+          setMultiProgress({
+            overall: {
+              completedSkills: totalCompleted,
+              totalSkills,
+              percentage: totalSkills > 0 ? Math.round((totalCompleted / totalSkills) * 100) : 0,
+            },
+            roadmaps: localRoadmaps,
+          });
+        } else {
+          setMultiProgress({
+            overall: { completedSkills: 0, totalSkills: 0, percentage: 0 },
+            roadmaps: [],
+          });
+        }
       }
+
+      // Handle Skills (p2)
+      if (results[1].status === "fulfilled") {
+        setLocalSkills(results[1].value.data);
+      } else {
+        console.error("Failed to fetch skills data:", results[1].reason);
+      }
+
+      // Handle Milestones (p3)
+      if (results[2].status === "fulfilled") {
+        setMilestones(results[2].value);
+      }
+
+      // Handle Market Stats (p4)
+      if (results[3].status === "fulfilled") {
+        setMarketStats(results[3].value);
+      }
+
+      setIsLoading(false);
     };
-    fetchProgress();
+
+    fetchDashboardData();
   }, []);
 
-  /* ── Skills data ── */
-  const [localSkills, setLocalSkills] = useState([
-    { id: 1, icon: "◈", title: "GraphQL Mastery", desc: "Optimize your API layer with typed queries", xp: 200, isCompleted: false },
-    { id: 2, icon: "🔐", title: "Auth Patterns", desc: "Implement OAuth2, JWT, and WebAuthn", xp: 350, isCompleted: false },
-    { id: 3, icon: "⚡", title: "Serverless Edge", desc: "Deploying functions globally with low latency", xp: 150, isCompleted: false },
-    { id: 4, icon: "🧩", title: "Micro-Frontends", desc: "Scaling UI development across distributed teams", xp: 500, isCompleted: false },
-  ]);
-
-  /* ── Xử lý Click Hoàn thành Skill (Optimistic Update) ── */
+  /** Handles skill completion with optimistic update and API sync. */
   const handleCompleteSkill = async (skillId: number) => {
-    const previousProgress = progress;
+    const previousProgress = multiProgress;
     const previousSkills = [...localSkills];
 
-    setLocalSkills(prev => prev.map(s => 
+    setLocalSkills(prev => prev.map(s =>
       s.id === skillId ? { ...s, isCompleted: true } : s
     ));
-    if (progress) {
-      setProgress({
-        ...progress,
-        completedSkills: progress.completedSkills + 1
-      });
-    }
 
     try {
       await api.post(`/skills/${skillId}/complete`);
     } catch (error) {
-      console.error("Lỗi khi lưu tiến độ:", error);
-      setProgress(previousProgress);
+      console.error('Failed to save progress:', error);
+      setMultiProgress(previousProgress);
       setLocalSkills(previousSkills);
-      alert("Lỗi kết nối! Vui lòng thử lại.");
+      alert('Connection error! Please try again.');
     }
   };
 
-  const progressPercentage = progress
-    ? Math.round((progress.completedSkills / progress.totalSkills) * 100)
-    : 65;
+  /* ── Determine what to show in the ring ── */
+  const activeDisplay = (() => {
+    if (!multiProgress) return { percentage: 0, label: "OVERALL", name: "Loading..." };
+    if (selectedRoadmapIdx === null) {
+      return {
+        percentage: multiProgress.overall.percentage,
+        label: "OVERALL",
+        name: `${multiProgress.roadmaps.length} Roadmap${multiProgress.roadmaps.length !== 1 ? "s" : ""} Active`,
+      };
+    }
+    const rm = multiProgress.roadmaps[selectedRoadmapIdx];
+    return {
+      percentage: rm.percentage,
+      label: "ROADMAP",
+      name: rm.roadmapName,
+    };
+  })();
 
   const { line: sparkLine, area: sparkArea } = generateSparklinePath(sparklinePoints, 800, 96);
 
-  /* ── Navigation items ── */
-  const navItems = [
-    { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
-    { path: "/career-paths", label: "Roadmap", icon: <RoadmapIcon /> },
-    { path: "/career-paths", label: "Skill Tree", icon: <SkillTreeIcon /> },
-    { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },
-  ];
-
-  /* ── Milestones ── */
-  const milestones = [
-    { icon: "🚀", label: "First Step", variant: "unlocked-cyan" as const },
-    { icon: "🌱", label: "Beginner", variant: "unlocked-purple" as const },
-    { icon: "🧭", label: "Explorer", variant: "unlocked-orange" as const },
-    { icon: "🏛️", label: "Architect", variant: "locked" as const },
-  ];
-
-  /* ── Market data ── */
-  const marketStats = [
-    { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
-    { name: "Rust", value: "+8.7%", color: "purple" as const },
-    { name: "Next.js", value: "+22.5%", color: "orange" as const },
-  ];
+  /* ── Milestones & Market Stats are now managed via state ── */
 
   return (
     <div className="dashboard-layout">
-      {/* ===================== SIDEBAR ===================== */}
-      <aside className="sidebar">
-        <div className="sidebar-top">
-          <div className="sidebar-brand">
-            <h1>DevPath</h1>
-          </div>
-
-          <div className="sidebar-section-label">NAVIGATION</div>
-
-          <nav className="sidebar-nav">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={location.pathname === item.path ? "active" : ""}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="sidebar-bottom">
-          <div className="sidebar-bottom-links">
-            <a href="#settings">
-              <span className="nav-icon"><SettingsIcon /></span>
-              Settings
-            </a>
-            <Link to="/">
-              <span className="nav-icon"><LogoutIcon /></span>
-              Logout
-            </Link>
-          </div>
-
-          <div className="sidebar-user-card">
-            <div className="sidebar-avatar">JD</div>
-            <div className="sidebar-user-info">
-              <div className="sidebar-user-name">Architect Navigator</div>
-              <div className="sidebar-user-level">Lvl 24 Dev</div>
-            </div>
-          </div>
-        </div>
-      </aside>
 
       {/* ===================== MAIN CONTENT ===================== */}
       <main className="dashboard-main">
@@ -258,13 +294,19 @@ export const DashboardPage: React.FC = () => {
             <div className="bento-card card-progress">
               <span className="card-progress-label">PROGRESS OVERVIEW</span>
               {isLoading ? (
-                <ProgressRing percentage={0} />
+                <ProgressRing percentage={0} label="LOADING" />
               ) : (
-                <ProgressRing percentage={progressPercentage} />
+                <ProgressRing percentage={activeDisplay.percentage} label={activeDisplay.label} />
               )}
               <div className="card-progress-bottom">
-                <span className="card-progress-bottom-left">Current Roadmap: Fullstack Architect</span>
-                <span className="card-progress-bottom-right">Lvl 4/6</span>
+                <span className="card-progress-bottom-left">{activeDisplay.name}</span>
+                <button
+                  className="card-progress-overall-btn"
+                  onClick={() => setSelectedRoadmapIdx(null)}
+                  style={{ opacity: selectedRoadmapIdx === null ? 0.5 : 1 }}
+                >
+                  Show Overall
+                </button>
               </div>
             </div>
 
@@ -272,7 +314,7 @@ export const DashboardPage: React.FC = () => {
             <div className="bento-card card-milestones">
               <div className="card-header">
                 <span className="card-header-label">EARNED MILESTONES</span>
-                <a href="#milestones" className="card-header-link">View All</a>
+                <Link to="/career-paths" className="card-header-link">View All</Link>
               </div>
               <div className="milestones-row">
                 {milestones.map((m) => (
@@ -317,6 +359,82 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
+          {/* ── My Roadmaps Section ── */}
+          <section className="roadmaps-section">
+            <div className="roadmaps-section-header">
+              <div className="roadmaps-section-header-left">
+                <span className="section-label">MY PROGRESS</span>
+                <h3>Active Roadmaps</h3>
+              </div>
+              <button 
+                onClick={() => navigate('/career-paths')} 
+                className="explore-tree-btn cursor-pointer"
+              >
+                Browse Paths
+              </button>
+            </div>
+
+            {!isLoading && multiProgress && multiProgress.roadmaps.length > 0 ? (
+              <div className="roadmaps-cards-grid">
+                {multiProgress.roadmaps.map((rm, idx) => {
+                  const color = ROADMAP_COLORS[idx % ROADMAP_COLORS.length];
+                  const icon = ROADMAP_ICONS[idx % ROADMAP_ICONS.length];
+                  const isActive = selectedRoadmapIdx === idx;
+
+                  return (
+                    <div
+                      key={rm.roadmapId}
+                      className={`roadmap-progress-card cursor-pointer ${isActive ? "roadmap-progress-card--active" : ""}`}
+                      style={{
+                        borderColor: isActive ? color.border : undefined,
+                        background: isActive ? color.bg : undefined,
+                      }}
+                      onClick={() => navigate('/roadmaps/' + rm.roadmapId)}
+                    >
+                      <div className="roadmap-card-top">
+                        <span className="roadmap-card-icon">{icon}</span>
+                        <span
+                          className="roadmap-card-pct"
+                          style={{ color: color.accent }}
+                        >
+                          {rm.percentage}%
+                        </span>
+                      </div>
+                      <h4 className="roadmap-card-name">{rm.roadmapName}</h4>
+                      <p className="roadmap-card-stats">
+                        {rm.completedSkills} / {rm.totalSkills} skills
+                      </p>
+                      <div className="roadmap-card-bar-track">
+                        <div
+                          className="roadmap-card-bar-fill"
+                          style={{
+                            width: `${rm.percentage}%`,
+                            background: color.accent,
+                          }}
+                        />
+                      </div>
+                      <div 
+                        className={`mt-4 text-sm font-bold text-center transition-opacity flex items-center justify-center gap-1 ${isActive ? "opacity-100" : "opacity-0 h-0 overflow-hidden mt-0"}`}
+                        style={{ color: color.accent }}
+                      >
+                        Continue Learning
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : !isLoading ? (
+              <div className="roadmaps-empty">
+                <span className="roadmaps-empty-icon">📭</span>
+                <p>You haven't started any roadmaps yet.</p>
+                <Link to="/career-paths" className="roadmaps-empty-cta">
+                  Explore Career Paths →
+                </Link>
+              </div>
+            ) : null}
+          </section>
+
           {/* ── Recommended Skills ── */}
           <section className="skills-section">
             <div className="skills-section-header">
@@ -337,14 +455,13 @@ export const DashboardPage: React.FC = () => {
                   <p className="skill-card-desc">{skill.desc}</p>
                   <div className="skill-card-bottom">
                     <span className="skill-xp-badge">{skill.xp} XP</span>
-                    <button 
+                    <button
                       onClick={() => handleCompleteSkill(skill.id)}
                       disabled={skill.isCompleted}
-                      className={`skill-start-btn transition-all duration-300 ${
-                        skill.isCompleted 
-                          ? "bg-[#4cd7f6] text-[#171f33] opacity-80 cursor-not-allowed font-bold" 
-                          : ""
-                      }`}
+                      className={`skill-start-btn transition-all duration-300 ${skill.isCompleted
+                        ? "bg-[#4cd7f6] text-[#171f33] opacity-80 cursor-not-allowed font-bold"
+                        : ""
+                        }`}
                     >
                       {skill.isCompleted ? "✓ Completed" : "Start"}
                     </button>
@@ -358,9 +475,9 @@ export const DashboardPage: React.FC = () => {
         {/* ── Footer ── */}
         <footer className="dashboard-footer">
           <div className="footer-links">
-            <a href="#privacy">PRIVACY POLICY</a>
-            <a href="#terms">TERMS OF SERVICE</a>
-            <a href="#support">SUPPORT</a>
+            <Link to="#">PRIVACY POLICY</Link>
+            <Link to="#">TERMS OF SERVICE</Link>
+            <Link to="#">SUPPORT</Link>
           </div>
           <p className="footer-copyright">© 2024 DevPath. The Architectural Navigator.</p>
         </footer>

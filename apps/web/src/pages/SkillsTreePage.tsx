@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import ReactFlow, { Background, useNodesState, useEdgesState, PanOnScrollMode, type NodeTypes,type Node } from 'reactflow';
+import ReactFlow, { Background, useNodesState, useEdgesState, PanOnScrollMode, type NodeTypes, type Node } from 'reactflow';
 import { useParams } from 'react-router-dom';
 import 'reactflow/dist/style.css';
 
@@ -9,8 +9,7 @@ import SectionNode from '@/components/roadmap/nodes/SectionNode';
 import SkillNode from '@/components/roadmap/nodes/SkillNode';
 import type { RoadmapFlowResponse, RoadmapData, RoadmapNode } from '@/types/roadmap';
 
-// 1. IMPORT DRAWER VỪA TẠO
-import { ResourceDrawer } from '@/components/roadmap/ResourceDrawer'; 
+import { ResourceDrawer } from '@/components/roadmap/ResourceDrawer';
 
 const nodeTypes: NodeTypes = {
   sectionNode: SectionNode,
@@ -18,22 +17,25 @@ const nodeTypes: NodeTypes = {
 };
 
 export default function SkillsTreePage() {
-  const { id } = useParams<{ id: string }>();
+  // 1. SỬA LẠI TÊN PARAM CHO KHỚP VỚI App.tsx
+  const { roadmapId } = useParams<{ roadmapId: string }>(); 
+  
   const [nodes, setNodes, onNodesChange] = useNodesState<RoadmapData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
   const [containerWidth, setContainerWidth] = useState(900);
 
-  // 2. KHAI BÁO STATE CHO DRAWER
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDrawerLoading, setIsDrawerLoading] = useState(false);
   const [drawerData, setDrawerData] = useState(null);
+  const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadRoadmap = async () => {
       try {
         setLoading(true);
-        const { data } = await apiClient.get<RoadmapFlowResponse>(`/roadmaps/${id}/flow`);
+        // 2. Dùng biến roadmapId để gọi API
+        const { data } = await apiClient.get<RoadmapFlowResponse>(`/roadmaps/${roadmapId}/flow`);
 
         const screenWidth = window.innerWidth;
         const calculatedWidth = Math.max(700, Math.min(1200, screenWidth * 0.5));
@@ -48,50 +50,80 @@ export default function SkillsTreePage() {
         setNodes(layoutedNodes as RoadmapNode[]);
         setEdges(layoutedEdges);
       } catch (error) {
-        console.error("Lỗi tải roadmap:", error);
+        console.error('Failed to load roadmap:', error);
       } finally {
         setLoading(false); 
       }
     };
 
-    if (id) loadRoadmap();
-  }, [id, setNodes, setEdges]);
+    if (roadmapId) loadRoadmap();
+  }, [roadmapId, setNodes, setEdges]); // Cập nhật dependency array
 
-  // 3. HÀM XỬ LÝ KHI CLICK VÀO NODE BẤT KỲ TRÊN BẢN ĐỒ
-const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
-  event.preventDefault();
+  const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
 
-  setIsDrawerOpen(true);
-  setIsDrawerLoading(true);
+    setIsDrawerOpen(true);
+    setIsDrawerLoading(true);
 
-  try {
-    const isSection = node.type === 'sectionNode';
-    
-    const rawId = node.data?.id || node.data?.skillId || node.id; 
-    
-    if (!rawId) throw new Error("Không tìm thấy ID của node");
-
-    const numericId = String(rawId).replace(/[^0-9]/g, ''); 
-
-    const endpoint = isSection 
-      ? `/roadmap-sections/${numericId}/detail` 
-      : `/roadmaps/${numericId}/detail`; 
+    try {
+      const isSection = node.type === 'sectionNode';
+      const rawId = (node.data as any)?.id || (node.data as any)?.skillId || node.id; 
       
-    const response = await apiClient.get(endpoint);
-    console.log("👉 Dữ liệu gốc từ BE:", response.data);
-    setDrawerData(response.data);
-  } catch (error) {
-    console.error("🚨 Lỗi khi lấy chi tiết node:", error);
-  } finally {
-    setIsDrawerLoading(false);
-  }
-}, []);
+      if (!rawId) throw new Error('Node ID not found');
 
-  if (loading) return <div className="p-10 text-white flex justify-center items-center h-screen">Đang tải dữ liệu bản đồ...</div>;
+      const numericId = String(rawId).replace(/[^0-9]/g, ''); 
+      
+      if (!isSection) {
+        setSelectedSkillId(Number(numericId));
+      } else {
+        setSelectedSkillId(null);
+      }
+
+      const endpoint = isSection 
+  ? `/roadmap-sections/${numericId}/detail` 
+  : `/roadmaps/${numericId}/detail`;
+        
+      const response = await apiClient.get(endpoint);
+      console.log('Detail data from backend:', response.data);
+      setDrawerData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch node detail:', error);
+    } finally {
+      setIsDrawerLoading(false);
+    }
+  }, []);
+
+  const handleSkillCompleted = useCallback((skillId: number) => {
+    console.log("🛑 6. Component cha đã nhận được ID cần đổi màu:", skillId);
+    setNodes((nds) => 
+      nds.map((node) => {
+        if (
+          node.type === 'skillNode' && 
+          ((node.data as any)?.skillId === skillId || (node.data as any)?.id === skillId || node.id === String(skillId))
+        ) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              isCompleted: true,
+            },
+          };
+        }
+        return node;
+      })
+    );
+  }, [setNodes]);
+
+  // Sửa loading UI một chút cho đẹp
+  if (loading) return (
+    <div className="w-full h-full flex justify-center items-center bg-slate-950 text-white font-bold text-xl tracking-widest uppercase">
+      Đang tải bản đồ...
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-950 items-center justify-center relative">
-      
+    // 4. THAY ĐỔI QUAN TRỌNG: h-screen -> h-full
+    <div className="flex flex-col h-full w-full bg-slate-950 items-center justify-center relative">
       <main 
         className="relative h-full overflow-hidden bg-slate-950" 
         style={{ width: `${containerWidth}px` }} 
@@ -102,10 +134,7 @@ const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          
-          // 4. GẮN SỰ KIỆN CLICK VÀO ĐÂY LÀ XONG!
           onNodeClick={onNodeClick}
-
           panOnDrag={false}
           nodesDraggable={false}
           zoomOnScroll={false}
@@ -113,7 +142,6 @@ const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
           panOnScroll={true}
           preventScrolling={false}
           panOnScrollMode={PanOnScrollMode.Vertical}
-
           translateExtent={[[0, -Infinity], [containerWidth, Infinity]]}
           defaultViewport={{ x: 0, y: 50, zoom: 1 }}
           minZoom={1}
@@ -123,14 +151,14 @@ const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
         </ReactFlow>
       </main>
 
-      {/* 5. GẮN COMPONENT DRAWER NGOÀI CÙNG MAIN ĐỂ NÓ ĐÈ LÊN MỌI THỨ */}
       <ResourceDrawer 
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         isLoading={isDrawerLoading}
         data={drawerData}
+        skillId={selectedSkillId}
+        onCompleteSuccess={handleSkillCompleted}
       />
-      
     </div>
   );
 }

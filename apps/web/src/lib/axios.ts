@@ -2,12 +2,12 @@ import axios from 'axios'
 
 /**
  * Pre-configured Axios instance for the IT Career Roadmap API.
- * - baseURL: http://localhost:3000/api
+ * - baseURL: import.meta.env.VITE_API_BASE_URL (defaults to http://localhost:3000/api)
  * - Request interceptor: attaches Authorization: Bearer <token>
  *   reading from localStorage.getItem('access_token')
  */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,7 +19,6 @@ const TOKEN_KEY = 'access_token'
 
 apiClient.interceptors.request.use(
   (config) => {
-    // Do not attach token for public endpoints
     const url = config.url || ''
     const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/register')
     const isPublicCareerPaths = config.method === 'get' && url.includes('/career-paths')
@@ -33,12 +32,11 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
-// ─── Response Interceptor (optional – handles 401 globally) ──────────────
+// Handles 401 responses globally by clearing the stored token.──
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid – clear stored token but don't force redirect here
       localStorage.removeItem(TOKEN_KEY)
       console.warn('API client received 401; cleared token')
     }

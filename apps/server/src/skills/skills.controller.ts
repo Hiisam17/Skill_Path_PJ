@@ -19,4 +19,8 @@ export class SkillsController {
     // TODO: get userId from @Request() req.user.id after Dev A merges
     return this.skillsService.findSkillsByRoadmap(roadmapId, userId);
   }
+  @Get(':id/detail')
+  getSkillDetail(@Param('id', ParseIntPipe) id: number) {
+    return this.skillsService.getSkillDetail(id);
+  }
 }

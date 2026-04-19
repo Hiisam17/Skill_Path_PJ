@@ -10,11 +10,12 @@ import { SkillsModule } from './skills/skills.module';
 import { ProgressModule } from './progress/progress.module';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
+import { RoadmapSectionsModule } from './roadmap-sections/roadmap-sections.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: join(process.cwd(), '.env'), 
+      envFilePath: join(process.cwd(), '.env.development'), 
     }),
     PrismaModule,
     AuthModule,
@@ -23,6 +24,7 @@ import { join } from 'path';
     RoadmapsModule,
     SkillsModule,
     ProgressModule,
+    RoadmapSectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

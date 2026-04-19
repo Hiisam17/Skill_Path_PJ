@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { SkillDto, UserSkillStatus } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -68,15 +68,41 @@ export class SkillsService {
           roadmapId: String(roadmapId),
           name: skill.name,
           description: skill.description ?? '',
-          // ĐÃ SỬA: Thay stepNumber bằng id của bảng RoadmapSkill
           orderIndex: roadmapSkill.id, 
           status: this.mapProgressStatus(progressStatusName),
         };
       });
   }
 
-  // ĐÃ SỬA: roadmapId thành type number
   async findByRoadmap(roadmapId: number, userId: string): Promise<SkillDto[]> {
     return this.findSkillsByRoadmap(roadmapId, userId);
+  }
+  async getSkillDetail(id: number) {
+    // Gọi 1 câu query duy nhất lấy Skill kèm theo Resources đang active
+    const skill = await this.prisma.skill.findUnique({
+      where: { id },
+      include: {
+        resources: {
+          where: { isActive: true }, 
+          include: { resourceType: true }, 
+        },
+      },
+    });
+    
+    // Quăng lỗi nếu không tìm thấy
+    if (!skill) throw new NotFoundException('Skill not found');
+
+    // Đóng gói data chuẩn form { title, content, resources }
+    return {
+      // Lưu ý: Nếu bảng Skill của bạn dùng cột 'name' thay vì 'title' thì sửa thành skill.name nhé
+      title: skill.name, 
+      content: skill.description || '',
+      resources: skill.resources.map(res => ({
+        id: res.id,
+        type: res.resourceType?.name || 'link',
+        title: res.title,
+        url: res.url,
+      }))
+    };
   }
 }

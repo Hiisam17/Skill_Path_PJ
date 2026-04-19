@@ -128,6 +128,7 @@ model RoadmapSection {
 
   roadmap Roadmap?       @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
   skills  RoadmapSkill[]
+  resources Resource[]
 
   @@map("roadmap_sections")
 }
@@ -188,7 +189,6 @@ model UserSkillProgress {
 
 model Resource {
   id              Int      @id @default(autoincrement())
-  skillId         Int?     @map("skill_id")
   title           String
   url             String?
   resourceTypeId  Int?     @map("resource_type_id")
@@ -198,7 +198,12 @@ model Resource {
   reviewCount     Int?     @default(0) @map("review_count")
   isActive        Boolean? @default(true) @map("is_active")
 
-  skill        Skill?                 @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillId   Int?     @map("skill_id")
+  skill     Skill?   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  
+  sectionId Int?     @map("section_id")
+  section   RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  
   resourceType ResourceType?          @relation(fields: [resourceTypeId], references: [id])
   reviews      ResourceReview[]
   userProgress UserResourceProgress[]

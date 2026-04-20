@@ -1,47 +1,30 @@
-/**
- * App Component
- * Demo router setup
- * Bypasses authentication and exposes Skill Tree only
- */
-
+/** Root application component defining all routes and their access control. */
 import { Routes, Route, Navigate } from "react-router-dom";
-import { CareerPathPage } from "./pages/CareerPathPage";
-import { FrontendRoadmapPage } from "./pages/FrontendRoadmapPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { JavaScriptSkillTreePage } from "@/pages/JavaScriptSkillTreePage";
+
+// ── Imports Pages ──
 import { LoginPage } from "./pages/LoginPage";
 import { SignUpPage } from "./pages/SignUpPage";
-import { SkillsTreePage } from "./pages/SkillsTreePage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { CareerPathPage } from "./pages/CareerPathPage";
+import { ExploreRoadmapsPage } from "./pages/ExploreRoadmapsPage";
+import SkillsTreePage from "./pages/SkillsTreePage";
 import { JobMarketPage } from "./pages/JobMarketPage";
+
+// ── Imports Components & Auth ──
 import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
-/**
- * App Root Component
- * Sets up React Router in Skill Tree demo mode
- *
- * Route behavior:
- * - / -> /skills-tree
- * - /skills-tree -> SkillsTreePage
- * - any other path -> /skills-tree
- *
- * @returns {JSX.Element} Router with all routes
- */
 function App() {
   return (
     <Routes>
+      {/* ── 1. PUBLIC ROUTES (Không cần đăng nhập) ── */}
+      <Route path="/" element={<Navigate to="/career-paths" replace />} />
+      <Route path="/career-paths" element={<CareerPathPage />} />
+      <Route path="/explore" element={<ExploreRoadmapsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/sign-up" element={<SignUpPage />} />
-      <Route path="/" element={<Navigate to="/login" replace />} />
 
-      <Route
-        path="/career-paths"
-        element={
-          <ProtectedRoute>
-            <CareerPathPage />
-          </ProtectedRoute>
-        }
-      />
+      {/* ── 2. PROTECTED ROUTES (Cần đăng nhập & Dùng chung Layout) ── */}
       <Route
         element={
           <ProtectedRoute>
@@ -49,14 +32,13 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/javascript-roadmap" element={<JavaScriptSkillTreePage />} />
-        <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} />
+        {/* Tất cả các trang bên trong này đều sẽ có Sidebar và Topbar từ Layout */}
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/skills-tree" element={<SkillsTreePage />} />
         <Route path="/job-market" element={<JobMarketPage />} />
+        
+        <Route path="/roadmaps/:roadmapId" element={<SkillsTreePage />} />
       </Route>
 
-      {/* Fallback Route (404) */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

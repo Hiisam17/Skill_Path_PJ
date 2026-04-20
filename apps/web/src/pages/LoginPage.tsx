@@ -4,7 +4,7 @@ import { AuthLayout } from "@/components/layouts/AuthLayout";
 import { InputField } from "@/components/forms/InputField";
 import { SocialButton } from "@/components/auth/SocialButton";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/lib/supabase"; // Đảm bảo bạn đã tạo file này
+import { supabase } from "@/lib/supabase";
 
 export const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -15,7 +15,7 @@ export const LoginPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login } = useAuth(); // Hàm này sẽ gọi API NestJS và lưu Token
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const validateForm = (): boolean => {
@@ -48,13 +48,12 @@ export const LoginPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Gọi hàm login từ Context - hàm này sẽ fetch tới http://localhost:3000/api/auth/login
       await login({
         email: formData.email,
         password: formData.password,
       });
 
-      navigate("/career-paths");
+      navigate("/dashboard");
     } catch (error: any) {
       setErrors({
         submit: error.message || "Login failed. Please check your credentials.",
@@ -64,13 +63,12 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  // Xử lý đăng nhập bằng Google/GitHub qua Supabase
   const handleSocialLogin = async (provider: "github" | "google") => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/career-paths`,
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       });
       if (error) throw error;
@@ -122,7 +120,7 @@ export const LoginPage: React.FC = () => {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                 Password <span className="text-red-400">*</span>
               </label>
               <Link to="/forgot-password" title="Coming soon" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300">

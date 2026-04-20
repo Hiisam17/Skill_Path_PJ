@@ -5,15 +5,7 @@ import { InputField } from "@/components/forms/InputField";
 import { SocialButton } from "@/components/auth/SocialButton";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
-/**
- * SignUpPage - User registration page
- * Features:
- * - Full Name, Email, Password, Confirm Password fields
- * - Form validation (required, email format, password match)
- * - Social buttons (GitHub, Google) - OAuth stubs
- * - Divider with "OR SYNCHRONIZE WITH" text
- * - Link to login page
- */
+/** User registration page with form validation and social OAuth. */
 export const SignUpPage: React.FC = () => {
   const [formData, setFormData] = useState({
     fullName: "",
@@ -78,8 +70,6 @@ export const SignUpPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // 1. Gọi API Đăng ký tới Backend NestJS của chúng ta
-      // (Nhớ đổi URL nếu bạn cấu hình port hoặc prefix khác nhé)
       const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
       const response = await fetch(`${apiUrl}/auth/register`, {
         method: "POST",
@@ -89,31 +79,25 @@ export const SignUpPage: React.FC = () => {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          fullName: formData.fullName, // Truyền đúng tên biến fullName mà NestJS đang đợi
+          fullName: formData.fullName,
         }),
       });
 
       const data = await response.json();
 
-      // Nếu Backend báo lỗi (ví dụ: Trùng email)
       if (!response.ok) {
-        throw new Error(data.message || "Đăng ký thất bại. Vui lòng thử lại.");
+        throw new Error(data.message || 'Registration failed. Please try again.');
       }
-
-      // 2. Sau khi Backend báo "Đăng ký thành công!", ta mới gọi hàm login của AuthContext 
-      // để tự động lấy token và đăng nhập cho user luôn.
       await login({
         email: formData.email,
         password: formData.password,
       });
-      
-      // 3. Chuyển hướng sang trang lộ trình
-      navigate("/career-paths");
+      navigate("/dashboard");
       
     } catch (error) {
       setErrors({
         submit:
-          error instanceof Error ? error.message : "Đã có lỗi xảy ra từ máy chủ.",
+          error instanceof Error ? error.message : 'An error occurred on the server.',
       });
     } finally {
       setIsLoading(false);
@@ -125,18 +109,16 @@ export const SignUpPage: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          // Nơi Supabase sẽ đá người dùng về sau khi đăng nhập thành công
-          redirectTo: `${window.location.origin}/career-paths`,
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
       if (error) {
-        console.error("Lỗi đăng nhập social:", error.message);
-        setErrors({ submit: "Không thể kết nối với " + provider });
+      console.error('Social login error:', error.message);
+        setErrors({ submit: 'Could not connect to ' + provider });
       }
-      // Lưu ý: Không cần navigate ở đây, vì Supabase sẽ tự động redirect cả trang web
     } catch (error) {
-      console.error("Lỗi hệ thống:", error);
+      console.error('System error:', error);
     }
   };
 

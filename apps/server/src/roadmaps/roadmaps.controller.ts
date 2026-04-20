@@ -4,10 +4,29 @@ import { RoadmapsService } from './roadmaps.service';
 import { CareerResponseDto } from './dto/career-response.dto';
 import { RoadmapSummaryResponseDto } from './dto/roadmap-summary-response.dto';
 
+/**
+ * Unified controller for career path and roadmap endpoints.
+ * Serves both public career browsing and authenticated roadmap consumption.
+ */
 @Controller()
 export class RoadmapsController {
-	constructor(private readonly roadmapsService: RoadmapsService) {}
+	constructor(private readonly roadmapsService: RoadmapsService) { }
 
+	/** Lists all available career paths. */
+	@Get('career-paths')
+	async getCareerPaths(): Promise<CareerResponseDto[]> {
+		return this.roadmapsService.findAllCareerPaths();
+	}
+
+	/** Lists published system roadmaps for a given career path. */
+	@Get('career-paths/:careerId/roadmaps')
+	async getRoadmapsByCareer(
+		@Param('careerId', ParseIntPipe) careerId: number,
+	): Promise<RoadmapSummaryResponseDto[]> {
+		return this.roadmapsService.getSystemRoadmapsByCareerPath(careerId);
+	}
+
+	/** Lists all roadmaps in the system. */
 	@Get('roadmaps')
 	async findAll(): Promise<RoadmapDto[]> {
 		return this.roadmapsService.findAll();
@@ -15,27 +34,21 @@ export class RoadmapsController {
 
 	@Get('roadmaps/career-path/:careerPathId')
 	async findByCareerPath(
-		@Param('careerPathId') careerPathId: string,
+		@Param('careerPathId', ParseIntPipe) careerPathId: number,
 	): Promise<RoadmapDto[]> {
 		return this.roadmapsService.findByCareerPath(careerPathId);
 	}
+	@Get('roadmaps/:roadmapId/flow')
+	async getRoadmapFlow(
+		@Param('roadmapId', ParseIntPipe) roadmapId: number,
+	) {
+		return this.roadmapsService.getRoadmapFlow(roadmapId);
+	}
 
 	@Get('roadmaps/:roadmapId')
-	async findById(@Param('roadmapId') roadmapId: string): Promise<RoadmapDto> {
+	async findById(
+		@Param('roadmapId', ParseIntPipe) roadmapId: number,
+	): Promise<RoadmapDto> {
 		return this.roadmapsService.findById(roadmapId);
-	}
-
-	// Public endpoint: GET /career-paths
-	@Get('career-paths')
-	async getCareerPaths(): Promise<CareerResponseDto[]> {
-		return this.roadmapsService.findAllCareerPaths();
-	}
-
-	// Public endpoint: GET /career-paths/:careerId/roadmaps
-	@Get('career-paths/:careerId/roadmaps')
-	async getRoadmapsByCareer(
-		@Param('careerId', ParseIntPipe) careerPathId: number,
-	): Promise<RoadmapSummaryResponseDto[]> {
-		return this.roadmapsService.getSystemRoadmapsByCareerPath(careerPathId);
 	}
 }

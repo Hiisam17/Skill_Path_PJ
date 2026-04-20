@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { SkillDto, UserSkillStatus } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -24,36 +24,20 @@ export class SkillsService {
   /**
    * Retrieve all skills in a roadmap with user's progress status
    * Returns ordered list of skills user should learn, with current completion status
-   * Skills maintain a specific order (orderIndex) for progressive learning
-   *
-   * @param roadmapId - UUID of the roadmap to fetch skills from
-   * @param userId - UUID of authenticated user (to fetch their progress status)
-   * @returns Array of SkillDto objects ordered by orderIndex with user's completion status
-   *
-   * Example:
-   * const skills = await skillsService.findByRoadmap('roadmap-id', 'user-id')
-   * // Returns: [
-   * //   { id: 'uuid1', roadmapId: '...', name: 'Git', description: '...', orderIndex: 1, status: 'COMPLETED' },
-   * //   { id: 'uuid2', roadmapId: '...', name: 'Linux', description: '...', orderIndex: 2, status: 'NOT_STARTED' },
-   * // ]
    */
   async findSkillsByRoadmap(
-    roadmapId: string,
+    roadmapId: number,
     userId: string,
   ): Promise<SkillDto[]> {
-    const roadmapIdNumber = Number(roadmapId);
-    if (!Number.isInteger(roadmapIdNumber) || roadmapIdNumber <= 0) {
-      return [];
-    }
 
     const roadmapSkills = await this.prisma.roadmapSkill.findMany({
       where: {
         section: {
-          roadmapId: roadmapIdNumber,
+          roadmapId: roadmapId,
         },
         skillId: { not: null },
       },
-      orderBy: [{ sectionId: 'asc' }, { stepNumber: 'asc' }],
+      orderBy: [{ sectionId: 'asc' }, { id: 'asc' }],
       include: {
         skill: {
           include: {
@@ -72,23 +56,54 @@ export class SkillsService {
     });
 
     return roadmapSkills
-      .filter((roadmapSkill) => roadmapSkill.skill)
+      .filter((roadmapSkill) => roadmapSkill.skill !== null) 
       .map((roadmapSkill) => {
-        const skill = roadmapSkill.skill!;
+        const skill = roadmapSkill.skill!; 
         const progressStatusName = skill.userProgress[0]?.status?.name;
 
         return {
           id: String(skill.id),
-          roadmapId: String(roadmapIdNumber),
+          roadmapId: String(roadmapId),
           name: skill.name,
           description: skill.description ?? '',
-          orderIndex: roadmapSkill.stepNumber,
+          orderIndex: roadmapSkill.id, 
           status: this.mapProgressStatus(progressStatusName),
         };
       });
   }
 
-  async findByRoadmap(roadmapId: string, userId: string): Promise<SkillDto[]> {
+  async findByRoadmap(roadmapId: number, userId: string): Promise<SkillDto[]> {
     return this.findSkillsByRoadmap(roadmapId, userId);
+  }
+  /**
+   * Retrieves skill details with associated active learning resources.
+   *
+   * @param id - The skill ID.
+   * @returns An object containing skill title, description, and formatted resources.
+   * @throws NotFoundException if the skill does not exist.
+   */
+  async getSkillDetail(id: number) {
+    const skill = await this.prisma.skill.findUnique({
+      where: { id },
+      include: {
+        resources: {
+          where: { isActive: true },
+          include: { resourceType: true },
+        },
+      },
+    });
+
+    if (!skill) throw new NotFoundException('Skill not found');
+
+    return {
+      title: skill.name,
+      content: skill.description || '',
+      resources: skill.resources.map(res => ({
+        id: res.id,
+        type: res.resourceType?.name || 'link',
+        title: res.title,
+        url: res.url,
+      }))
+    };
   }
 }

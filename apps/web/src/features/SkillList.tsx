@@ -1,11 +1,7 @@
 /**
- * SkillList Component
- * Displays list of skills for a roadmap with completion status
- * Plain React list (no D3.js visualization yet)
- *
- * Props:
- * - roadmapId: ID of the roadmap to load skills for
- * - onSkillComplete: Callback when user marks a skill as completed
+ * Renders a list of skills associated with a roadmap.
+ * Displays completion status and allows marking skills as complete.
+ * Currently uses a standard list layout (visualization features pending).
  */
 
 import { useState, useEffect } from "react";
@@ -17,13 +13,8 @@ interface SkillListProps {
 }
 
 /**
- * SkillList Component
- * Fetches and renders skills for a specific roadmap
- * Each skill shows: name, description, orderIndex, status
- * User can click "Mark completed" button to trigger completion
- *
- * @param {SkillListProps} props - Component props
- * @returns {JSX.Element} Skill list with complete buttons
+ * @param props - The component properties containing roadmap details and completion callback.
+ * @returns The rendered list of skills.
  */
 export const SkillList = ({
   roadmapId,
@@ -39,7 +30,7 @@ export const SkillList = ({
         setIsLoading(true);
         setError(null);
         setSkills([]);
-        // TODO: Fetch skills from GET /roadmaps/:id/skills
+        // TODO(SkillList): Connect to actual API endpoints for fetching skills once implemented.
         // const response = await api.get<SkillDto[]>(`/roadmaps/${roadmapId}/skills`);
         // setSkills(response.data);
         throw new Error("Not implemented");

@@ -26,13 +26,44 @@ export class UsersService {
   async selectRoadmap(
     userId: string,
     selectRoadmapDto: SelectRoadmapDto,
-  ): Promise<void> {
-    // TODO: Implement roadmap selection logic
-    // 1. Verify user exists in database
-    // 2. Verify careerPath exists and get its beginner level roadmap
-    // 3. Associate roadmap with user (store in user context or session)
-    // 4. Could store in a user_roadmap junction table if persistence needed
-    throw new Error('Not implemented');
+  ): Promise<number> {
+    const careerPathId = parseInt(selectRoadmapDto.careerPathId);
+    if (isNaN(careerPathId)) throw new Error('Invalid careerPathId');
+
+    // Find the first system roadmap for this career path
+    const roadmaps = await this.prisma.roadmap.findMany({
+      where: {
+        careerPathId: careerPathId,
+        userId: null, // System roadmap
+      },
+      orderBy: { id: 'asc' },
+      take: 1,
+    });
+
+    if (roadmaps.length === 0) {
+      throw new Error('No roadmap found for this career path');
+    }
+
+    const roadmapId = roadmaps[0].id;
+
+    // Create tracking record if it doesn't exist
+    await this.prisma.userRoadmap.upsert({
+      where: {
+        userId_roadmapId: {
+          userId: userId,
+          roadmapId: roadmapId,
+        }
+      },
+      update: {},
+      create: {
+        userId: userId,
+        roadmapId: roadmapId,
+        currentStepOrder: 1,
+        progressPercentage: 0,
+      }
+    });
+
+    return roadmapId;
   }
 
   /**

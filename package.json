@@ -11,7 +11,11 @@
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspaces",
     "start": "npm start --workspaces",
-    "test": "npm test --workspaces"
+    "test": "npm test --workspaces",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up --build",
+    "docker:prod": "docker-compose -f docker-compose.yml up -d --build",
+    "docker:stop": "docker-compose -f docker-compose.dev.yml down && docker-compose -f docker-compose.yml down",
+    "docker:clean": "docker system prune -af --volumes"
   },
   "engines": {
     "node": ">=18.0.0",
@@ -298,7 +302,6 @@
     "leven": "^3.1.0",
     "levn": "^0.4.1",
     "lightningcss": "^1.32.0",
-    "lightningcss-win32-x64-msvc": "^1.32.0",
     "lilconfig": "^2.1.0",
     "lines-and-columns": "^1.2.4",
     "load-esm": "^1.0.3",

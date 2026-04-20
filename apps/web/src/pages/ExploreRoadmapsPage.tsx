@@ -23,14 +23,7 @@ interface CareerPath {
 
 const PATH_ICONS = [Code, Database, Brain, Shield, Smartphone, Cloud]
 
-const MOCK_DESCRIPTIONS = [
-  'Master modern frameworks, APIs, and system design to build scalable applications.',
-  'Design and optimize databases, handle big data, and architect robust data pipelines.',
-  'Dive into ML models, neural networks, and deploy AI solutions at production scale.',
-  'Protect systems, conduct penetration testing, and build secure infrastructures.',
-  'Build native and cross-platform apps with cutting-edge mobile technologies.',
-  'Deploy, scale, and manage cloud infrastructure with DevOps best practices.',
-]
+
 
 function SkeletonCard() {
   return (
@@ -56,7 +49,7 @@ function PathCard({
   loading: boolean
 }) {
   const Icon = PATH_ICONS[index % PATH_ICONS.length]
-  const description = path.description ?? MOCK_DESCRIPTIONS[index % MOCK_DESCRIPTIONS.length]
+  const description = path.description || 'No description available for this career path.';
 
   return (
     <div
@@ -101,26 +94,22 @@ export const ExploreRoadmapsPage = () => {
  useEffect(() => {
     let cancelled = false
     
-    // 1. Gọi đúng endpoint từ Controller của bạn: '/career-paths'
     apiClient
-      // Tạm để any[] hoặc tạo interface riêng cho dữ liệu BE trả về
-      .get<any[]>('/career-paths') 
+      .get<any[]>('/career-paths')
       .then((res) => {
         if (!cancelled) {
-          console.log('📦 Dữ liệu gốc từ Backend:', res.data); 
-
-          // 2. "Biến hình" dữ liệu BE cho khớp với giao diện FE
+          // Map backend field names to frontend interface expectations.
           const mappedPaths: CareerPath[] = res.data.map((item) => ({
-            id: String(item.id), // BE trả số (number), FE cần chuỗi (string)
-            title: item.name,    // BE trả 'name', FE cần 'title'
-            // description: Nếu BE không có, giao diện sẽ tự lấy từ MOCK_DESCRIPTIONS
+            id: String(item.id),
+            title: item.name,
+            description: item.description,
           }));
 
           setPaths(mappedPaths);
         }
       })
       .catch((err) => {
-        console.error('❌ Lỗi khi gọi API /career-paths:', err);
+        console.error('Failed to fetch career paths:', err);
       })
       .finally(() => {
         if (!cancelled) setFetching(false)
@@ -134,8 +123,8 @@ export const ExploreRoadmapsPage = () => {
   const handleSelect = async (careerPathId: string) => {
     setSelectingId(careerPathId)
     try {
-      await apiClient.post('/users/select-roadmap', { careerPathId })
-      navigate('/roadmap')
+      const res = await apiClient.post('/users/select-roadmap', { careerPathId })
+      navigate(`/roadmaps/${res.data.roadmapId}`)
     } catch {
       setSelectingId(null)
     }

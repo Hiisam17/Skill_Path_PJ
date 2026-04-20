@@ -3,14 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from './prisma.service';
 
 /**
- * PrismaModule - Global infrastructure module for database access
- * Provides PrismaService as a global singleton, accessible from all modules
- * without requiring explicit imports in each module
- *
- * Usage:
- * - Import PrismaModule in AppModule with @Global() decorator
- * - Inject PrismaService in any service: constructor(private prisma: PrismaService) {}
- * - Access Prisma client: this.prisma.user.findUnique(), this.prisma.skill.findMany(), etc.
+ * Global module that provides PrismaService as a singleton across the application.
+ * No explicit import is needed in other modules.
  */
 @Global()
 @Module({

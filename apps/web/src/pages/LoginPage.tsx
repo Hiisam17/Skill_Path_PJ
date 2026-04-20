@@ -122,7 +122,7 @@ export const LoginPage: React.FC = () => {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                 Password <span className="text-red-400">*</span>
               </label>
               <Link to="/forgot-password" title="Coming soon" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300">

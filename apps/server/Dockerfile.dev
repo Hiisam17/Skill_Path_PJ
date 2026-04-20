@@ -1,0 +1,17 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+ENV PRISMA_CLI_QUERY_ENGINE_TYPE=binary
+ENV PRISMA_CLIENT_ENGINE_TYPE=binary
+
+# Chỉ copy package và prisma trước để cache
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm install
+RUN npx prisma generate
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start:dev"]

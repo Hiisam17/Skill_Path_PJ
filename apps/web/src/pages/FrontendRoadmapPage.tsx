@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import "./FrontendRoadmapPage.css";
 
 /* ── Import tất cả file markdown trong thư mục content ── */
@@ -259,7 +259,7 @@ function NodeDrawer({ node, status, isLocked, onClose, onStatusChange }: DrawerP
 
 /* ── Main Page ── */
 export default function FrontendRoadmapPage() {
-  const navigate = useNavigate();
+
   const [statuses, setStatuses] = useState<Record<string, Status>>(() => {
     try {
       const saved = localStorage.getItem("frontendRoadmapProgress");

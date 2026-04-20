@@ -10,16 +10,17 @@ import { SkillsModule } from './skills/skills.module';
 import { ProgressModule } from './progress/progress.module';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
-import { AiModule } from './ai/ai.module';
+import { RoadmapSectionsModule } from './roadmap-sections/roadmap-sections.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: join(process.cwd(), '.env'),
+      envFilePath: join(process.cwd(), '.env.development'), 
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -27,7 +28,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     RoadmapsModule,
     SkillsModule,
     ProgressModule,
-    AiModule,
+    RoadmapSectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

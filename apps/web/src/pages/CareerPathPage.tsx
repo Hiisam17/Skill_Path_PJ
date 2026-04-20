@@ -177,10 +177,14 @@ export const CareerPathPage = () => {
 
           {/* Auth actions */}
           <div className="hidden md:flex items-center gap-3">
-            <button className="text-sm text-[#94A3B8] hover:text-white transition-colors px-3 py-1.5">
+            <button
+              onClick={() => navigate('/login')}
+              className="text-sm text-[#94A3B8] hover:text-white transition-colors px-3 py-1.5"
+            >
               Log In
             </button>
             <Button
+              onClick={() => navigate('/sign-up')}
               className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-semibold text-sm
                          shadow-[0_0_15px_rgba(0,189,214,0.3)] hover:shadow-[0_0_20px_rgba(0,189,214,0.5)]
                          transition-all duration-300"
@@ -214,8 +218,12 @@ export const CareerPathPage = () => {
               </a>
             ))}
             <hr className="border-[#1F2937]" />
-            <button className="text-sm text-[#94A3B8] hover:text-white text-left py-1">Log In</button>
+            <button
+              className="text-sm text-[#94A3B8] hover:text-white text-left py-1"
+              onClick={() => { setMobileOpen(false); navigate('/login'); }}
+            >Log In</button>
             <Button
+              onClick={() => { setMobileOpen(false); navigate('/sign-up'); }}
               className="bg-[#00BDD6] text-[#090E1A] font-semibold w-full"
               size="sm"
             >

@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "./Sidebar.css";
 
 const HomeIcon = () => (
@@ -35,6 +36,8 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  const { logout } = useAuth();
+
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
@@ -66,10 +69,13 @@ export default function Sidebar() {
             <span className="nav-icon"><SettingsIcon /></span>
             Settings
           </a>
-          <NavLink to="/">
+          <a href="#" onClick={(e) => {
+            e.preventDefault();
+            logout();
+          }}>
             <span className="nav-icon"><LogoutIcon /></span>
             Logout
-          </NavLink>
+          </a>
         </div>
 
         <div className="sidebar-user-card">

@@ -19,11 +19,6 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
     }
   };
 
-  const truncateSummary = (text: string) => {
-    if (text.length <= 100) return text;
-    return text.substring(0, 100) + "...";
-  };
-
   return (
     <div className="job-selector-container">
       <div className="job-selector-header">
@@ -48,12 +43,13 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
                 </div>
               )}
               <div className="job-card-header">
-                <img src={job.logo} alt={job.companyName} className="job-card-logo" />
+                {job.logo && <img src={job.logo} alt={job.companyName} className="job-card-logo" />}
                 {job.isHot && <span className="job-card-badge">Hot</span>}
               </div>
               <div className="job-card-info">
                 <h3>{job.title}</h3>
                 <p>{job.companyName}</p>
+                {job.location && <p className="text-xs text-slate-400 mt-1">{job.location}  • {job.jobType}</p>}
               </div>
             </div>
           );
@@ -61,8 +57,25 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
       </div>
 
       {selectedJob && (
-        <div className="job-summary-box">
-          <p><strong>Job Description:</strong> {truncateSummary(selectedJob.description)}</p>
+        <div className="job-summary-box flex flex-col gap-4 mt-6 p-4 bg-slate-800 rounded-md border border-slate-700">
+          <div>
+            <strong className="text-lg text-slate-100 block mb-2">Job Description:</strong>
+            <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans">{selectedJob.description.trim()}</pre>
+          </div>
+          <div>
+            <strong className="text-lg text-slate-100 block mb-2">Requirements:</strong>
+            <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans">{selectedJob.requirements?.trim()}</pre>
+          </div>
+          {selectedJob.skills && selectedJob.skills.length > 0 && (
+            <div>
+              <strong className="text-lg text-slate-100 block mb-2">Skills:</strong>
+              <div className="flex flex-wrap gap-2">
+                {selectedJob.skills.map((skill, i) => (
+                  <span key={i} className="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs">{skill}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -73,10 +86,10 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
           onClick={handleAnalyzeClick}
         >
           {isAnalyzing ? (
-            <>
-              <span className="spinner"></span>
-              Đang phân tích...
-            </>
+             <>
+               <span className="spinner"></span>
+               Đang thân tích...
+             </>
           ) : (
             "Phân tích lộ trình cho tôi"
           )}

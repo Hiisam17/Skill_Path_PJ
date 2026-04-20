@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import ReactFlow, { Background, useNodesState, useEdgesState, PanOnScrollMode, type NodeTypes, type Node } from 'reactflow';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import 'reactflow/dist/style.css';
 
 import apiClient from '@/lib/axios';
@@ -19,6 +19,7 @@ const nodeTypes: NodeTypes = {
 export default function SkillsTreePage() {
   // 1. SỬA LẠI TÊN PARAM CHO KHỚP VỚI App.tsx
   const { roadmapId } = useParams<{ roadmapId: string }>();
+  const navigate = useNavigate();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<RoadmapData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -29,6 +30,8 @@ export default function SkillsTreePage() {
   const [isDrawerLoading, setIsDrawerLoading] = useState(false);
   const [drawerData, setDrawerData] = useState(null);
   const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
+  
+  const [activeJobInfo, setActiveJobInfo] = useState<{title: string, company: string} | null>(null);
 
   useEffect(() => {
     const loadRoadmap = async () => {
@@ -53,6 +56,7 @@ export default function SkillsTreePage() {
           const stored = localStorage.getItem("activeGapAnalysis");
           if (stored) {
             const parsed = JSON.parse(stored);
+            setActiveJobInfo({ title: parsed.jobTitle, company: parsed.companyName });
             if (Array.isArray(parsed.gapNodes)) {
               gapNodesList = parsed.gapNodes;
             }
@@ -62,7 +66,8 @@ export default function SkillsTreePage() {
         }
 
         const nodesWithHighlights = layoutedNodes.map((n: any) => {
-          if (n.type === "skillNode" && n.data?.name && gapNodesList.includes(n.data.name)) {
+          const matched = n.data?.name && gapNodesList.some(gap => gap.toLowerCase() === n.data.name.toLowerCase());
+          if (n.type === "skillNode" && matched) {
             return {
               ...n,
               data: { ...n.data, isHighlighted: true },
@@ -138,7 +143,13 @@ export default function SkillsTreePage() {
     );
   }, [setNodes]);
 
-  // Sửa loading UI một chút cho đẹp
+  const handleResetGap = () => {
+    localStorage.removeItem('activeGapAnalysis');
+    setActiveJobInfo(null);
+    navigate('/job-market');
+  };
+
+  // Sa loading UI một chút cho đẹp
   if (loading) return (
     <div className="w-full h-full flex justify-center items-center bg-slate-950 text-white font-bold text-xl tracking-widest uppercase">
       Đang tải bản đồ...
@@ -175,6 +186,31 @@ export default function SkillsTreePage() {
         </ReactFlow>
       </main>
 
+      {activeJobInfo && (
+        <div className="absolute top-4 right-4 bg-slate-900 bg-opacity-90 border border-blue-500/50 p-4 rounded-lg shadow-xl text-slate-200 z-[1000] w-80 max-w-[90vw]">
+          <h3 className="text-sm font-semibold text-blue-400 mb-1 uppercase tracking-wider">Skill Gap Analysis</h3>
+          <p className="text-base font-bold text-white leading-tight">{activeJobInfo.title}</p>
+          <p className="text-sm text-slate-400 mb-3">{activeJobInfo.company}</p>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleResetGap}
+              className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs py-2 px-3 rounded border border-slate-600 transition-colors"
+            >
+              Chọn Job Khác
+            </button>
+            <button
+              onClick={() => {
+                const els = document.querySelectorAll('.animate-pulse');
+                if (els.length > 0) els[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 px-3 rounded transition-colors"
+            >
+              Tìm Skills
+            </button>
+          </div>
+        </div>
+      )}
+
       <ResourceDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
@@ -186,3 +222,4 @@ export default function SkillsTreePage() {
     </div>
   );
 }
+

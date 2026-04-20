@@ -7,14 +7,18 @@ export default function SkillNode({ data }: NodeProps) {
   // 1. BASE: Phong cách Brutalism - Viền dày, chữ in hoa đậm, layout linh hoạt
   const baseClasses = "w-full h-full border-4 flex items-center justify-center px-6 py-3 cursor-pointer transition-all duration-300 relative font-black uppercase text-center min-w-[150px]";
   
-  // 2. DEFAULT: Chưa học -> Nền trắng, viền đen, bóng đổ đen đặc (Shadow khối)
-  const defaultClasses = "bg-slate-900 text-white border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:-translate-y-1";
-  
-  // 3. COMPLETED: Đã học -> Nền tối, viền xanh dương sáng (#3b82f6), bóng đổ màu xanh
-  const completedClasses = "bg-slate-900 text-white border-[#3b82f6] shadow-[4px_4px_0px_#3b82f6] hover:-translate-y-1";
+// 2. DEFAULT
+  let stateClasses = "bg-slate-900 text-white border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:-translate-y-1";
+
+  // 3. COMPLETED
+  if (isCompleted) {
+    stateClasses = "bg-slate-900 text-white border-[#3b82f6] shadow-[4px_4px_0px_#3b82f6] hover:-translate-y-1";
+  } else if ((data as any).isHighlighted) {
+    stateClasses = "bg-yellow-400 text-black border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:-translate-y-1 animate-pulse";
+  }
 
   return (
-    <div className={`${baseClasses} ${isCompleted ? completedClasses : defaultClasses}`}>
+    <div className={`${baseClasses} ${stateClasses}`}>
       
       {/* Cọc nối bên Trái (Target) */}
       <Handle 

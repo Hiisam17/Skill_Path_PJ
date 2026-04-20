@@ -10,8 +10,6 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { ExploreRoadmapsPage } from "./pages/ExploreRoadmapsPage";
 import SkillsTreePage from "./pages/SkillsTreePage";
 import { JobMarketPage } from "./pages/JobMarketPage";
-import FrontendRoadmapPage from "./pages/FrontendRoadmapPage";
-import { JavaScriptSkillTreePage } from "./pages/JavaScriptSkillTreePage";
 
 // ── Imports Components & Auth ──
 import Layout from "./components/Layout";
@@ -67,8 +65,8 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/job-market" element={<JobMarketPage />} />
         <Route path="/roadmaps/:roadmapId" element={<SkillsTreePage />} />
-        <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} />
-        <Route path="/javascript-roadmap" element={<JavaScriptSkillTreePage />} />
+        {/* <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} /> */}
+        {/* <Route path="/javascript-roadmap" element={<JavaScriptSkillTreePage />} /> */}
       </Route>
 
       {/* Fallback */}

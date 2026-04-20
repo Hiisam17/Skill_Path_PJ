@@ -40,7 +40,7 @@ export const JobMarketPage: React.FC = () => {
     <div className="job-market-page">
       <div className="job-market-header">
         <h1>Job Market</h1>
-        <p>Explore frontend developer positions and analyze your skill gaps instantly.</p>
+        <p>Explore backend developer positions and analyze your skill gaps instantly.</p>
       </div>
 
       <div className="job-market-content">

@@ -47,7 +47,31 @@ export default function SkillsTreePage() {
           calculatedWidth
         );
 
-        setNodes(layoutedNodes as RoadmapNode[]);
+        // -- Add JD Highlighting --
+        let gapNodesList: string[] = [];
+        try {
+          const stored = localStorage.getItem("activeGapAnalysis");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed.gapNodes)) {
+              gapNodesList = parsed.gapNodes;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse activeGapAnalysis", e);
+        }
+
+        const nodesWithHighlights = layoutedNodes.map((n: any) => {
+          if (n.type === "skillNode" && n.data?.name && gapNodesList.includes(n.data.name)) {
+            return {
+              ...n,
+              data: { ...n.data, isHighlighted: true },
+            };
+          }
+          return n;
+        });
+
+        setNodes(nodesWithHighlights as RoadmapNode[]);
         setEdges(layoutedEdges);
       } catch (error) {
         console.error('Failed to load roadmap:', error);

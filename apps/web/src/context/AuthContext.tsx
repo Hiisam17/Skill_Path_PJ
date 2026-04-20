@@ -28,6 +28,7 @@ interface AuthProviderProps {
 /** Provides authentication state and methods to the component tree. */
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<UserDto | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!getAuthToken());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +61,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       setAuthToken(token);
+      setIsAuthenticated(true);
 
       if (userData) setUser(userData);
     } catch (err) {
@@ -75,6 +77,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = (): void => {
     clearAuthToken();
     setUser(null);
+    setIsAuthenticated(false);
     setError(null);
   };
 
@@ -84,7 +87,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     error,
     login,
     logout,
-    isAuthenticated: !!user || !!getAuthToken(),
+    isAuthenticated,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

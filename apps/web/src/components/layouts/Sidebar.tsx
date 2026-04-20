@@ -31,7 +31,7 @@ const LogoutIcon = () => (
 
 const navItems = [
   { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
-  { path: "/frontend-roadmap", label: "Roadmap", icon: <RoadmapIcon /> },
+  { path: "/roadmaps/2", label: "Roadmap", icon: <RoadmapIcon /> },
   { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },
 ];
 

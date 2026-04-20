@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { JobSelector } from "@/components/features/JobSelector";
+import { JobSelector } from "@/features/JobSelector";
 import { analyzeGap } from "@/services/gapService";
 import type { SuggestedJob } from "@/data/mockGaps";
 import "./JobMarketPage.css";

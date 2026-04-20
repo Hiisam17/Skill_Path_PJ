@@ -6,12 +6,13 @@ import ReactFlow, {
   MiniMap,
   Handle,
   Position,
-  BackgroundVariant
+  BackgroundVariant,
+  PanOnScrollMode
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import "./DashboardPage.css";
 // Re-use some styles from frontend roadmap for consistency
-import "./FrontendRoadmapPage.css"; 
+import "./FrontendRoadmapPage.css";
 
 import jsData from '../javascript.json';
 
@@ -152,10 +153,10 @@ const TopicNode = ({ data }: any) => {
   const isGap = data.isGap;
   const borderColor = isGap ? 'border-amber-500' :
     status === 'completed' ? 'border-[#4cd7f6]' :
-    status === 'in-progress' ? 'border-orange-400' : 'border-gray-700';
+      status === 'in-progress' ? 'border-orange-400' : 'border-gray-700';
   const shadow = isGap ? 'shadow-[0_0_25px_rgba(245,158,11,0.8)] animate-pulse' :
     status === 'completed' ? 'shadow-[0_0_20px_rgba(76,215,246,0.3)]' :
-    status === 'in-progress' ? 'shadow-[0_0_20px_rgba(251,146,60,0.2)]' : '';
+      status === 'in-progress' ? 'shadow-[0_0_20px_rgba(251,146,60,0.2)]' : '';
 
   return (
     <div className={`relative bg-[#171f33] border-2 ${borderColor} ${shadow} px-6 py-4 rounded-xl min-w-[200px] text-center group hover:scale-105 transition-all backdrop-blur-sm ${isGap ? 'bg-amber-900/20' : ''}`}>
@@ -195,7 +196,7 @@ const SubtopicNode = ({ data }: any) => {
 
   const borderColor = isGap ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)] animate-pulse' :
     status === 'completed' ? 'border-[#4cd7f6]/60' :
-    status === 'in-progress' ? 'border-orange-400/60' : 'border-gray-600';
+      status === 'in-progress' ? 'border-orange-400/60' : 'border-gray-600';
 
   return (
     <div className={`relative bg-[#222a3d] border ${borderColor} px-4 py-3 rounded-lg text-center hover:border-[#4cd7f6] hover:shadow-[0_0_15px_rgba(76,215,246,0.2)] transition-all group ${isSmall ? 'min-w-[80px]' : 'min-w-[140px]'} ${isGap ? 'bg-amber-900/20' : ''}`}>
@@ -257,7 +258,7 @@ const MainTitleNode = ({ data }: any) => {
 export const JavaScriptSkillTreePage: React.FC = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedNodeData, setSelectedNodeData] = useState<ParsedMarkdown & { id: string } | null>(null);
-  
+
   const [gapNodes, setGapNodes] = useState<string[]>([]);
   const [gapSummary, setGapSummary] = useState<{ jobTitle: string; companyName: string } | null>(null);
 
@@ -445,6 +446,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
   const removeNodesSet = new Set(REMOVE_NODE_IDS);
 
   processedEdges = processedEdges.filter(edge => {
+    if (!edge.source || !edge.target) return false;
     // Không dùng lại cạnh liên quan đến vertical node
     if (verticalNodeIds.has(edge.source) || verticalNodeIds.has(edge.target)) return false;
     // Không dùng lại cạnh liên quan đến node bị xoá (roadmap.sh)
@@ -564,7 +566,7 @@ export const JavaScriptSkillTreePage: React.FC = () => {
             minZoom={0.5}
             maxZoom={1.5}
             panOnScroll={true}
-            panOnScrollMode="vertical"
+            panOnScrollMode={PanOnScrollMode.Vertical}
             zoomOnScroll={false}
             zoomOnPinch={false}
             zoomOnDoubleClick={false}

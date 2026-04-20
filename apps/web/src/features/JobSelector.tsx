@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import type { SuggestedJob } from '../../data/mockGaps';
-import { MOCK_JOBS } from '../../data/mockGaps';
+import type { SuggestedJob } from '../data/mockGaps';
+import { MOCK_JOBS } from '../data/mockGaps';
 import './JobSelector.css';
 
 interface JobSelectorProps {
@@ -35,7 +35,7 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
         {MOCK_JOBS.map((job) => {
           const isSelected = selectedJobId === job.id;
           return (
-            <div 
+            <div
               key={job.id}
               className={`job-card ${isSelected ? 'selected' : ''}`}
               onClick={() => !isAnalyzing && setSelectedJobId(job.id)}
@@ -67,7 +67,7 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
       )}
 
       <div className="job-selector-actions">
-        <button 
+        <button
           className={`job-selector-btn ${isAnalyzing ? 'job-selector-btn-loading' : ''}`}
           disabled={!selectedJobId || isAnalyzing}
           onClick={handleAnalyzeClick}

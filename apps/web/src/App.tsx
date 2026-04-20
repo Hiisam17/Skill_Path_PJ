@@ -18,13 +18,16 @@ function App() {
   return (
     <Routes>
       {/* ── 1. PUBLIC ROUTES (Không cần đăng nhập) ── */}
-      <Route path="/" element={<Navigate to="/career-paths" replace />} />
-      <Route path="/career-paths" element={<CareerPathPage />} />
-      <Route path="/explore" element={<ExploreRoadmapsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/sign-up" element={<SignUpPage />} />
 
-      {/* ── 2. PROTECTED ROUTES (Cần đăng nhập & Dùng chung Layout) ── */}
+      {/* ── 2. ROOT ROUTE ── 
+          Chuyển hướng mặc định vào Dashboard. 
+          Nếu chưa đăng nhập, ProtectedRoute ở dưới sẽ tự động đá về /login. 
+      */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      {/* ── 3. PROTECTED ROUTES (Cần đăng nhập & Dùng chung Layout) ── */}
       <Route
         element={
           <ProtectedRoute>
@@ -35,7 +38,9 @@ function App() {
         {/* Tất cả các trang bên trong này đều sẽ có Sidebar và Topbar từ Layout */}
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/job-market" element={<JobMarketPage />} />
-        
+        <Route path="/career-paths" element={<CareerPathPage />} />
+        <Route path="/explore" element={<ExploreRoadmapsPage />} />
+
         <Route path="/roadmaps/:roadmapId" element={<SkillsTreePage />} />
       </Route>
 

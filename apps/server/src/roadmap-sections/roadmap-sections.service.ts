@@ -20,24 +20,36 @@ export class RoadmapSectionsService {
     const section = await this.prisma.roadmapSection.findUnique({
       where: { id },
       include: {
-        resources: {
-          where: { isActive: true },
-          include: { resourceType: true },
+        skills: {
+          include: {
+            skill: {
+              include: {
+                resources: {
+                  where: { isActive: true },
+                  include: { resourceType: true },
+                },
+              },
+            },
+          },
         },
       },
     });
-    
+
     if (!section) throw new NotFoundException('Section not Found');
 
-    return {
-      title: section.title,
-      content: section.description || '',
-      resources: section.resources.map(res => ({
+    const allResources = section.skills.flatMap((rs) =>
+      rs.skill?.resources.map((res) => ({
         id: res.id,
         type: res.resourceType?.name || 'link',
         title: res.title,
         url: res.url,
-      }))
+      })) ?? [],
+    );
+
+    return {
+      title: section.title,
+      content: section.description || '',
+      resources: allResources,
     };
   }
 }

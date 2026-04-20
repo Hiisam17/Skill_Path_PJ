@@ -43,7 +43,11 @@ async function main() {
   ];
 
   for (const tableName of sequenceTables) {
-    await syncIdSequence(tableName);
+    try {
+      await syncIdSequence(tableName);
+    } catch (e: any) {
+      console.warn(`Could not sync sequence for ${tableName}:`, e.message);
+    }
   }
 
   const demoUserId =
@@ -143,26 +147,23 @@ async function main() {
       },
     });
 
-    await prisma.roadmapSkill.upsert({
-      where: {
-        sectionId_stepNumber: {
-          sectionId: coreSection.id,
-          stepNumber: index + 1,
-        },
-      },
-      update: {
-        skillId: skill.id,
-        isOptional: false,
-        estimatedHours: 4,
-      },
-      create: {
-        sectionId: coreSection.id,
-        skillId: skill.id,
-        stepNumber: index + 1,
-        isOptional: false,
-        estimatedHours: 4,
-      },
+    const existingRoadmapSkill = await prisma.roadmapSkill.findFirst({
+        where: {
+            sectionId: coreSection.id,
+            skillId: skill.id,
+        }
     });
+
+    if (!existingRoadmapSkill) {
+        await prisma.roadmapSkill.create({
+            data: {
+                sectionId: coreSection.id,
+                skillId: skill.id,
+                isOptional: false,
+                estimatedHours: 4,
+            }
+        });
+    }
   }
 
   await prisma.profile.upsert({
@@ -203,17 +204,19 @@ async function main() {
       },
       skillId: { not: null },
     },
-    orderBy: { stepNumber: 'asc' },
-    select: { skillId: true, stepNumber: true },
+    orderBy: { id: 'asc' },
+    select: { id: true, skillId: true },
   });
 
-  for (const roadmapSkill of orderedRoadmapSkills) {
+  for (let i = 0; i < orderedRoadmapSkills.length; i++) {
+    const roadmapSkill = orderedRoadmapSkills[i];
     if (!roadmapSkill.skillId) continue;
 
+    // Giả lập tiến độ dựa trên thứ tự index
     const statusId =
-      roadmapSkill.stepNumber <= 1
+      i <= 1
         ? completedStatus.id
-        : roadmapSkill.stepNumber <= 3
+        : i <= 3
           ? inProgressStatus.id
           : notStartedStatus.id;
 

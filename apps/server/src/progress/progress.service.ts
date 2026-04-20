@@ -306,4 +306,60 @@ export class ProgressService {
       roadmaps: roadmapResults,
     };
   }
+
+  async getCompletedStatusId(): Promise<number> {
+    return this.ensureProgressStatus('COMPLETED');
+  }
+
+  /**
+   * Syncs the progress percentage for a specific user and roadmap
+   * Recalculates based on completed skills vs total skills in roadmap
+   */
+  async syncRoadmapProgressPercentage(
+    userId: string,
+    roadmapId: number,
+  ): Promise<void> {
+    const completedStatusId = await this.getCompletedStatusId();
+
+    // 1. Get all skill IDs in this roadmap
+    const roadmapSkills = await this.prisma.roadmapSkill.findMany({
+      where: {
+        section: { roadmapId },
+      },
+      select: { skillId: true },
+    });
+
+    const skillIds = roadmapSkills
+      .map((rs) => rs.skillId)
+      .filter((id): id is number => id !== null);
+
+    if (skillIds.length === 0) return;
+
+    // 2. Count completed
+    const completedCount = await this.prisma.userSkillProgress.count({
+      where: {
+        userId,
+        skillId: { in: skillIds },
+        statusId: completedStatusId,
+      },
+    });
+
+    // 3. Update UserRoadmap record
+    const percentage = (completedCount / skillIds.length) * 100;
+
+    await this.prisma.userRoadmap.upsert({
+      where: {
+        userId_roadmapId: { userId, roadmapId },
+      },
+      update: {
+        progressPercentage: percentage,
+      },
+      create: {
+        userId,
+        roadmapId,
+        progressPercentage: percentage,
+        currentStepOrder: 1,
+      },
+    });
+  }
 }

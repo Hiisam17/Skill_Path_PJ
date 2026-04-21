@@ -248,6 +248,7 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+
   /* ── Determine what to show in the ring ── */
   const activeDisplay = (() => {
     if (!multiProgress) return { percentage: 0, label: "OVERALL", name: "Loading..." };
@@ -470,6 +471,8 @@ export const DashboardPage: React.FC = () => {
               ))}
             </div>
           </section>
+
+
         </div>
 
         {/* ── Footer ── */}

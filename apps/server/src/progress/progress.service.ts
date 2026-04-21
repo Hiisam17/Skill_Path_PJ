@@ -47,6 +47,9 @@ export class ProgressService {
     if (normalized === 'IN_PROGRESS' || normalized === 'IN PROGRESS') {
       return UserSkillStatus.IN_PROGRESS;
     }
+    if (normalized === 'SKIPPED') {
+      return UserSkillStatus.SKIPPED;
+    }
     return UserSkillStatus.NOT_STARTED;
   }
 
@@ -95,33 +98,27 @@ export class ProgressService {
   }
 
   /**
-   * Marks a skill as completed for the given user.
-   * Uses upsert to prevent duplicate completion records.
+   * Updates the status of a skill for the given user.
+   * Uses upsert to create or update the progress record.
    *
    * @param userId - UUID of the user.
-   * @param skillId - ID of the skill to complete.
+   * @param skillId - ID of the skill.
+   * @param statusId - ID of the new status.
    * @returns Updated skill progress record.
-   * @throws NotFoundException if the skill does not exist.
    */
-  async completeSkill(
+  async updateSkillStatus(
     userId: string,
     skillId: number,
+    statusId: number,
   ): Promise<UserSkillProgressDto> {
-    if (!Number.isInteger(skillId) || skillId <= 0) {
-      throw new NotFoundException(`Skill ${skillId} not found`);
-    }
-
-    // Kiểm tra xem Skill có tồn tại không
     const skill = await this.prisma.skill.findUnique({
       where: { id: skillId },
-      select: { id: true },
     });
 
     if (!skill) {
       throw new NotFoundException(`Skill ${skillId} not found`);
     }
 
-    // Lấy ID status từ cache thay vì gọi DB liên tục
     const completedStatusId = await this.getCompletedStatusId();
 
     const progress = await this.prisma.userSkillProgress.upsert({
@@ -132,19 +129,22 @@ export class ProgressService {
         },
       },
       update: {
-        statusId: completedStatusId,
-        completedAt: new Date(),
+        statusId,
+        completedAt: statusId === completedStatusId ? new Date() : null,
+        updatedAt: new Date(),
       },
       create: {
         userId,
         skillId,
-        statusId: completedStatusId,
-        completedAt: new Date(),
+        statusId,
+        completedAt: statusId === completedStatusId ? new Date() : null,
+        updatedAt: new Date(),
       },
       include: {
         status: { select: { name: true } },
       },
     });
+
     return {
       id: String(progress.id),
       userId: progress.userId,
@@ -152,6 +152,25 @@ export class ProgressService {
       status: this.mapStatusNameToEnum(progress.status?.name),
       completedAt: progress.completedAt,
     };
+  }
+
+  /**
+   * Resets (removes) the progress of a skill for the given user.
+   *
+   * @param userId - UUID of the user.
+   * @param skillId - ID of the skill.
+   */
+  async resetSkillStatus(userId: string, skillId: number): Promise<void> {
+    await this.prisma.userSkillProgress.delete({
+      where: {
+        userId_skillId: {
+          userId,
+          skillId,
+        },
+      },
+    }).catch(() => {
+      // Ignore if not found
+    });
   }
 
   /**

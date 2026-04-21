@@ -18,6 +18,7 @@
     "skipLibCheck": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
+    "types": ["jest", "node"],
     "paths": {
       "@prisma/client": ["../../node_modules/@prisma/client"],
       ".prisma/client": ["../../node_modules/.prisma/client"]

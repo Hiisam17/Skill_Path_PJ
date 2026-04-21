@@ -23,19 +23,17 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
       {/* Ambient glow blobs - right */}
       <div className="absolute -right-40 top-40 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse" />
 
-      {/* Main content container */}
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-8">
+      <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-12">
         {/* Logo */}
-        <div className="mb-8">
+        <div className="mb-10">
           <Link to="/career-paths" className="hover:opacity-80 transition-opacity">
-            <h1 className="text-3xl font-bold tracking-tight text-center">
+            <h1 className="text-4xl font-bold tracking-tight">
               <span className="bg-gradient-to-r from-cyan-300 to-cyan-500 bg-clip-text text-transparent">
                 DevPath
               </span>
             </h1>
           </Link>
         </div>
-
         {/* Auth Card */}
         <div className="w-full max-w-md backdrop-blur-md bg-slate-950/70 border border-slate-700/30 rounded-2xl p-8 md:p-12 shadow-2xl shadow-cyan-500/10 z-10">
           {children}

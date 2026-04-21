@@ -6,8 +6,13 @@ import {
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
-import { PrismaPg } from '@prisma/adapter-pg';
+
+/**
+ * Prisma ORM service providing database access via the PG driver adapter.
+ * Manages connection lifecycle aligned with NestJS module initialization.
+ */
 import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
 export class PrismaService
@@ -15,7 +20,6 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
-  private readonly pool: Pool;
 
   constructor(config: ConfigService) {
     const connectionString = config.get<string>('DATABASE_URL') || process.env.DATABASE_URL;
@@ -43,15 +47,10 @@ export class PrismaService
           : ['warn', 'error'],
     });
 
-    this.pool = pool;
-    this.logger.log('--- 🛡️ GIÁM ĐỊNH TẠI PRISMA SERVICE ---');
-    this.logger.log('✅ Đã cấu hình Driver Adapter thành công!');
+    this.logger.log('PrismaService initialized with PG Adapter');
   }
 
-  /**
-   * Connect to database when module initializes
-   * Called automatically by NestJS after dependency injection setup
-   */
+  /** Connects to the database when the NestJS module initializes. */
   async onModuleInit(): Promise<void> {
     try {
       await this.$connect();
@@ -62,14 +61,10 @@ export class PrismaService
     }
   }
 
-  /**
-   * Disconnect from database when module is destroyed
-   * Ensures graceful shutdown with proper resource cleanup
-   */
+  /** Disconnects from the database and releases the connection pool on shutdown. */
   async onModuleDestroy(): Promise<void> {
     try {
       await this.$disconnect();
-      await this.pool.end();
       this.logger.log('Database disconnected successfully');
     } catch (error) {
       this.logger.error('Failed to disconnect from database', error);

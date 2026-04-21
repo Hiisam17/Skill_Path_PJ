@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuth } from '@/context/AuthContext'
+import apiClient from '@/lib/axios'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CareerPath {
@@ -29,20 +29,7 @@ interface CareerPath {
 // ─── Icon Map ─────────────────────────────────────────────────────────────────
 const PATH_ICONS = [Code, Database, Brain, Shield, Smartphone, Cloud]
 
-// ─── Mock descriptions (fallback when API doesn't return one) ─────────────────
-const MOCK_DESCRIPTIONS = [
-  'Master modern frameworks, APIs, and system design to build scalable applications.',
-  'Design and optimize databases, handle big data, and architect robust data pipelines.',
-  'Dive into ML models, neural networks, and deploy AI solutions at production scale.',
-  'Protect systems, conduct penetration testing, and build secure infrastructures.',
-  'Build native and cross-platform apps with cutting-edge mobile technologies.',
-  'Deploy, scale, and manage cloud infrastructure with DevOps best practices.',
-]
 
-const DEFAULT_PATHS: CareerPath[] = [
-  { id: 'frontend-roadmap', title: 'Frontend Developer', description: 'Master HTML, CSS, JavaScript, and modern frameworks to build interactive web interfaces.' },
-  { id: 'backend-roadmap', title: 'Backend Developer', description: 'Design APIs, optimize databases, and architect scalable server-side systems.' },
-]
 
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 function SkeletonCard() {
@@ -70,7 +57,7 @@ function PathCard({
   loading: boolean
 }) {
   const Icon = PATH_ICONS[index % PATH_ICONS.length]
-  const description = path.description ?? MOCK_DESCRIPTIONS[index % MOCK_DESCRIPTIONS.length]
+  const description = path.description || 'No description available for this career path.';
 
   return (
     <div
@@ -99,8 +86,8 @@ function PathCard({
         onClick={() => onSelect(path.id)}
         disabled={loading}
         className="flex items-center gap-1 text-[#00BDD6] text-sm font-medium
-                  hover:text-[#00E5FF] transition-colors duration-200
-                  disabled:opacity-50 disabled:cursor-not-allowed w-fit group/btn"
+                   hover:text-[#00E5FF] transition-colors duration-200
+                   disabled:opacity-50 disabled:cursor-not-allowed w-fit group/btn"
       >
         Start Learning
         <ChevronRight
@@ -114,27 +101,55 @@ function PathCard({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const CareerPathPage = () => {
   const navigate = useNavigate()
-  const { isAuthenticated, logout, user } = useAuth()
   const [paths, setPaths] = useState<CareerPath[]>([])
   const [fetching, setFetching] = useState(true)
+  const [selectingId, setSelectingId] = useState<string | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Fetch career paths
   useEffect(() => {
-    // By-pass the backend for now to strictly show only the 2 default paths defined
-    setPaths(DEFAULT_PATHS);
-    setFetching(false);
+    let cancelled = false;
+
+    apiClient
+      .get<any[]>('/career-paths')
+      .then((res) => {
+        if (!cancelled) {
+          // Map backend field names to frontend interface expectations.
+          const mappedPaths = res.data.map((item) => ({
+            id: String(item.id),
+            title: item.name,
+            description: item.description,
+          }));
+
+          setPaths(mappedPaths);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch career paths:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setFetching(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Select roadmap — navigate trực tiếp đến skill-tree (MVP)
-  const handleSelect = (careerPathId: string) => {
-    // Navigate to frontend roadmap if front-end is selected
-    if (careerPathId === 'frontend-roadmap' || careerPathId.toLowerCase().includes('front') || careerPathId === '1') {
-      navigate('/frontend-roadmap')
-    } else {
-      alert("Back-end roadmap thay vì chuyển trang thì hiện tại đang được bảo trì!"); // Theo yêu cầu, chỉ front-end mới nhảy
+  // Select roadmap
+  const handleSelect = async (careerPathId: string) => {
+    setSelectingId(careerPathId)
+    try {
+      const res = await apiClient.post('/users/select-roadmap', { careerPathId })
+      navigate(`/roadmaps/${res.data.roadmapId}`)
+    } catch {
+      setSelectingId(null)
     }
   }
+
+  const handleExploreClick = () => {
+    navigate('/explore');
+  };
 
   return (
     <div className="min-h-screen bg-[#090E1A] text-white overflow-x-hidden">
@@ -143,10 +158,7 @@ export const CareerPathPage = () => {
       <nav className="sticky top-0 z-50 bg-[#090E1A]/80 backdrop-blur-md border-b border-[#1F2937]/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
-          <span 
-            className="text-xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
-            onClick={() => navigate('/career-paths')}
-          >
+          <span className="text-xl font-bold tracking-tight">
             Dev<span className="text-[#00E5FF]">Path</span>
           </span>
 
@@ -165,41 +177,21 @@ export const CareerPathPage = () => {
 
           {/* Auth actions */}
           <div className="hidden md:flex items-center gap-3">
-            {isAuthenticated ? (
-              <>
-                <div className="w-8 h-8 rounded-full bg-[#00BDD6] flex items-center justify-center text-[#090E1A] font-bold">
-                  {(user as any)?.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <Button
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                  variant="outline"
-                  className="border-[#1F2937] text-[#94A3B8] hover:text-white hover:bg-[#111726] px-3 py-1.5 h-8 text-sm"
-                >
-                  Log out
-                </Button>
-              </>
-            ) : (
-              <>
-                <button 
-                  onClick={() => navigate('/login')}
-                  className="text-sm text-[#94A3B8] hover:text-white transition-colors px-3 py-1.5"
-                >
-                  Log In
-                </button>
-                <Button
-                  onClick={() => navigate('/sign-up')}
-                  className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-semibold text-sm
-                             shadow-[0_0_15px_rgba(0,189,214,0.3)] hover:shadow-[0_0_20px_rgba(0,189,214,0.5)]
-                             transition-all duration-300"
-                  size="sm"
-                >
-                  Sign Up
-                </Button>
-              </>
-            )}
+            <button
+              onClick={() => navigate('/login')}
+              className="text-sm text-[#94A3B8] hover:text-white transition-colors px-3 py-1.5"
+            >
+              Log In
+            </button>
+            <Button
+              onClick={() => navigate('/sign-up')}
+              className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-semibold text-sm
+                         shadow-[0_0_15px_rgba(0,189,214,0.3)] hover:shadow-[0_0_20px_rgba(0,189,214,0.5)]
+                         transition-all duration-300"
+              size="sm"
+            >
+              Sign Up
+            </Button>
           </div>
 
           {/* Mobile hamburger */}
@@ -225,61 +217,21 @@ export const CareerPathPage = () => {
                 {link}
               </a>
             ))}
-            {isAuthenticated ? (
-              <>
-                <hr className="border-[#1F2937]" />
-                <div className="flex items-center gap-3 py-2 px-2">
-                  <div className="w-8 h-8 rounded-full bg-[#00BDD6] flex items-center justify-center text-[#090E1A] font-bold">
-                    {(user as any)?.name?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                  <span className="text-white text-sm">{(user as any)?.name || 'User'}</span>
-                </div>
-                <Button
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                  variant="outline"
-                  className="w-full border-[#1F2937] text-white"
-                  size="sm"
-                >
-                  Log out
-                </Button>
-              </>
-            ) : (
-              <>
-                <hr className="border-[#1F2937]" />
-                <button 
-                  onClick={() => navigate('/login')}
-                  className="text-sm text-[#94A3B8] hover:text-white text-left py-1"
-                >
-                  Log In
-                </button>
-                <Button
-                  onClick={() => navigate('/sign-up')}
-                  className="bg-[#00BDD6] text-[#090E1A] font-semibold w-full"
-                  size="sm"
-                >
-                  Sign Up
-                </Button>
-              </>
-            )}
+            <hr className="border-[#1F2937]" />
+            <button
+              className="text-sm text-[#94A3B8] hover:text-white text-left py-1"
+              onClick={() => { setMobileOpen(false); navigate('/login'); }}
+            >Log In</button>
+            <Button
+              onClick={() => { setMobileOpen(false); navigate('/sign-up'); }}
+              className="bg-[#00BDD6] text-[#090E1A] font-semibold w-full"
+              size="sm"
+            >
+              Sign Up
+            </Button>
           </div>
         )}
       </nav>
-
-      {/* Quick link: View all career paths (navigates to ExploreRoadmapsPage) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-        <div className="flex justify-end">
-          <Button
-            variant="link"
-            className="text-[#94A3B8] hover:text-[#00E5FF]"
-            onClick={() => navigate('/explore-roadmaps')}
-          >
-            View all career-paths
-          </Button>
-        </div>
-      </div>
 
       {/* ══ HERO SECTION ════════════════════════════════════════════════════ */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
@@ -316,18 +268,17 @@ export const CareerPathPage = () => {
 
             {/* CTA buttons */}
             <div className="flex flex-wrap gap-4">
-              <a href="#roadmaps">
-                <Button
-                  id="explore-roadmaps-btn"
-                  className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-bold
-                             px-7 h-12 text-base rounded-lg
-                             shadow-[0_0_15px_rgba(0,189,214,0.4)] hover:shadow-[0_0_25px_rgba(0,189,214,0.6)]
-                             transition-all duration-300"
-                >
-                  Explore Roadmaps
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </a>
+              <Button
+                id="explore-roadmaps-btn"
+                onClick={handleExploreClick}
+                className="bg-[#00BDD6] hover:bg-[#00BDD6]/90 text-[#090E1A] font-bold
+                           px-7 h-12 text-base rounded-lg cursor-pointer
+                           shadow-[0_0_15px_rgba(0,189,214,0.4)] hover:shadow-[0_0_25px_rgba(0,189,214,0.6)]
+                           transition-all duration-300"
+              >
+                Explore Roadmaps
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
               <Button
                 id="how-it-works-btn"
                 variant="outline"
@@ -442,8 +393,8 @@ export const CareerPathPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
             {[
               { value: '200k+', label: 'DEVELOPERS' },
-              { value: '50+',   label: 'CAREER PATHS' },
-              { value: '1M+',   label: 'SKILLS MASTERED' },
+              { value: '50+', label: 'CAREER PATHS' },
+              { value: '1M+', label: 'SKILLS MASTERED' },
             ].map(({ value, label }) => (
               <div key={label} className="flex flex-col gap-1">
                 <span
@@ -483,27 +434,27 @@ export const CareerPathPage = () => {
             ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
             : paths.length > 0
               ? paths.map((path, i) => (
-                  <PathCard
-                    key={path.id}
-                    path={path}
-                    index={i}
-                    onSelect={handleSelect}
-                    loading={false}
-                  />
-                ))
+                <PathCard
+                  key={path.id}
+                  path={path}
+                  index={i}
+                  onSelect={handleSelect}
+                  loading={selectingId === path.id}
+                />
+              ))
               : (
-                  /* Empty state */
-                  <div className="col-span-3 text-center py-16 text-[#94A3B8]">
-                    <Brain className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p>No career paths available yet. Check back soon!</p>
-                  </div>
-                )}
+                /* Empty state */
+                <div className="col-span-3 text-center py-16 text-[#94A3B8]">
+                  <Brain className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                  <p>No career paths available yet. Check back soon!</p>
+                </div>
+              )}
         </div>
 
         {/* View All Paths Button */}
         <div className="mt-12 text-center">
           <Button
-            onClick={() => navigate('/explore-roadmaps')}
+            onClick={() => navigate('/explore')}
             variant="outline"
             className="border-[#00BDD6]/50 bg-[#0d1829]/50 text-[#00BDD6] hover:bg-[#00BDD6]/10 hover:border-[#00BDD6] hover:text-[#00E5FF] px-8 h-12 text-base rounded-full transition-all duration-300"
           >
@@ -574,13 +525,7 @@ export const CareerPathPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Logo */}
-            <span 
-              className="text-lg font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
-              onClick={() => {
-                navigate('/career-paths');
-                window.scrollTo(0, 0);
-              }}
-            >
+            <span className="text-lg font-bold tracking-tight">
               Dev<span className="text-[#00E5FF]">Path</span>
             </span>
 

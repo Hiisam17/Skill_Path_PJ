@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./apps/server
+      dockerfile: Dockerfile.dev
+    container_name: roadmap_server_dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/server:/app
+      - /app/node_modules 
+    env_file:
+      - ./apps/server/.env.development
+    restart: always
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    container_name: roadmap_web_dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    env_file:
+      - ./apps/web/.env.development
+    depends_on:
+      - server
+    restart: always

@@ -1,11 +1,5 @@
 /**
- * Authentication Context
- * Manages global auth state: current user, login/logout functions, token
- *
- * Usage:
- * ```
- * const { user, login, logout } = useContext(AuthContext);
- * ```
+ * Authentication context providing global auth state, login, and logout.
  */
 
 import { createContext, useContext, useState, useEffect } from "react";
@@ -13,10 +7,7 @@ import type { ReactNode } from "react";
 import type { UserDto, LoginDto } from "@/types";
 import { api, setAuthToken, clearAuthToken, getAuthToken } from "@/services/api";
 
-// ───── CONTEXT TYPE ─────
-/**
- * Shape of AuthContext value
- */
+/** Shape of the AuthContext value. */
 interface AuthContextType {
   user: UserDto | null;
   isLoading: boolean;
@@ -26,63 +17,41 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-// ───── CREATE CONTEXT ─────
-/**
- * Auth context for accessing authentication state and methods globally
- * @default { user: null, isLoading: false, error: null, isAuthenticated: false }
- */
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined,
 );
 
-// ───── PROVIDER COMPONENT ─────
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-/**
- * AuthProvider component - wrap app with this to provide auth context
- *
- * @example
- * ```jsx
- * <AuthProvider>
- *   <App />
- * </AuthProvider>
- * ```
- */
+/** Provides authentication state and methods to the component tree. */
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<UserDto | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!getAuthToken());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize auth state from localStorage on mount
+  // Restore auth session from localStorage on mount.
   useEffect(() => {
     const token = getAuthToken();
     if (token) {
-      // Token exists, but we don't have user data yet
-      // In a real app, you might fetch user profile here
-      try {
-        // For now, we'll just ensure the token is valid by trying to use it
-        // You could add a GET /auth/me endpoint to verify and get user data
-        console.log("✅ User session found in localStorage");
-      } catch (err) {
-        console.error("Failed to restore session:", err);
-        clearAuthToken();
-      }
+      // TODO(auth): Validate token via GET /auth/me and populate user state.
+      console.log('User session found in localStorage');
     }
   }, []);
 
   /**
-   * Handle user login
-   * @param {LoginDto} loginDto - Email and password
-   * @throws {Error} If API call fails
+   * Authenticates the user and stores the JWT token.
+   *
+   * @throws Error if the API call fails or no token is returned.
    */
   const login = async (loginDto: LoginDto): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await api.post<any>("/auth/login", loginDto);
-      // Backend might return { token, user } or { access_token, user }
+      // Backend may return the token under different field names.
       const resp = response.data || {};
       const token = resp.token ?? resp.access_token ?? resp.accessToken ?? null;
       const userData = resp.user ?? resp.userData ?? null;
@@ -91,10 +60,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error('No token returned from server');
       }
 
-      // Save token to localStorage and set header
       setAuthToken(token);
+      setIsAuthenticated(true);
 
-      // Update user state if available
       if (userData) setUser(userData);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
@@ -105,13 +73,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  /**
-   * Handle user logout
-   * Clears token and user from state/storage
-   */
+  /** Clears token and user state, effectively logging the user out. */
   const logout = (): void => {
     clearAuthToken();
     setUser(null);
+    setIsAuthenticated(false);
     setError(null);
   };
 
@@ -121,16 +87,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     error,
     login,
     logout,
-    isAuthenticated: !!user || !!getAuthToken(),
+    isAuthenticated,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 /**
- * Hook to use auth context
- * @returns {AuthContextType} Auth state and methods
- * @throws {Error} If used outside AuthProvider
+ * Hook to access auth state and methods.
+ *
+ * @throws Error if used outside of AuthProvider.
  */
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);

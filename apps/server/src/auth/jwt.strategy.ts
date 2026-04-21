@@ -2,8 +2,12 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { passportJwtSecret } from 'jwks-rsa'; // Import thư viện mới
+import { passportJwtSecret } from 'jwks-rsa';
 
+/**
+ * JWT strategy that validates tokens against Supabase's JWKS endpoint.
+ * Supports both RS256 and HS256 algorithms for Supabase compatibility.
+ */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly logger = new Logger(JwtStrategy.name);
@@ -25,6 +29,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         this.logger.debug(`JwtStrategy initialized with JWKS URI: ${supabaseUrl}/auth/v1/.well-known/jwks.json`);
     }
 
+    /**
+     * Extracts user identity from the validated JWT payload.
+     *
+     * @param payload - The decoded JWT token payload from Supabase.
+     * @returns An object containing userId, email, and role.
+     */
     async validate(payload: any) {
         try {
             this.logger.debug(`Token payload received: sub=${payload?.sub} email=${payload?.email}`);

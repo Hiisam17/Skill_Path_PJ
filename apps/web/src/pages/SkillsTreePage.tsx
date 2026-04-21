@@ -150,8 +150,10 @@ export default function SkillsTreePage() {
     }
   }, []);
 
-  const handleSkillCompleted = useCallback((skillId: number) => {
-    console.log("🛑 6. Component cha đã nhận được ID cần đổi màu:", skillId);
+  const handleStatusChange = useCallback((skillId: number, statusId: number | null) => {
+    console.log("🛑 6. Component cha đã nhận được ID và trạng thái mới:", skillId, statusId);
+    
+    // Update nodes state for React Flow visualization
     setNodes((nds) =>
       nds.map((node) => {
         if (
@@ -162,14 +164,24 @@ export default function SkillsTreePage() {
             ...node,
             data: {
               ...node.data,
-              isCompleted: true,
+              isCompleted: statusId === 1,
+              statusId: statusId,
             },
           };
         }
         return node;
       })
     );
-  }, [setNodes]);
+
+    // Sync drawerData if the changed skill is the one currently open
+    setDrawerData((prev: any) => {
+      if (!prev || !skillId) return prev;
+      return {
+        ...prev,
+        statusId: statusId
+      };
+    });
+  }, [setNodes, setDrawerData]);
 
   // #5: Edge highlighting on node hover
   const onNodeMouseEnter = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -347,7 +359,7 @@ export default function SkillsTreePage() {
         isLoading={isDrawerLoading}
         data={drawerData}
         skillId={selectedSkillId}
-        onCompleteSuccess={handleSkillCompleted}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );

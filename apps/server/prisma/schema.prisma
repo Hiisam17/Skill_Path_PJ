@@ -137,6 +137,7 @@ model RoadmapSkill {
   id             Int     @id @default(autoincrement())
   sectionId      Int?    @map("section_id")
   skillId        Int?    @map("skill_id")
+  stepNumber     Int?    @map("step_number")
   isOptional     Boolean @default(false) @map("is_optional")
   estimatedHours Int?    @map("estimated_hours")
   notes          String? @db.Text
@@ -144,6 +145,7 @@ model RoadmapSkill {
   section RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   skill   Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
+  @@unique([sectionId, stepNumber])
   @@map("roadmap_skills")
 }
 

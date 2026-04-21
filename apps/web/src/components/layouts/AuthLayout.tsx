@@ -35,7 +35,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
           </Link>
         </div>
         {/* Auth Card */}
-        <div className="w-full max-w-md backdrop-blur-md bg-slate-950/70 border border-slate-700/30 rounded-2xl p-8 md:p-12 shadow-2xl shadow-cyan-500/10">
+        <div className="w-full max-w-md backdrop-blur-md bg-slate-950/70 border border-slate-700/30 rounded-2xl p-8 md:p-12 shadow-2xl shadow-cyan-500/10 z-10">
           {children}
         </div>
 

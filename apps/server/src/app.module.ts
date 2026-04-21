@@ -29,6 +29,7 @@ import { AiModule } from './ai/ai.module';
     SkillsModule,
     ProgressModule,
     RoadmapSectionsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

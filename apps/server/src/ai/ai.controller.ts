@@ -1,5 +1,6 @@
-import { Controller, Post, Body, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Controller, Post, Body, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { AiService } from './ai.service';
+import { MOCK_JOBS } from '../data/mockGaps';
 
 @Controller('ai')
 export class AiController {
@@ -12,30 +13,40 @@ export class AiController {
     this.logger.log(`Nhận request phân tích cho Job ID: ${jobId}`);
 
     // ---------------------------------------------------------
-    // BƯỚC 1: MOCK DỮ LIỆU CỦA DEV 1 (Vì Task D3 chưa xong)
-    // Sau này bạn sẽ thay bằng: await this.prisma.jobTemplate.findUnique(...)
+    // BƯỚC 1: TÌM JOB TRONG MOCK DATA THEO ID TỪ FRONTEND
     // ---------------------------------------------------------
-    const mockJob = {
-      id: jobId,
-      jdText: "We are looking for a Frontend Developer. Must have deep knowledge of HTML, CSS, JavaScript and React. Familiarity with Git is required.",
-      preAnalyzedGaps: ["html", "css", "javascript", "react", "git"] // Lưới an toàn của Dev 1
-    };
+    const job = MOCK_JOBS.find(j => j.id === jobId);
 
-    const mockValidNodeIds = ["html", "css", "javascript", "react", "nodejs", "git", "docker"];
+    if (!job) {
+      throw new NotFoundException(`Không tìm thấy Job với ID: ${jobId}`);
+    }
+
+    // Gộp description và requirements lại thành một đoạn JD hoàn chỉnh cho AI
+    const fullJdText = `
+      Description:
+      ${job.description}
+      
+      Requirements:
+      ${job.requirements}
+    `;
+
+    // Tạm thời mock danh sách Valid Node IDs bao quát các kỹ năng trong mockGaps.ts
+    const mockValidNodeIds = [
+      "ASP.NET", "React", ".NET", "C#", "SQL", "Java", "Maven", "Spring Boot", 
+      "Relational Databases", "Go", "AWS", "Software Testing", "Ruby", 
+      "Ruby on Rails", "PostgreSQL", "REST", "Node.js", "Express", "Git"
+    ];
 
     // ---------------------------------------------------------
-    // BƯỚC 2: GỌI XUỐNG AI SERVICE (Task A2)
+    // BƯỚC 2: GỌI XUỐNG AI SERVICE
     // ---------------------------------------------------------
     try {
-      // Gọi hàm AI bạn đã viết ở file ai.service.ts
       const gapNodeIds = await this.aiService.analyzeJobDescription(
-        mockJob.jdText, 
+        fullJdText, 
         mockValidNodeIds
       );
 
-      // ---------------------------------------------------------
-      // BƯỚC 3: TRẢ VỀ ĐÚNG HỢP ĐỒNG (CONTRACT) CHO DEV 3
-      // ---------------------------------------------------------
+      // Trả về đúng Contract cho Dev 3
       return {
         gapNodeIds: gapNodeIds,
         source: "ai"
@@ -46,10 +57,10 @@ export class AiController {
       this.logger.warn(`Lỗi khi gọi AI, kích hoạt Fallback: ${errorMessage}`);
       
       // ---------------------------------------------------------
-      // FALLBACK: Trả về kết quả phân tích sẵn có của Dev 1 nếu AI lỗi/timeout
+      // FALLBACK: Lấy mảng gapNodes được chuẩn bị sẵn từ mock data
       // ---------------------------------------------------------
       return {
-        gapNodeIds: mockJob.preAnalyzedGaps,
+        gapNodeIds: job.gapNodes,
         source: "fallback"
       };
     }

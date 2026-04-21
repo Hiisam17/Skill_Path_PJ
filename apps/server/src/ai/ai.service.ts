@@ -20,7 +20,7 @@ export class AiService {
    */
   async analyzeJobDescription(jdText: string, validNodeIds: string[]): Promise<string[]> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const prompt = this.buildPrompt(jdText, validNodeIds);
 
       this.logger.log('Sending request to Gemini (with 10s timeout)...');
@@ -55,7 +55,7 @@ export class AiService {
     try {
       // Dùng Regex lấy chính xác chuỗi từ '[' đến ']'
       const match = text.match(/\[(.*?)\]/s);
-      
+
       if (!match) {
         throw new Error('Không tìm thấy JSON Array trong response');
       }
@@ -96,4 +96,4 @@ export class AiService {
     ["html", "css", "javascript", "react"]
     `;
   }
-}
+}

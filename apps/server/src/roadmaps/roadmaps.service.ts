@@ -93,13 +93,27 @@ export class RoadmapsService {
    * Transforms a roadmap into React Flow nodes and edges for frontend visualization.
    * Sections become primary nodes connected vertically; skills branch out from each section.
    */
-  async getRoadmapFlow(roadmapId: number) {
+  async getRoadmapFlow(roadmapId: number, userId?: string) {
     const roadmap = await this.prisma.roadmap.findUnique({
       where: { id: roadmapId },
       include: {
         sections: {
           orderBy: { sortOrder: 'asc' },
-          include: { skills: { include: { skill: true } } },
+          include: { 
+            skills: { 
+              include: { 
+                skill: {
+                  include: {
+                    userProgress: {
+                      where: { userId },
+                      include: { status: { select: { id: true } } },
+                      take: 1
+                    }
+                  }
+                } 
+              } 
+            } 
+          },
         },
       },
     });
@@ -133,12 +147,20 @@ export class RoadmapsService {
       }
 
       section.skills.forEach((rs) => {
-        const skillNodeId = `skill-${rs.id}`;
+        const skillNodeId = String(rs.skill?.id || `skill-${rs.id}`);
+        // rs.skill is included, so we can check progress
+        const progress = rs.skill?.userProgress[0];
 
         nodes.push({
           id: skillNodeId,
           type: 'skillNode',
-          data: { name: rs.skill?.name || 'Unknown Skill', isOptional: rs.isOptional },
+          data: { 
+            name: rs.skill?.name || 'Unknown Skill', 
+            isOptional: rs.isOptional,
+            isCompleted: progress?.statusId === 1,
+            statusId: progress?.statusId || null,
+            skillId: rs.skill?.id
+          },
           position: { x: 0, y: 0 },
         });
 

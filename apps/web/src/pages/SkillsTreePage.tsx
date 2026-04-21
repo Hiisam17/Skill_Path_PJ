@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import ReactFlow, { Background, useNodesState, useEdgesState, PanOnScrollMode, type NodeTypes, type Node } from 'reactflow';
 import { useParams, useNavigate } from 'react-router-dom';
 import 'reactflow/dist/style.css';
@@ -24,7 +24,6 @@ export default function SkillsTreePage() {
   const [nodes, setNodes, onNodesChange] = useNodesState<RoadmapData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
-  const [containerWidth, setContainerWidth] = useState(900);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDrawerLoading, setIsDrawerLoading] = useState(false);
@@ -32,23 +31,28 @@ export default function SkillsTreePage() {
   const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
   
   const [activeJobInfo, setActiveJobInfo] = useState<{title: string, company: string} | null>(null);
+  const [rfInstance, setRfInstance] = useState<any>(null);
+  const [lastVisitedNodeId, setLastVisitedNodeId] = useState<string | null>(null);
+  const [roadmapTitle, setRoadmapTitle] = useState<string>('');
 
   useEffect(() => {
     const loadRoadmap = async () => {
       try {
         setLoading(true);
-        // 2. Dùng biến roadmapId để gọi API
         const { data } = await apiClient.get<RoadmapFlowResponse>(`/roadmaps/${roadmapId}/flow`);
+        if (data.title) setRoadmapTitle(data.title);
 
-        const screenWidth = window.innerWidth;
-        const calculatedWidth = Math.max(700, Math.min(1200, screenWidth * 0.5));
-        setContainerWidth(calculatedWidth);
+        const sidebarWidth = window.innerWidth > 960 ? 260 : 0;
+        const availableWidth = window.innerWidth - sidebarWidth;
+        const calculatedWidth = availableWidth;
 
         const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
           data.nodes,
           data.edges,
           calculatedWidth
         );
+
+        // (Optional: use calculatedWidth or totalWidth for canvas sizing if needed later)
 
         // -- Add JD Highlighting --
         let gapNodesList: string[] = [];
@@ -76,7 +80,31 @@ export default function SkillsTreePage() {
           return n;
         });
 
-        setNodes(nodesWithHighlights as RoadmapNode[]);
+        // Inject progress counts into section nodes (#4)
+        const nodesWithProgress = nodesWithHighlights.map((n: any) => {
+          if (n.type !== 'sectionNode') return n;
+          
+          // Find skill nodes connected to this section
+          const connectedSkillIds = layoutedEdges
+            .filter((e: any) => e.source === n.id)
+            .map((e: any) => e.target);
+          
+          const connectedSkills = nodesWithHighlights.filter(
+            (s: any) => s.type === 'skillNode' && connectedSkillIds.includes(s.id)
+          );
+          
+          const totalCount = connectedSkills.length;
+          const completedCount = connectedSkills.filter(
+            (s: any) => !!(s.data as any)?.isCompleted
+          ).length;
+          
+          return {
+            ...n,
+            data: { ...n.data, completedCount, totalCount },
+          };
+        });
+
+        setNodes(nodesWithProgress as RoadmapNode[]);
         setEdges(layoutedEdges);
       } catch (error) {
         console.error('Failed to load roadmap:', error);
@@ -86,7 +114,7 @@ export default function SkillsTreePage() {
     };
 
     if (roadmapId) loadRoadmap();
-  }, [roadmapId, setNodes, setEdges]); // Cập nhật dependency array
+  }, [roadmapId, setNodes, setEdges]);
 
   const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
     event.preventDefault();
@@ -143,33 +171,99 @@ export default function SkillsTreePage() {
     );
   }, [setNodes]);
 
+  // #5: Edge highlighting on node hover
+  const onNodeMouseEnter = useCallback((_event: React.MouseEvent, node: Node) => {
+    setEdges((eds) =>
+      eds.map((e) => {
+        const isConnected = e.source === node.id || e.target === node.id;
+        if (isConnected) {
+          return {
+            ...e,
+            style: {
+              ...e.style,
+              stroke: '#4cd7f6',
+              strokeWidth: 3,
+              strokeDasharray: undefined,
+              filter: 'drop-shadow(0 0 6px rgba(76,215,246,0.6))',
+            },
+            animated: true,
+          };
+        }
+        return e;
+      })
+    );
+  }, [setEdges]);
+
+  const onNodeMouseLeave = useCallback((_event: React.MouseEvent, _node: Node) => {
+    // Restore edges to their original style
+    setEdges((eds) =>
+      eds.map((e) => ({
+        ...e,
+        style: {
+          ...e.style,
+          stroke: '#4cd7f6',
+          strokeWidth: 2,
+          strokeDasharray: e.type === 'step' ? undefined : '4 4',
+          filter: undefined,
+        },
+        animated: e.type !== 'step',
+      }))
+    );
+  }, [setEdges]);
+
   const handleResetGap = () => {
     localStorage.removeItem('activeGapAnalysis');
     setActiveJobInfo(null);
     navigate('/job-market');
   };
 
-  // Sa loading UI một chút cho đẹp
+  const handleCloseGap = () => {
+    setActiveJobInfo(null);
+    localStorage.removeItem('activeGapAnalysis');
+    setNodes((nds) =>
+      nds.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isHighlighted: false,
+        },
+      }))
+    );
+  };
+
+  // Loading UI
   if (loading) return (
-    <div className="w-full h-full flex justify-center items-center bg-slate-950 text-white font-bold text-xl tracking-widest uppercase">
+    <div className="w-full h-full flex justify-center items-center bg-[#0b1326] text-[#dae2fd] font-bold text-xl tracking-widest uppercase">
       Đang tải bản đồ...
     </div>
   );
 
   return (
     // 4. THAY ĐỔI QUAN TRỌNG: h-screen -> h-full
-    <div className="flex flex-col h-full w-full bg-slate-950 items-center justify-center relative">
+    <div className="flex flex-col h-full w-full bg-[#0b1326] items-center justify-start relative">
+      
+      {/* Title Overlay */}
+      {roadmapTitle && (
+        <div className="absolute top-6 left-6 z-[100] bg-[#131b2e]/80 border border-[#3d494c]/50 backdrop-blur-sm px-6 py-3 rounded-xl shadow-lg">
+          <h1 className="text-[#4cd7f6] font-bold text-xl tracking-wide uppercase">
+            {roadmapTitle}
+          </h1>
+        </div>
+      )}
+
       <main
-        className="relative h-full overflow-hidden bg-slate-950"
-        style={{ width: `${containerWidth}px` }}
+        className="relative h-full w-full overflow-hidden bg-[#0b1326]"
       >
         <ReactFlow
+          onInit={setRfInstance}
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
+          onNodeMouseEnter={onNodeMouseEnter}
+          onNodeMouseLeave={onNodeMouseLeave}
           panOnDrag={false}
           nodesDraggable={false}
           zoomOnScroll={false}
@@ -177,18 +271,26 @@ export default function SkillsTreePage() {
           panOnScroll={true}
           preventScrolling={false}
           panOnScrollMode={PanOnScrollMode.Vertical}
-          translateExtent={[[0, -Infinity], [containerWidth, Infinity]]}
+          translateExtent={[[-Infinity, -100], [Infinity, Infinity]]}
           defaultViewport={{ x: 0, y: 50, zoom: 1 }}
           minZoom={1}
           maxZoom={1}
         >
-          <Background color="#334155" gap={20} size={1.5} />
+          <Background color="#3d494c" gap={24} size={1.5} />
         </ReactFlow>
       </main>
 
-      {activeJobInfo && (
+      {activeJobInfo && !isDrawerOpen && (
         <div className="absolute top-4 right-4 bg-slate-900 bg-opacity-90 border border-blue-500/50 p-4 rounded-lg shadow-xl text-slate-200 z-[1000] w-80 max-w-[90vw]">
-          <h3 className="text-sm font-semibold text-blue-400 mb-1 uppercase tracking-wider">Skill Gap Analysis</h3>
+          <div className="flex justify-between items-start mb-1">
+            <h3 className="text-sm font-semibold text-blue-400 uppercase tracking-wider">Skill Gap Analysis</h3>
+            <button 
+              onClick={handleCloseGap}
+              className="text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
           <p className="text-base font-bold text-white leading-tight">{activeJobInfo.title}</p>
           <p className="text-sm text-slate-400 mb-3">{activeJobInfo.company}</p>
           <div className="flex gap-2">
@@ -200,12 +302,40 @@ export default function SkillsTreePage() {
             </button>
             <button
               onClick={() => {
-                const els = document.querySelectorAll('.animate-pulse');
-                if (els.length > 0) els[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const highlightedNodes = nodes.filter(n => n.data && (n.data as any).isHighlighted);
+                if (highlightedNodes.length > 0 && rfInstance) {
+                  let nextIndex = 0;
+                  if (lastVisitedNodeId) {
+                    const currentIndex = highlightedNodes.findIndex(n => n.id === lastVisitedNodeId);
+                    if (currentIndex !== -1) {
+                      nextIndex = (currentIndex + 1) % highlightedNodes.length;
+                    }
+                  }
+                  
+                  const targetNode = highlightedNodes[nextIndex];
+                  
+                  // Mẹo: Giữ nguyên trục X ở chính giữa màn hình (dựa vào sectionNode)
+                  // Để ngăn không cho cả roadmap bị lệch sang trái/phải vĩnh viễn
+                  const sectionNode = nodes.find(n => n.type === 'sectionNode');
+                  // Kích thước của sectionNode trong layout.ts là 250px
+                  const centerX = sectionNode ? sectionNode.position.x + 125 : targetNode.position.x;
+                  
+                  rfInstance.setCenter(centerX, targetNode.position.y, { zoom: 1, duration: 800 });
+                  setLastVisitedNodeId(targetNode.id);
+                }
               }}
               className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 px-3 rounded transition-colors"
             >
-              Tìm Skills
+              {(() => {
+                const highlightedNodes = nodes.filter(n => n.data && (n.data as any).isHighlighted);
+                if (highlightedNodes.length <= 1) return 'Tìm Skills';
+                
+                let currentIndex = highlightedNodes.findIndex(n => n.id === lastVisitedNodeId);
+                // Nếu chưa tìm thấy (mới click lần đầu) thì hiển thị là đang chuẩn bị tìm skill số 1
+                let displayIndex = currentIndex === -1 ? 0 : currentIndex;
+                
+                return `Tìm Skills (${displayIndex + 1}/${highlightedNodes.length})`;
+              })()}
             </button>
           </div>
         </div>

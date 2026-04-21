@@ -9,6 +9,7 @@ export interface SectionNodeData {
 export interface SkillNodeData {
     name: string;
     isOptional: boolean;
+    isLeft?: boolean;
 }
 
 export type RoadmapData = SectionNodeData | SkillNodeData;
@@ -16,6 +17,7 @@ export type RoadmapData = SectionNodeData | SkillNodeData;
 export type RoadmapNode = Node<RoadmapData>;
 
 export interface RoadmapFlowResponse {
+    title?: string;
     nodes: RoadmapNode[];
     edges: Edge[];
 }

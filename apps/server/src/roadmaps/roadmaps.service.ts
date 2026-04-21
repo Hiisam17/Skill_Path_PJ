@@ -151,6 +151,6 @@ export class RoadmapsService {
       });
     });
 
-    return { nodes, edges };
+    return { title: roadmap.title, nodes, edges };
   }
 }

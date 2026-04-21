@@ -1,21 +1,36 @@
 import { Handle, Position, type NodeProps } from 'reactflow';
 
 export default function SectionNode({ data }: NodeProps) {
-  // Trích xuất tên tự động (phòng trường hợp API dùng tên trường khác nhau)
   const nodeName = String((data as any).label || (data as any).title || (data as any).name || 'Unnamed');
+  
+  // Progress data injected from layout
+  const completedCount = (data as any).completedCount ?? 0;
+  const totalCount = (data as any).totalCount ?? 0;
+  const hasProgress = totalCount > 0;
+  const progressPct = hasProgress ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    // BỔ SUNG: cursor-pointer, hover:bg-slate-800, hover:shadow-blue-500/50 và transition-all
-    <div className="w-full h-full bg-slate-900 border-2 border-blue-500 rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.3)] flex items-center justify-center p-2 text-white cursor-pointer hover:bg-slate-800 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-200">
+    <div className="w-full min-h-full bg-[#0b1326]/90 border border-[#4cd7f6]/40 rounded-xl shadow-[0_0_15px_rgba(76,215,246,0.15)] flex flex-col items-center justify-center py-4 px-3 text-[#dae2fd] cursor-pointer hover:bg-[#131b2e] hover:border-[#4cd7f6] hover:shadow-[0_0_30px_rgba(76,215,246,0.35)] hover:scale-[1.03] backdrop-blur-md transition-all duration-300 relative overflow-hidden group">
       
-      <Handle type="target" position={Position.Top} id="top" className="w-2 h-2 !bg-blue-400 border-none" />
-      <Handle type="source" position={Position.Bottom} id="bottom" className="w-2 h-2 !bg-blue-400 border-none" />
-      <Handle type="source" position={Position.Left} id="left" className="w-2 h-2 !bg-blue-400 border-none" />
-      <Handle type="source" position={Position.Right} id="right" className="w-2 h-2 !bg-blue-400 border-none" />
+      {/* Progress bar at bottom of node */}
+      {hasProgress && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#171f33]">
+          <div 
+            className="h-full bg-[#4cd7f6] transition-all duration-500 rounded-r-full"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      )}
+
+      <Handle type="target" position={Position.Top} id="top" className="w-2 h-2 !bg-[#4cd7f6] border-none shadow-[0_0_8px_#4cd7f6]" />
+      <Handle type="source" position={Position.Bottom} id="bottom" className="w-2 h-2 !bg-[#4cd7f6] border-none shadow-[0_0_8px_#4cd7f6]" />
+      <Handle type="source" position={Position.Left} id="left" className="w-2 h-2 !bg-[#4cd7f6] border-none shadow-[0_0_8px_#4cd7f6]" />
+      <Handle type="source" position={Position.Right} id="right" className="w-2 h-2 !bg-[#4cd7f6] border-none shadow-[0_0_8px_#4cd7f6]" />
       
-      <div className="font-bold text-center px-2 text-lg">
+      <div className="font-bold text-center px-2 text-lg uppercase tracking-wider group-hover:text-white transition-colors">
         {nodeName}
       </div>
+
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
+import { RotateCcw, ChevronDown } from 'lucide-react';
 import apiClient from '@/lib/axios';
 
 export interface Resource {
@@ -17,7 +18,8 @@ export interface Resource {
 export interface DrawerData {
   title: string;
   content: string;
-  isCompleted: boolean;
+  statusId: number | null;
+  status: string;
   resources: Resource[];
 }
 
@@ -27,7 +29,7 @@ interface ResourceDrawerProps {
   isLoading: boolean;
   data: DrawerData | null;
   skillId?: number | null;
-  onCompleteSuccess?: (skillId: number, newStatus: boolean) => void;
+  onStatusChange?: (skillId: number, statusId: number | null) => void;
 }
 
 /** Maps resource type names to their visual badge styles. */
@@ -82,43 +84,39 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
   isLoading,
   data,
   skillId,
-  // Đổi tên callback một chút (tùy chọn) hoặc giữ nguyên, 
-  // nhưng ta cần truyền thêm tham số thứ 2 là boolean (trạng thái mới)
-  onCompleteSuccess 
+  onStatusChange 
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 1. Lấy trạng thái hiện tại từ data truyền vào
-  const isCompleted = !!data?.isCompleted;
+  const currentStatusId = data?.statusId || null;
 
-  const handleToggleComplete = async () => {
-    if (!skillId) {
-      alert("LỖI: Không tìm thấy skillId!");
-      return;
-    }
+  const handleStatusChange = async (statusId: number) => {
+    if (!skillId) return;
 
     setIsSubmitting(true);
     try {
-      if (isCompleted) {
-        // LUỒNG 1: HỦY HOÀN THÀNH (BẤM NHẦM)
-        // Lưu ý: Sửa lại URL hoặc Method (DELETE/POST) cho khớp với Backend NestJS của bạn
-        const url = `/progress/skills/${skillId}/complete`; 
-        await apiClient.delete(url); // Ví dụ dùng DELETE để xóa progress
-        
-        console.log("🛑 Đã HỦY hoàn thành skill:", skillId);
-        onCompleteSuccess?.(skillId, false); // Truyền false để báo thẻ Cha tắt màu xanh
-        
-      } else {
-        // LUỒNG 2: ĐÁNH DẤU HOÀN THÀNH
-        const url = `/progress/skills/${skillId}/complete`; 
-        await apiClient.post(url);
-        
-        console.log("🛑 Đã ĐÁNH DẤU hoàn thành skill:", skillId);
-        onCompleteSuccess?.(skillId, true); // Truyền true để báo thẻ Cha bật màu xanh
-      }
+      await apiClient.patch(`/progress/skills/${skillId}`, { statusId });
+      console.log(`🛑 Status changed to ${statusId} for skill ${skillId}`);
+      onStatusChange?.(skillId, statusId);
     } catch (error: any) {
-      console.error("🛑 LỖI API:", error);
-      alert(error.response?.data?.message || "Có lỗi xảy ra khi lưu tiến độ!");
+      console.error("🛑 API Error:", error);
+      alert(error.response?.data?.message || "Lỗi khi cập nhật trạng thái!");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!skillId) return;
+
+    setIsSubmitting(true);
+    try {
+      await apiClient.delete(`/progress/skills/${skillId}`);
+      console.log(`🛑 Status reset for skill ${skillId}`);
+      onStatusChange?.(skillId, null);
+    } catch (error: any) {
+      console.error("🛑 API Error:", error);
+      alert(error.response?.data?.message || "Lỗi khi reset trạng thái!");
     } finally {
       setIsSubmitting(false);
     }
@@ -140,18 +138,65 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-[#3d494c]/50 bg-[#131b2e]">
-          <h2 className="flex-1 min-w-0 text-lg font-bold text-white tracking-tight leading-snug break-words capitalize">
-            {isLoading ? <Skeleton className="h-7 w-48 bg-[#171f33]" /> : data?.title}
-          </h2>
-          <Button 
-            variant="ghost" 
-            onClick={onClose} 
-            className="flex-shrink-0 text-[#bcc9cd] hover:text-[#4cd7f6] hover:bg-[#171f33] font-bold text-lg h-8 w-8 p-0 flex items-center justify-center rounded-full transition-colors"
-            aria-label="Close drawer"
-          >
-            ✕
-          </Button>
+        <div className="flex flex-col border-b-4 border-black bg-[#131b2e]">
+          {/* Main Header Top */}
+          <div className="flex items-start justify-between gap-3 px-5 py-4">
+            <h2 className="flex-1 min-w-0 text-lg font-black text-white tracking-tight leading-snug break-words capitalize">
+              {isLoading ? <Skeleton className="h-7 w-48 bg-[#171f33]" /> : data?.title}
+            </h2>
+            <Button 
+              variant="ghost" 
+              onClick={onClose} 
+              className="flex-shrink-0 text-[#bcc9cd] hover:text-white hover:bg-black/20 font-black text-lg h-9 w-9 p-0 flex items-center justify-center rounded-sm border-2 border-transparent hover:border-black transition-all"
+              aria-label="Close drawer"
+            >
+              ✕
+            </Button>
+          </div>
+
+          {/* Brutalist Controller Section */}
+          {data && skillId && (
+            <div className="px-5 pb-5 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              {/* Select Status Dropdown - Glass Style */}
+              <div className="relative flex-1 group">
+                <select
+                  value={currentStatusId || ''}
+                  onChange={(e) => handleStatusChange(Number(e.target.value))}
+                  disabled={isSubmitting}
+                  className={`w-full appearance-none bg-black/20 backdrop-blur-md border border-white/10 px-4 py-2.5 font-bold text-white text-xs uppercase tracking-wider shadow-lg focus:outline-none transition-all cursor-pointer disabled:opacity-80 ${isSubmitting ? 'border-cyan-500/50' : ''}`}
+                >
+                  <option value="" disabled className="bg-[#131b2e]">
+                    {isSubmitting 
+                      ? 'Saving Status...' 
+                      : currentStatusId === 1 ? 'Current: COMPLETED'
+                      : currentStatusId === 2 ? 'Current: IN PROGRESS'
+                      : currentStatusId === 3 ? 'Current: SKIPPED'
+                      : 'Update Status'}
+                  </option>
+                  <option value="1" className="bg-[#131b2e] font-bold text-cyan-400">Completed</option>
+                  <option value="2" className="bg-[#131b2e] font-bold text-amber-500">In Progress</option>
+                  <option value="3" className="bg-[#131b2e] font-bold text-slate-400">Skipped</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none border-l border-white/20 pl-2">
+                  {isSubmitting ? (
+                    <div className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-white/70 stroke-[3]" />
+                  )}
+                </div>
+              </div>
+
+              {/* Reset Button - Red Glass Style */}
+              <button
+                onClick={handleReset}
+                disabled={isSubmitting || !currentStatusId}
+                title="Reset progress"
+                className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 flex items-center justify-center shadow-lg transition-all duration-500 hover:bg-red-500/20 hover:rotate-180 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed group"
+              >
+                <RotateCcw className={`w-5 h-5 stroke-[3] ${isSubmitting ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
@@ -233,28 +278,6 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
           )}
         </div>
         
-        {/* Sticky Footer for Action Button */}
-        {data && skillId && (
-          <div className="p-5 border-t border-[#3d494c]/50 bg-[#0b1326]">
-            <button 
-          onClick={handleToggleComplete}
-          disabled={isSubmitting}
-          className={`
-            w-full font-bold rounded-xl py-3 text-sm transition-all duration-300
-            disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none
-            ${isCompleted 
-              ? 'bg-[#171f33] text-[#bcc9cd] border border-[#3d494c] hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50' 
-              : 'bg-gradient-to-r from-[#4cd7f6] to-[#06b6d4] text-[#003640] hover:scale-[1.02] hover:shadow-[0_4px_16px_rgba(76,215,246,0.35)]'
-            }
-          `}
-        >
-          {isSubmitting 
-            ? 'Đang xử lý...' 
-            : (isCompleted ? 'Đã học xong (Bấm để hủy)' : 'Đánh dấu hoàn thành')
-          }
-        </button>
-          </div>
-        )}
       </div>
     </>
   );

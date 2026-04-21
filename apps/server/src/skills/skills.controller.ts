@@ -25,7 +25,8 @@ export class SkillsController {
     return this.skillsService.findSkillsByRoadmap(roadmapId, userId);
   }
   @Get(':id/detail')
-  getSkillDetail(@Param('id', ParseIntPipe) id: number) {
-    return this.skillsService.getSkillDetail(id);
+  async getSkillDetail(@Param('id', ParseIntPipe) id: number) {
+    const userId = await this.progressService.getDemoUserId();
+    return this.skillsService.getSkillDetail(id, userId);
   }
 }

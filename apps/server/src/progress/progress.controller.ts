@@ -1,4 +1,4 @@
-import { Controller, Param, Post, Get, ParseIntPipe,HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Param, Post, Get, Patch, Delete, Body, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { 
   UserSkillProgressDto, 
   ProgressDto, 
@@ -11,27 +11,32 @@ import { ProgressQueueService } from './progress-queue.service';
 export class ProgressController {
   constructor(
 	private readonly progressService: ProgressService,
-	private readonly progressQueue: ProgressQueueService
 ) {}
 
   /**
-   * [POST] /progress/skills/:skillId/complete
-   * Đánh dấu hoàn thành một kỹ năng (Skill) cho User hiện tại
+   * [PATCH] /progress/skills/:skillId
+   * Cập nhật trạng thái tiến độ cho một kỹ năng
    */
-  @Post('skills/:skillId/complete')
-  @HttpCode(HttpStatus.ACCEPTED)
-  async completeSkill(
+  @Patch('skills/:skillId')
+  async updateSkillStatus(
+    @Param('skillId', ParseIntPipe) skillId: number,
+    @Body('statusId', ParseIntPipe) statusId: number,
+  ) {
+    const userId = await this.progressService.getDemoUserId();
+    return this.progressService.updateSkillStatus(userId, skillId, statusId);
+  }
+
+  /**
+   * [DELETE] /progress/skills/:skillId
+   * Reset trạng thái tiến độ cho một kỹ năng
+   */
+  @Delete('skills/:skillId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetSkillStatus(
     @Param('skillId', ParseIntPipe) skillId: number,
   ) {
     const userId = await this.progressService.getDemoUserId();
-    
-    // Đẩy vào RAM rồi báo thành công luôn, Frontend không phải chờ DB I/O
-    this.progressQueue.enqueueProgress(userId, skillId);
-    
-    return { 
-      message: 'Progress recorded locally and scheduled for sync.',
-      status: 'QUEUED'
-    };
+    await this.progressService.resetSkillStatus(userId, skillId);
   }
 
   /**

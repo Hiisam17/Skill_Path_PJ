@@ -18,6 +18,9 @@ export class SkillsService {
     if (normalized === 'IN_PROGRESS' || normalized === 'IN PROGRESS') {
       return UserSkillStatus.IN_PROGRESS;
     }
+    if (normalized === 'SKIPPED') {
+      return UserSkillStatus.SKIPPED;
+    }
     return UserSkillStatus.NOT_STARTED;
   }
 
@@ -82,7 +85,7 @@ export class SkillsService {
    * @returns An object containing skill title, description, and formatted resources.
    * @throws NotFoundException if the skill does not exist.
    */
-  async getSkillDetail(id: number) {
+  async getSkillDetail(id: number, userId: string) {
     const skill = await this.prisma.skill.findUnique({
       where: { id },
       include: {
@@ -90,14 +93,25 @@ export class SkillsService {
           where: { isActive: true },
           include: { resourceType: true },
         },
+        userProgress: {
+          where: { userId },
+          include: {
+            status: { select: { id: true, name: true } },
+          },
+          take: 1,
+        },
       },
     });
 
     if (!skill) throw new NotFoundException('Skill not found');
 
+    const progress = skill.userProgress[0];
+
     return {
       title: skill.name,
       content: skill.description || '',
+      statusId: progress?.statusId || null,
+      status: this.mapProgressStatus(progress?.status?.name),
       resources: skill.resources.map(res => ({
         id: res.id,
         type: res.resourceType?.name || 'link',

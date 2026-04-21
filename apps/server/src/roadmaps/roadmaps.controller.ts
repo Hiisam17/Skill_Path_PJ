@@ -3,6 +3,7 @@ import { RoadmapDto } from '../types';
 import { RoadmapsService } from './roadmaps.service';
 import { CareerResponseDto } from './dto/career-response.dto';
 import { RoadmapSummaryResponseDto } from './dto/roadmap-summary-response.dto';
+import { ProgressService } from '../progress/progress.service';
 
 /**
  * Unified controller for career path and roadmap endpoints.
@@ -10,7 +11,10 @@ import { RoadmapSummaryResponseDto } from './dto/roadmap-summary-response.dto';
  */
 @Controller()
 export class RoadmapsController {
-	constructor(private readonly roadmapsService: RoadmapsService) { }
+	constructor(
+		private readonly roadmapsService: RoadmapsService,
+		private readonly progressService: ProgressService,
+	) { }
 
 	/** Lists all available career paths. */
 	@Get('career-paths')
@@ -42,7 +46,8 @@ export class RoadmapsController {
 	async getRoadmapFlow(
 		@Param('roadmapId', ParseIntPipe) roadmapId: number,
 	) {
-		return this.roadmapsService.getRoadmapFlow(roadmapId);
+		const userId = await this.progressService.getDemoUserId();
+		return this.roadmapsService.getRoadmapFlow(roadmapId, userId);
 	}
 
 	@Get('roadmaps/:roadmapId')

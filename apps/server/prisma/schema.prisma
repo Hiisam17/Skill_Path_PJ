@@ -73,6 +73,17 @@ model RewardType {
 }
 
 // =======================================
+// 2.5 ENUMS
+// =======================================
+
+enum SkillLabel {
+  STANDARD
+  RECOMMENDED
+  ALTERNATIVE
+  ANYTIME
+}
+
+// =======================================
 // 3. SKILLS & ROADMAPS
 // =======================================
 
@@ -84,10 +95,10 @@ model Skill {
   canonicalUrl String?    @map("canonical_url")
   createdAt    DateTime?  @default(now()) @map("created_at") @db.Timestamptz
 
-  level         SkillLevel?         @relation(fields: [levelId], references: [id])
+  level         SkillLevel?  @relation(fields: [levelId], references: [id])
   roadmapSkills RoadmapSkill[]
-  resources     Resource[]
-  userProgress  UserSkillProgress[]
+  resources      Resource[]
+  userProgress   UserSkillProgress[]
 
   @@map("skills")
 }
@@ -139,10 +150,13 @@ model RoadmapSkill {
   skillId        Int?    @map("skill_id")
   isOptional     Boolean @default(false) @map("is_optional")
   estimatedHours Int?    @map("estimated_hours")
-  notes          String? @db.Text
+  notes          String?    @db.Text
+  labelType      SkillLabel @default(STANDARD) @map("label_type")
 
-  section RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  skill   Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  section      RoadmapSection?     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  skill        Skill?              @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  resources    Resource[]
+  userProgress UserSkillProgress[]
 
   @@map("roadmap_skills")
 }
@@ -168,18 +182,20 @@ model UserRoadmap {
 }
 
 model UserSkillProgress {
-  id          Int       @id @default(autoincrement())
-  userId      String    @map("user_id") @db.Uuid
-  skillId     Int       @map("skill_id")
-  statusId    Int?      @map("status_id")
-  completedAt DateTime? @map("completed_at") @db.Timestamptz
-  updatedAt   DateTime? @default(now()) @map("updated_at") @db.Timestamptz
+  id             Int       @id @default(autoincrement())
+  userId         String    @map("user_id") @db.Uuid
+  roadmapSkillId Int       @map("roadmap_skill_id")
+  skillId        Int?      @map("skill_id")
+  statusId       Int?      @map("status_id")
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz
+  updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamptz
 
-  user   Profile         @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  skill  Skill           @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  status ProgressStatus? @relation(fields: [statusId], references: [id])
+  user         Profile         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  roadmapSkill RoadmapSkill    @relation(fields: [roadmapSkillId], references: [id], onDelete: Cascade)
+  skill        Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  status       ProgressStatus? @relation(fields: [statusId], references: [id])
 
-  @@unique([userId, skillId])
+  @@unique([userId, roadmapSkillId])
   @@map("user_skill_progress")
 }
 
@@ -200,6 +216,9 @@ model Resource {
 
   skillId   Int?     @map("skill_id")
   skill     Skill?   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  roadmapSkillId Int?          @map("roadmap_skill_id")
+  roadmapSkill   RoadmapSkill? @relation(fields: [roadmapSkillId], references: [id], onDelete: Cascade)
   
   sectionId Int?     @map("section_id")
   section   RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)

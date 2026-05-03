@@ -10,6 +10,12 @@ export interface SkillNodeData {
     name: string;
     isOptional: boolean;
     isLeft?: boolean;
+    skillId?: number;
+    roadmapSkillId?: number;
+    labelType?: string;
+    isCompleted?: boolean;
+    statusId?: number | null;
+    isHighlighted?: boolean;
 }
 
 export type RoadmapData = SectionNodeData | SkillNodeData;

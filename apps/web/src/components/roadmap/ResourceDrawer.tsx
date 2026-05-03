@@ -28,8 +28,8 @@ interface ResourceDrawerProps {
   onClose: () => void;
   isLoading: boolean;
   data: DrawerData | null;
-  skillId?: number | null;
-  onStatusChange?: (skillId: number, statusId: number | null) => void;
+  roadmapSkillId?: number | null;
+  onStatusChange?: (roadmapSkillId: number, statusId: number | null) => void;
 }
 
 /** Maps resource type names to their visual badge styles. */
@@ -83,7 +83,7 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
   onClose,
   isLoading,
   data,
-  skillId,
+  roadmapSkillId,
   onStatusChange 
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,13 +91,13 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
   const currentStatusId = data?.statusId || null;
 
   const handleStatusChange = async (statusId: number) => {
-    if (!skillId) return;
+    if (!roadmapSkillId) return;
 
     setIsSubmitting(true);
     try {
-      await apiClient.patch(`/progress/skills/${skillId}`, { statusId });
-      console.log(`🛑 Status changed to ${statusId} for skill ${skillId}`);
-      onStatusChange?.(skillId, statusId);
+      await apiClient.patch(`/progress/skills/${roadmapSkillId}`, { statusId });
+      console.log(`🛑 Status changed to ${statusId} for roadmap skill ${roadmapSkillId}`);
+      onStatusChange?.(roadmapSkillId, statusId);
     } catch (error: any) {
       console.error("🛑 API Error:", error);
       alert(error.response?.data?.message || "Lỗi khi cập nhật trạng thái!");
@@ -107,13 +107,13 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
   };
 
   const handleReset = async () => {
-    if (!skillId) return;
+    if (!roadmapSkillId) return;
 
     setIsSubmitting(true);
     try {
-      await apiClient.delete(`/progress/skills/${skillId}`);
-      console.log(`🛑 Status reset for skill ${skillId}`);
-      onStatusChange?.(skillId, null);
+      await apiClient.delete(`/progress/skills/${roadmapSkillId}`);
+      console.log(`🛑 Status reset for roadmap skill ${roadmapSkillId}`);
+      onStatusChange?.(roadmapSkillId, null);
     } catch (error: any) {
       console.error("🛑 API Error:", error);
       alert(error.response?.data?.message || "Lỗi khi reset trạng thái!");
@@ -155,7 +155,7 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
           </div>
 
           {/* Brutalist Controller Section */}
-          {data && skillId && (
+          {data && roadmapSkillId && (
             <div className="px-5 pb-5 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
               {/* Select Status Dropdown - Glass Style */}
               <div className="relative flex-1 group">

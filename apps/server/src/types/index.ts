@@ -143,7 +143,7 @@ export interface MultiRoadmapProgressDto {
 export interface UserSkillProgressDto {
   id: string;
   userId: string;
-  skillId: string;
+  roadmapSkillId: string;
   status: UserSkillStatus;
   completedAt: Date | null;
 }

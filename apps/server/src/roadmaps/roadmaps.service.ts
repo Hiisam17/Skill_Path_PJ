@@ -99,20 +99,17 @@ export class RoadmapsService {
       include: {
         sections: {
           orderBy: { sortOrder: 'asc' },
-          include: { 
-            skills: { 
-              include: { 
-                skill: {
-                  include: {
-                    userProgress: {
-                      where: { userId },
-                      include: { status: { select: { id: true } } },
-                      take: 1
-                    }
-                  }
-                } 
-              } 
-            } 
+          include: {
+            skills: {
+              include: {
+                skill: true,
+                userProgress: {
+                  where: { userId },
+                  select: { statusId: true },
+                  take: 1,
+                },
+              },
+            },
           },
         },
       },
@@ -147,9 +144,11 @@ export class RoadmapsService {
       }
 
       section.skills.forEach((rs) => {
-        const skillNodeId = String(rs.skill?.id || `skill-${rs.id}`);
-        // rs.skill is included, so we can check progress
-        const progress = rs.skill?.userProgress[0];
+        const roadmapSkillId = rs.id;
+        const skillNodeId = String(roadmapSkillId);
+        
+        // Progress is now tracked at RoadmapSkill level
+        const progress = rs.userProgress[0];
 
         nodes.push({
           id: skillNodeId,
@@ -159,7 +158,9 @@ export class RoadmapsService {
             isOptional: rs.isOptional,
             isCompleted: progress?.statusId === 1,
             statusId: progress?.statusId || null,
-            skillId: rs.skill?.id
+            skillId: rs.skill?.id,
+            roadmapSkillId: rs.id,
+            labelType: rs.labelType
           },
           position: { x: 0, y: 0 },
         });

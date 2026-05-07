@@ -137,10 +137,10 @@ export const CareerPathPage = () => {
   }, []);
 
   // Select roadmap
-  const handleSelect = async (careerPathId: string) => {
-    setSelectingId(careerPathId)
+  const handleSelect = async (roadmapId: string) => {
+    setSelectingId(roadmapId)
     try {
-      const res = await apiClient.post('/users/select-roadmap', { careerPathId })
+      const res = await apiClient.post('/users/select-roadmap', { roadmapId })
       navigate(`/roadmaps/${res.data.roadmapId}`)
     } catch {
       setSelectingId(null)

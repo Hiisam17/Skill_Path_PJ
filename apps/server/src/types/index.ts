@@ -74,7 +74,7 @@ export interface RoadmapDto {
  * Request payload for selecting a career path and its roadmap
  */
 export interface SelectRoadmapDto {
-  careerPathId: string;
+  roadmapId: string;
 }
 
 // ============================================================================

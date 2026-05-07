@@ -12,39 +12,32 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Store user's selected career path and roadmap choice
+   * Store user's selected roadmap choice
    * Creates association between user and their chosen roadmap for learning tracking
    *
    * @param userId - UUID of authenticated user
-   * @param selectRoadmapDto - Contains careerPathId to associate with user
-   * @returns void
-   * @throws NotFoundException if user or careerPath not found
+   * @param selectRoadmapDto - Contains roadmapId to associate with user
+   * @returns roadmapId
+   * @throws NotFoundException if user or roadmap not found
    *
    * Example:
-   * await usersService.selectRoadmap('user-id', { careerPathId: 'backend-path-id' })
+   * await usersService.selectRoadmap('user-id', { roadmapId: '1' })
    */
   async selectRoadmap(
     userId: string,
     selectRoadmapDto: SelectRoadmapDto,
   ): Promise<number> {
-    const careerPathId = parseInt(selectRoadmapDto.careerPathId);
-    if (isNaN(careerPathId)) throw new Error('Invalid careerPathId');
+    const roadmapId = parseInt(selectRoadmapDto.roadmapId);
+    if (isNaN(roadmapId)) throw new Error('Invalid roadmapId');
 
-    // Find the first system roadmap for this career path
-    const roadmaps = await this.prisma.roadmap.findMany({
-      where: {
-        careerPathId: careerPathId,
-        userId: null, // System roadmap
-      },
-      orderBy: { id: 'asc' },
-      take: 1,
+    // Verify roadmap exists
+    const roadmap = await this.prisma.roadmap.findUnique({
+      where: { id: roadmapId },
     });
 
-    if (roadmaps.length === 0) {
-      throw new Error('No roadmap found for this career path');
+    if (!roadmap) {
+      throw new Error('Roadmap not found');
     }
-
-    const roadmapId = roadmaps[0].id;
 
     // Create tracking record if it doesn't exist
     await this.prisma.userRoadmap.upsert({

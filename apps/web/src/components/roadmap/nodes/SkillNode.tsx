@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { CheckCircle2, Clock, XCircle, Search } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, Search, Star, GitBranch, Infinity as InfinityIcon } from 'lucide-react';
 
 /** Capitalize first letter of each word */
 const titleCase = (str: string) =>
@@ -14,9 +14,34 @@ export default function SkillNode({ data }: NodeProps) {
   const isSkipped = statusId === 3;
   const isLeft = !!(data as any).isLeft;
   const isHighlighted = !!(data as any).isHighlighted;
+  const labelType = (data as any).labelType || 'STANDARD';
+
+  // Label Type logic
+  let LabelIcon = null;
+  let labelIconClasses = "";
+  let labelTitle = "";
+  let borderStyleClass = "border-solid";
+  let opacityClass = "opacity-100";
+
+  if (labelType === 'RECOMMENDED') {
+    LabelIcon = Star;
+    labelIconClasses = "text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)] fill-purple-400/20";
+    labelTitle = "Khuyên dùng";
+  } else if (labelType === 'ALTERNATIVE') {
+    LabelIcon = GitBranch;
+    labelIconClasses = "text-teal-600";
+    borderStyleClass = "border-dashed";
+    labelTitle = "Lựa chọn thay thế";
+  } else if (labelType === 'ANYTIME') {
+    LabelIcon = InfinityIcon;
+    labelIconClasses = "text-neutral-500 opacity-80";
+    borderStyleClass = "border-dashed";
+    opacityClass = "opacity-75";
+    labelTitle = "Học bất cứ lúc nào";
+  }
 
   // BASE GLASSMORPHISM
-  const baseClasses = "w-full h-full flex items-center justify-center px-4 py-3 cursor-pointer transition-all duration-500 relative text-center min-w-[160px] rounded-xl bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] active:scale-[0.98]";
+  const baseClasses = `w-full h-full flex items-center justify-center px-4 py-3 cursor-pointer transition-all duration-500 relative text-center min-w-[160px] rounded-xl bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] active:scale-[0.98] ${borderStyleClass} ${opacityClass}`;
   
   // DEFAULT
   let stateClasses = "text-slate-400 font-medium";
@@ -41,6 +66,16 @@ export default function SkillNode({ data }: NodeProps) {
   return (
     <div className={`${baseClasses} ${stateClasses}`}>
       
+      {/* Label Icon at top right */}
+      {LabelIcon && (
+        <div 
+          className="absolute -top-2 -right-2 bg-neutral-900 rounded-full p-1 border border-neutral-700/50 shadow-md"
+          title={labelTitle}
+        >
+          <LabelIcon className={`w-3.5 h-3.5 ${labelIconClasses}`} />
+        </div>
+      )}
+
       {/* Handle facing the Section */}
       {isLeft ? (
         <Handle 
@@ -59,12 +94,14 @@ export default function SkillNode({ data }: NodeProps) {
       )}
       
       {/* Content */}
-      <div className="text-sm break-words flex items-center gap-2 w-full justify-center px-1">
-        {Icon && <Icon className={`w-4 h-4 flex-shrink-0 ${isInProgress ? 'animate-spin-slow' : ''}`} />}
-        <span className="leading-tight">{nodeName}</span>
+      <div className="flex flex-col items-center gap-1 w-full">
+        <div className="text-sm break-words flex items-center gap-2 w-full justify-center px-1">
+          {Icon && <Icon className={`w-4 h-4 flex-shrink-0 ${isInProgress ? 'animate-spin-slow' : ''}`} />}
+          <span className="leading-tight">{nodeName}</span>
+        </div>
       </div>
       
     </div>
   );
 }
-
+

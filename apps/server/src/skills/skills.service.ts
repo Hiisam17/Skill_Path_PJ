@@ -42,34 +42,29 @@ export class SkillsService {
       },
       orderBy: [{ sectionId: 'asc' }, { id: 'asc' }],
       include: {
-        skill: {
+        skill: true,
+        userProgress: {
+          where: { userId },
           include: {
-            userProgress: {
-              where: { userId },
-              include: {
-                status: {
-                  select: { name: true },
-                },
-              },
-              take: 1,
-            },
+            status: { select: { name: true } },
           },
+          take: 1,
         },
       },
     });
 
     return roadmapSkills
-      .filter((roadmapSkill) => roadmapSkill.skill !== null) 
+      .filter((roadmapSkill) => roadmapSkill.skill !== null)
       .map((roadmapSkill) => {
-        const skill = roadmapSkill.skill!; 
-        const progressStatusName = skill.userProgress[0]?.status?.name;
+        const skill = roadmapSkill.skill!;
+        const progressStatusName = roadmapSkill.userProgress[0]?.status?.name;
 
         return {
           id: String(skill.id),
           roadmapId: String(roadmapId),
           name: skill.name,
           description: skill.description ?? '',
-          orderIndex: roadmapSkill.id, 
+          orderIndex: roadmapSkill.id,
           status: this.mapProgressStatus(progressStatusName),
         };
       });
@@ -85,10 +80,11 @@ export class SkillsService {
    * @returns An object containing skill title, description, and formatted resources.
    * @throws NotFoundException if the skill does not exist.
    */
-  async getSkillDetail(id: number, userId: string) {
-    const skill = await this.prisma.skill.findUnique({
-      where: { id },
+  async getSkillDetail(roadmapSkillId: number, userId: string) {
+    const roadmapSkill = await this.prisma.roadmapSkill.findUnique({
+      where: { id: roadmapSkillId },
       include: {
+        skill: true,
         resources: {
           where: { isActive: true },
           include: { resourceType: true },
@@ -103,16 +99,19 @@ export class SkillsService {
       },
     });
 
+    if (!roadmapSkill) throw new NotFoundException('Roadmap skill not found');
+
+    const skill = roadmapSkill.skill;
     if (!skill) throw new NotFoundException('Skill not found');
 
-    const progress = skill.userProgress[0];
+    const progress = roadmapSkill.userProgress[0];
 
     return {
       title: skill.name,
       content: skill.description || '',
       statusId: progress?.statusId || null,
       status: this.mapProgressStatus(progress?.status?.name),
-      resources: skill.resources.map(res => ({
+      resources: roadmapSkill.resources.map(res => ({
         id: res.id,
         type: res.resourceType?.name || 'link',
         title: res.title,

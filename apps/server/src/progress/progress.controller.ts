@@ -1,4 +1,4 @@
-import { Controller, Param, Post, Get, Patch, Delete, Body, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Param, Post, Get, Patch, Delete, Body, ParseIntPipe, HttpCode, HttpStatus, HttpException } from '@nestjs/common';
 import { 
   UserSkillProgressDto, 
   ProgressDto, 
@@ -14,29 +14,36 @@ export class ProgressController {
 ) {}
 
   /**
-   * [PATCH] /progress/skills/:skillId
-   * Cập nhật trạng thái tiến độ cho một kỹ năng
+   * [PATCH] /progress/skills/:roadmapSkillId
+   * Cập nhật trạng thái tiến độ cho một kỹ năng theo roadmapSkillId
    */
-  @Patch('skills/:skillId')
+  @Patch('skills/:roadmapSkillId')
   async updateSkillStatus(
-    @Param('skillId', ParseIntPipe) skillId: number,
+    @Param('roadmapSkillId', ParseIntPipe) roadmapSkillId: number,
     @Body('statusId', ParseIntPipe) statusId: number,
   ) {
-    const userId = await this.progressService.getDemoUserId();
-    return this.progressService.updateSkillStatus(userId, skillId, statusId);
+    try {
+      const userId = await this.progressService.getDemoUserId();
+      return await this.progressService.updateSkillStatus(userId, roadmapSkillId, statusId);
+    } catch (error: any) {
+      throw new HttpException(
+        { message: 'Custom Error Details', error: error.message, stack: error.stack },
+        500,
+      );
+    }
   }
 
   /**
-   * [DELETE] /progress/skills/:skillId
-   * Reset trạng thái tiến độ cho một kỹ năng
+   * [DELETE] /progress/skills/:roadmapSkillId
+   * Reset trạng thái tiến độ cho một kỹ năng theo roadmapSkillId
    */
-  @Delete('skills/:skillId')
+  @Delete('skills/:roadmapSkillId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async resetSkillStatus(
-    @Param('skillId', ParseIntPipe) skillId: number,
+    @Param('roadmapSkillId', ParseIntPipe) roadmapSkillId: number,
   ) {
     const userId = await this.progressService.getDemoUserId();
-    await this.progressService.resetSkillStatus(userId, skillId);
+    await this.progressService.resetSkillStatus(userId, roadmapSkillId);
   }
 
   /**

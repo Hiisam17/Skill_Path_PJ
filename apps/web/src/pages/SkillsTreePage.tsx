@@ -10,7 +10,7 @@ import SkillNode from '@/components/roadmap/nodes/SkillNode';
 import type { RoadmapFlowResponse, RoadmapData, RoadmapNode } from '@/types/roadmap';
 
 import { ResourceDrawer } from '@/components/roadmap/ResourceDrawer';
-
+import RoadmapLegend from '@/components/roadmap/RoadmapLegend';
 const nodeTypes: NodeTypes = {
   sectionNode: SectionNode,
   skillNode: SkillNode,
@@ -28,7 +28,7 @@ export default function SkillsTreePage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDrawerLoading, setIsDrawerLoading] = useState(false);
   const [drawerData, setDrawerData] = useState(null);
-  const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
+  const [selectedRoadmapSkillId, setSelectedRoadmapSkillId] = useState<number | null>(null);
   
   const [activeJobInfo, setActiveJobInfo] = useState<{title: string, company: string} | null>(null);
   const [rfInstance, setRfInstance] = useState<any>(null);
@@ -124,16 +124,19 @@ export default function SkillsTreePage() {
 
     try {
       const isSection = node.type === 'sectionNode';
-      const rawId = (node.data as any)?.id || (node.data as any)?.skillId || node.id;
+      const nodeData = node.data as any;
+      const rawId = isSection 
+        ? (nodeData.id || node.id)
+        : (nodeData.roadmapSkillId || node.id);
 
       if (!rawId) throw new Error('Node ID not found');
 
       const numericId = String(rawId).replace(/[^0-9]/g, '');
 
       if (!isSection) {
-        setSelectedSkillId(Number(numericId));
+        setSelectedRoadmapSkillId(nodeData.roadmapSkillId || null);
       } else {
-        setSelectedSkillId(null);
+        setSelectedRoadmapSkillId(null);
       }
 
       const endpoint = isSection
@@ -150,15 +153,15 @@ export default function SkillsTreePage() {
     }
   }, []);
 
-  const handleStatusChange = useCallback((skillId: number, statusId: number | null) => {
-    console.log("🛑 6. Component cha đã nhận được ID và trạng thái mới:", skillId, statusId);
+  const handleStatusChange = useCallback((roadmapSkillId: number, statusId: number | null) => {
+    console.log("🛑 6. Component cha đã nhận được ID và trạng thái mới:", roadmapSkillId, statusId);
     
     // Update nodes state for React Flow visualization
     setNodes((nds) =>
       nds.map((node) => {
         if (
           node.type === 'skillNode' &&
-          ((node.data as any)?.skillId === skillId || (node.data as any)?.id === skillId || node.id === String(skillId))
+          ((node.data as any)?.roadmapSkillId === roadmapSkillId)
         ) {
           return {
             ...node,
@@ -175,7 +178,7 @@ export default function SkillsTreePage() {
 
     // Sync drawerData if the changed skill is the one currently open
     setDrawerData((prev: any) => {
-      if (!prev || !skillId) return prev;
+      if (!prev || !roadmapSkillId) return prev;
       return {
         ...prev,
         statusId: statusId
@@ -358,9 +361,11 @@ export default function SkillsTreePage() {
         onClose={() => setIsDrawerOpen(false)}
         isLoading={isDrawerLoading}
         data={drawerData}
-        skillId={selectedSkillId}
+        roadmapSkillId={selectedRoadmapSkillId}
         onStatusChange={handleStatusChange}
       />
+
+      <RoadmapLegend />
     </div>
   );
 }

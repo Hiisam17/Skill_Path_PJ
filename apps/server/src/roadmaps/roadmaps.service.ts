@@ -3,13 +3,17 @@ import { RoadmapDto } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * RoadmapsService manages learning roadmaps at different difficulty levels
- * Each roadmap contains a curated sequence of skills to learn for a specific career path
+ * RoadmapsService quản lý các lộ trình học tập ở các mức độ khác nhau.
+ * Mỗi lộ trình chứa một chuỗi các kỹ năng được biên soạn cho một định hướng nghề nghiệp cụ thể.
  */
 @Injectable()
 export class RoadmapsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Chuyển đổi tên lộ trình thành cấp độ số tương ứng.
+   * Cấp độ 1: Cơ bản, 2: Trung cấp, 3: Nâng cao.
+   */
   private toLevel(title: string): string {
     const normalized = title.toLowerCase();
     if (normalized.includes('advanced')) return '3';
@@ -17,6 +21,9 @@ export class RoadmapsService {
     return '1';
   }
 
+  /**
+   * Chuyển đổi dữ liệu từ Database sang định dạng DTO gửi cho Frontend.
+   */
   private toDto(roadmap: { id: number; careerPathId: number | null; title: string }): RoadmapDto {
     return {
       id: String(roadmap.id),
@@ -25,6 +32,9 @@ export class RoadmapsService {
     };
   }
 
+  /**
+   * Lấy danh sách tất cả các lộ trình có trong hệ thống.
+   */
   async findAll(): Promise<RoadmapDto[]> {
     const roadmaps = await this.prisma.roadmap.findMany({
       orderBy: [{ careerPathId: 'asc' }, { id: 'asc' }],
@@ -34,21 +44,17 @@ export class RoadmapsService {
   }
 
   /**
-   * Find roadmap by its unique identifier
-   * Retrieves roadmap details including associated skills and career path reference
+   * Tìm một lộ trình học tập dựa trên ID duy nhất.
+   * Trả về thông tin cơ bản của lộ trình bao gồm các kỹ năng liên quan và định hướng nghề nghiệp.
    *
-   * @param roadmapId - UUID of the roadmap to retrieve
-   * @returns RoadmapDto containing roadmap metadata
-   * @throws NotFoundException if roadmap not found
-   *
-   * Example:
-   * const roadmap = await roadmapsService.findById('roadmap-uuid')
-   * // Returns: { id: 'uuid', careerPathId: 'path-id', level: 'beginner' }
+   * @param roadmapId - ID của lộ trình cần tìm (dạng chuỗi số).
+   * @returns RoadmapDto chứa thông tin của lộ trình.
+   * @throws NotFoundException nếu không tìm thấy ID tương ứng.
    */
   async findById(roadmapId: string): Promise<RoadmapDto> {
     const roadmapIdNumber = Number(roadmapId);
     if (!Number.isInteger(roadmapIdNumber) || roadmapIdNumber <= 0) {
-      throw new NotFoundException(`Roadmap ${roadmapId} not found`);
+      throw new NotFoundException(`Lộ trình ${roadmapId} không tồn tại`);
     }
 
     const roadmap = await this.prisma.roadmap.findUnique({
@@ -56,26 +62,18 @@ export class RoadmapsService {
     });
 
     if (!roadmap) {
-      throw new NotFoundException(`Roadmap ${roadmapId} not found`);
+      throw new NotFoundException(`Lộ trình ${roadmapId} không tồn tại`);
     }
 
     return this.toDto(roadmap);
   }
 
   /**
-   * Find all roadmaps for a specific career path
-   * Returns roadmaps at different difficulty levels (beginner, intermediate, advanced)
-   * Users can progress through levels as they complete skills
+   * Tìm tất cả các lộ trình cho một định hướng nghề nghiệp cụ thể (Career Path).
+   * Thường trả về danh sách các cấp độ khác nhau (Cơ bản, Trung cấp, Nâng cao).
    *
-   * @param careerPathId - INT of the career path
-   * @returns Array of RoadmapDto objects at different levels for this career path
-   *
-   * Example:
-   * const roadmaps = await roadmapsService.findByCareerPath('backend-path-id')
-   * // Returns: [
-   * //   { id: '1', careerPathId: 'path-id', level: 'beginner' },
-   * //   { id: '2', careerPathId: 'path-id', level: 'intermediate' },
-   * // ]
+   * @param careerPathId - ID của định hướng nghề nghiệp.
+   * @returns Mảng các đối tượng RoadmapDto thuộc định hướng này.
    */
   async findByCareerPath(careerPathId: string): Promise<RoadmapDto[]> {
     const careerPathIdNumber = Number(careerPathId);
@@ -92,8 +90,7 @@ export class RoadmapsService {
   }
 
   /**
-   * Retrieve all careers (id and name) for the public career list
-   * Returns an array of objects shaped as { id, name }
+   * Lấy danh sách tất cả các ngành nghề/định hướng (id và tên) cho trang danh sách công khai.
    */
   async findAllCareerPaths(): Promise<{ id: number; name: string }[]> {
     const careerPaths = await this.prisma.careerPath.findMany({ select: { id: true, name: true } });
@@ -101,9 +98,8 @@ export class RoadmapsService {
   }
 
   /**
-   * Get published system roadmaps for a given career id
-   * System roadmaps are identified by `userId == null` and `isPublished == true`
-   * Returns selected fields: id, title, description
+   * Lấy các lộ trình do hệ thống cung cấp (System Roadmaps) cho một định hướng nghề nghiệp.
+   * Lộ trình hệ thống được xác định bởi `userId == null` và `isPublished == true`.
    */
   async getSystemRoadmapsByCareerPath(careerPathId: number): Promise<{ id: number; title: string; description: string | null }[]> {
     const roadmaps = await this.prisma.roadmap.findMany({
@@ -121,7 +117,7 @@ export class RoadmapsService {
     });
 
     if (!roadmaps || roadmaps.length === 0) {
-      throw new NotFoundException('No roadmaps found for this career');
+      throw new NotFoundException('Không tìm thấy lộ trình hệ thống nào cho ngành nghề này');
     }
 
     return roadmaps.map((r) => ({ id: r.id, title: r.title, description: r.description }));

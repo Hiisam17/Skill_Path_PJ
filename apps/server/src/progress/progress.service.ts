@@ -9,13 +9,16 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * ProgressService tracks user's skill completion and learning progress
- * Manages skill completion records and calculates overall progress statistics
+ * ProgressService theo dõi việc hoàn thành kỹ năng và tiến độ học tập của người dùng.
+ * Quản lý các bản ghi hoàn thành kỹ năng và tính toán số liệu thống kê tiến độ tổng thể.
  */
 @Injectable()
 export class ProgressService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Đảm bảo một trạng thái tiến độ tồn tại trong Database (ví dụ: COMPLETED, IN_PROGRESS).
+   */
   private async ensureProgressStatus(name: string): Promise<number> {
     const status = await this.prisma.progressStatus.upsert({
       where: { name },
@@ -27,6 +30,9 @@ export class ProgressService {
     return status.id;
   }
 
+  /**
+   * Ánh xạ tên trạng thái từ Database sang Enum được sử dụng trong mã nguồn.
+   */
   private mapStatusNameToEnum(statusName?: string | null): UserSkillStatus {
     const normalized = (statusName ?? '').trim().toUpperCase();
     if (normalized === 'COMPLETED' || normalized === 'DONE') {
@@ -38,6 +44,10 @@ export class ProgressService {
     return UserSkillStatus.NOT_STARTED;
   }
 
+  /**
+   * Lấy ID người dùng dùng thử (Demo).
+   * Ưu tiên lấy từ biến môi trường DEMO_USER_ID, nếu không có sẽ lấy profile mới nhất.
+   */
   async getDemoUserId(): Promise<string> {
     const preferredUserId = process.env.DEMO_USER_ID;
 
@@ -71,7 +81,7 @@ export class ProgressService {
 
     if (!profile) {
       throw new NotFoundException(
-        'No profile found in database. Set DEMO_USER_ID in apps/server/.env or run seed.',
+        'Không tìm thấy Profile nào trong Database. Vui lòng thiết lập DEMO_USER_ID hoặc chạy seed.',
       );
     }
 
@@ -79,17 +89,13 @@ export class ProgressService {
   }
 
   /**
-   * Mark a skill as completed by the user
-   * Records completion timestamp and updates skill status to COMPLETED
-   * Prevents duplicate completions using upsert pattern
+   * Đánh dấu một kỹ năng đã hoàn thành bởi người dùng.
+   * Ghi lại thời gian hoàn thành và cập nhật trạng thái thành COMPLETED.
+   * Sử dụng pattern "upsert" để tránh trùng lặp bản ghi.
    *
-   * @param userId - UUID of authenticated user
-   * @param skillId - Number ID of the skill being marked as complete
-   * @returns UserSkillProgressDto with updated completion record
-   * @throws NotFoundException if user or skill not found
-   *
-   * Example:
-   * const progress = await progressService.completeSkill('user-id', 1)
+   * @param userId - ID người dùng.
+   * @param skillId - ID số của kỹ năng.
+   * @returns Đối tượng UserSkillProgressDto chứa kết quả cập nhật.
    */
   async completeSkill(
     userId: string,
@@ -144,12 +150,12 @@ export class ProgressService {
   }
 
   /**
-   * Calculate user's overall progress for their current roadmap
-   * Aggregates completion statistics and calculates percentage completion
-   * Used to display progress bar and motivation indicators
+   * Tính toán tiến độ tổng thể của người dùng cho lộ trình hiện tại của họ.
+   * Thống kê số kỹ năng đã xong so với tổng số kỹ năng để ra phần trăm %.
+   * Dùng cho thanh tiến độ và các chỉ báo động lực trên UI.
    *
-   * @param userId - UUID of authenticated user
-   * @returns ProgressDto with completion statistics
+   * @param userId - ID người dùng.
+   * @returns ProgressDto chứa các số liệu thống kê hoàn thành.
    */
   async getUserProgress(userId: string): Promise<ProgressDto> {
     const completedStatusId = await this.ensureProgressStatus('COMPLETED');
@@ -197,11 +203,11 @@ export class ProgressService {
   }
 
   /**
-   * Calculate user's progress across ALL enrolled roadmaps
-   * Returns per-roadmap breakdown and aggregated overall stats
+   * Tính toán tiến độ của người dùng trên TẤT CẢ các lộ trình họ tham gia.
+   * Trả về chi tiết từng lộ trình và thống kê tổng hợp.
    *
-   * @param userId - UUID of authenticated user
-   * @returns MultiRoadmapProgressDto with overall + per-roadmap progress
+   * @param userId - ID người dùng.
+   * @returns MultiRoadmapProgressDto chứa tiến độ tổng và chi tiết theo lộ trình.
    */
   async getUserMultiRoadmapProgress(
     userId: string,
@@ -312,8 +318,8 @@ export class ProgressService {
   }
 
   /**
-   * Syncs the progress percentage for a specific user and roadmap
-   * Recalculates based on completed skills vs total skills in roadmap
+   * Đồng bộ hóa phần trăm tiến độ cho một người dùng và lộ trình cụ thể.
+   * Tính toán lại dựa trên số kỹ năng đã xong so với tổng số kỹ năng của lộ trình đó.
    */
   async syncRoadmapProgressPercentage(
     userId: string,

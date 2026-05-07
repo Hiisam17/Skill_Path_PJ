@@ -3,26 +3,19 @@ import { CareerPathDto } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * CareerPathsService manages available career tracks and learning paths
- * Provides career options for users to choose from during onboarding
+ * CareerPathsService quản lý các lộ trình sự nghiệp (Career Tracks).
+ * Cung cấp các lựa chọn nghề nghiệp để người dùng chọn khi bắt đầu hành trình học tập.
  */
 @Injectable()
 export class CareerPathsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Retrieve all available career paths for user selection
-   * Returns complete list of career tracks (Backend Developer, Frontend Developer, etc.)
-   * These paths serve as starting points for users to select their learning roadmap
+   * Lấy danh sách tất cả các lộ trình sự nghiệp hiện có.
+   * Danh sách bao gồm các ngành nghề như Backend Developer, Frontend Developer, v.v.
+   * Đây là điểm bắt đầu để người dùng chọn lộ trình học tập phù hợp.
    *
-   * @returns Array of CareerPathDto objects sorted by creation date or custom order
-   *
-   * Example:
-   * const paths = await careerPathsService.findAll()
-   * // Returns: [
-   * //   { id: 'uuid1', name: 'Backend Developer', description: '...' },
-   * //   { id: 'uuid2', name: 'Frontend Developer', description: '...' },
-   * // ]
+   * @returns Mảng các đối tượng CareerPathDto được sắp xếp theo tên (A-Z).
    */
   async findAll(): Promise<CareerPathDto[]> {
     const careerPaths = await this.prisma.careerPath.findMany({

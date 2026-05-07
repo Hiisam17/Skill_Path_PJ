@@ -3,13 +3,16 @@ import { SkillDto, UserSkillStatus } from '../types';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * SkillsService manages individual skills within roadmaps
- * Provides skill listings with user progress tracking and learning resources
+ * SkillsService quản lý các kỹ năng riêng lẻ trong lộ trình.
+ * Cung cấp danh sách kỹ năng cùng với theo dõi tiến độ người dùng và tài nguyên học tập.
  */
 @Injectable()
 export class SkillsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Ánh xạ trạng thái tiến độ từ Database sang Enum.
+   */
   private mapProgressStatus(statusName?: string | null): UserSkillStatus {
     const normalized = (statusName ?? '').trim().toUpperCase();
     if (normalized === 'COMPLETED' || normalized === 'DONE') {
@@ -22,14 +25,17 @@ export class SkillsService {
   }
 
   /**
-   * Retrieve all skills in a roadmap with user's progress status
-   * Returns ordered list of skills user should learn, with current completion status
+   * Lấy tất cả các kỹ năng trong một lộ trình cùng với trạng thái tiến độ của người dùng.
+   * Trả về danh sách các kỹ năng được sắp xếp kèm theo trạng thái hoàn thành hiện tại.
+   * 
+   * @param roadmapId - ID của lộ trình.
+   * @param userId - ID của người dùng.
    */
   async findSkillsByRoadmap(
     roadmapId: number,
     userId: string,
   ): Promise<SkillDto[]> {
-
+    // Truy vấn các kỹ năng thuộc các Section của Roadmap này
     const roadmapSkills = await this.prisma.roadmapSkill.findMany({
       where: {
         section: {
@@ -75,12 +81,13 @@ export class SkillsService {
   async findByRoadmap(roadmapId: number, userId: string): Promise<SkillDto[]> {
     return this.findSkillsByRoadmap(roadmapId, userId);
   }
+
   /**
-   * Retrieves skill details with associated active learning resources.
+   * Lấy chi tiết của một kỹ năng kèm theo các tài nguyên học tập (link, video, v.v.).
    *
-   * @param id - The skill ID.
-   * @returns An object containing skill title, description, and formatted resources.
-   * @throws NotFoundException if the skill does not exist.
+   * @param id - ID của kỹ năng.
+   * @returns Đối tượng chứa tiêu đề, mô tả và danh sách tài nguyên.
+   * @throws NotFoundException nếu kỹ năng không tồn tại.
    */
   async getSkillDetail(id: number) {
     const skill = await this.prisma.skill.findUnique({
@@ -93,7 +100,7 @@ export class SkillsService {
       },
     });
 
-    if (!skill) throw new NotFoundException('Skill not found');
+    if (!skill) throw new NotFoundException('Không tìm thấy kỹ năng tương ứng');
 
     return {
       title: skill.name,

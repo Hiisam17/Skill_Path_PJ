@@ -16,7 +16,7 @@ import { ScheduleModule } from '@nestjs/schedule';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: join(process.cwd(), '.env.development'), 
+      envFilePath: join(process.cwd(), '.env.development'),
     }),
     ScheduleModule.forRoot(),
     PrismaModule,

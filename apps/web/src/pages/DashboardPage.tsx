@@ -21,6 +21,19 @@ interface MultiProgress {
   roadmaps: RoadmapProgress[];
 }
 
+interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  lastActivityAt: string | null;
+}
+
+interface MilestoneData {
+  id: number;
+  name: string;
+  icon: string;
+  description: string;
+}
+
 const ArrowUpIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 12V2M3 5l4-3 4 3" />
@@ -105,8 +118,14 @@ export const DashboardPage: React.FC = () => {
   const [selectedRoadmapIdx, setSelectedRoadmapIdx] = useState<number | null>(null); // null = overall
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [localSkills, setLocalSkills] = useState<any[]>([]);
-  const [milestones, setMilestones] = useState<any[]>([]);
   const [marketStats, setMarketStats] = useState<any[]>([]);
+  
+  // Gamification State
+  const [streakData, setStreakData] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastActivityAt: null });
+  const [unlockedMilestones, setUnlockedMilestones] = useState<MilestoneData[]>([]);
+
+  // Giả định userId lấy từ Auth Context hoặc LocalStorage
+  const userId = "daa69b29-004d-49ea-87b3-57ebe211705b"; 
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -114,6 +133,7 @@ export const DashboardPage: React.FC = () => {
 
       const localRoadmaps: RoadmapProgress[] = [];
 
+      // Khôi phục logic đọc localStorage
       try {
         const saved = localStorage.getItem("frontendRoadmapProgress");
         if (saved) {
@@ -152,42 +172,46 @@ export const DashboardPage: React.FC = () => {
         }
       } catch { /* ignore */ }
 
-      const p1 = api.get("/users/progress");
-      const p2 = api.get("/dashboard/skills");
-      const p3 = Promise.resolve([
-        { icon: "🚀", label: "First Step", variant: "unlocked-cyan" as const },
-        { icon: "🌱", label: "Beginner", variant: "unlocked-purple" as const },
-        { icon: "🧭", label: "Explorer", variant: "unlocked-orange" as const },
-        { icon: "🏛️", label: "Architect", variant: "locked" as const },
-      ]);
-      const p4 = Promise.resolve([
-        { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
-        { name: "Rust", value: "+8.7%", color: "purple" as const },
-        { name: "Next.js", value: "+22.5%", color: "orange" as const },
-      ]);
+      try {
+        // BƯỚC 1: Gọi API điểm danh
+        await api.post(`/dashboard/activity/${userId}`);
+        
+        const pStats = api.get(`/dashboard/stats/${userId}`);
+        const pProgress = api.get("/users/progress");
+        const pSkills = api.get("/dashboard/skills");
+        const pMarket = Promise.resolve([
+          { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
+          { name: "Rust", value: "+8.7%", color: "purple" as const },
+          { name: "Next.js", value: "+22.5%", color: "orange" as const },
+        ]);
 
-      const results = await Promise.allSettled([p1, p2, p3, p4]);
+        const results = await Promise.allSettled([pStats, pProgress, pSkills, pMarket]);
 
-      // Handle Progress (p1)
-      if (results[0].status === "fulfilled") {
-        const data: MultiProgress = results[0].value.data;
-        for (const lr of localRoadmaps) {
-          if (lr.completedSkills > 0) {
-            const nameKey = lr.roadmapName.toLowerCase();
-            const alreadyInApi = data.roadmaps.some(r => r.roadmapName.toLowerCase().includes(nameKey));
-            if (!alreadyInApi) {
-              data.roadmaps.push(lr);
-              data.overall.completedSkills += lr.completedSkills;
-              data.overall.totalSkills += lr.totalSkills;
+        // Handle Gamification Stats
+        if (results[0].status === "fulfilled") {
+          setStreakData(results[0].value.data.streakData);
+          setUnlockedMilestones(results[0].value.data.unlockedMilestones);
+        }
+
+        // Handle Progress & Merge with Local
+        if (results[1].status === "fulfilled") {
+          const data: MultiProgress = results[1].value.data;
+          for (const lr of localRoadmaps) {
+            if (lr.completedSkills > 0) {
+              const nameKey = lr.roadmapName.toLowerCase();
+              const alreadyInApi = data.roadmaps.some(r => r.roadmapName.toLowerCase().includes(nameKey));
+              if (!alreadyInApi) {
+                data.roadmaps.push(lr);
+                data.overall.completedSkills += lr.completedSkills;
+                data.overall.totalSkills += lr.totalSkills;
+              }
             }
           }
-        }
-        if (data.overall.totalSkills > 0) {
-          data.overall.percentage = Math.round((data.overall.completedSkills / data.overall.totalSkills) * 100);
-        }
-        setMultiProgress(data);
-      } else {
-        if (localRoadmaps.length > 0) {
+          if (data.overall.totalSkills > 0) {
+            data.overall.percentage = Math.round((data.overall.completedSkills / data.overall.totalSkills) * 100);
+          }
+          setMultiProgress(data);
+        } else if (localRoadmaps.length > 0) {
           const totalCompleted = localRoadmaps.reduce((s, r) => s + r.completedSkills, 0);
           const totalSkills = localRoadmaps.reduce((s, r) => s + r.totalSkills, 0);
           setMultiProgress({
@@ -198,32 +222,23 @@ export const DashboardPage: React.FC = () => {
             },
             roadmaps: localRoadmaps,
           });
-        } else {
-          setMultiProgress({
-            overall: { completedSkills: 0, totalSkills: 0, percentage: 0 },
-            roadmaps: [],
-          });
         }
-      }
 
-      // Handle Skills (p2)
-      if (results[1].status === "fulfilled") {
-        setLocalSkills(results[1].value.data);
-      } else {
-        console.error("Failed to fetch skills data:", results[1].reason);
-      }
+        // Handle Skills
+        if (results[2].status === "fulfilled") {
+          setLocalSkills(results[2].value.data);
+        }
 
-      // Handle Milestones (p3)
-      if (results[2].status === "fulfilled") {
-        setMilestones(results[2].value);
-      }
+        // Handle Market Stats
+        if (results[3].status === "fulfilled") {
+          setMarketStats(results[3].value);
+        }
 
-      // Handle Market Stats (p4)
-      if (results[3].status === "fulfilled") {
-        setMarketStats(results[3].value);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     fetchDashboardData();
@@ -285,7 +300,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="streak-badge">
               <span>🔥</span>
-              <span>18 Day Streak</span>
+              <span>{streakData.currentStreak} Day Streak</span>
             </div>
           </header>
 
@@ -318,12 +333,18 @@ export const DashboardPage: React.FC = () => {
                 <Link to="/career-paths" className="card-header-link">View All</Link>
               </div>
               <div className="milestones-row">
-                {milestones.map((m) => (
-                  <div key={m.label} className={`milestone-badge ${m.variant}`}>
-                    <div className="milestone-icon-circle">{m.icon}</div>
-                    <span className="milestone-label">{m.label}</span>
-                  </div>
-                ))}
+                {unlockedMilestones.length > 0 ? (
+                  unlockedMilestones.map((m) => (
+                    <div key={m.id} className="milestone-badge unlocked-cyan">
+                      <div className="milestone-icon-circle">{m.icon}</div>
+                      <span className="milestone-label">{m.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-sm italic py-4">
+                    Bạn chưa có huy hiệu nào. Hãy tiếp tục học tập để mở khóa nhé!
+                  </p>
+                )}
               </div>
             </div>
 

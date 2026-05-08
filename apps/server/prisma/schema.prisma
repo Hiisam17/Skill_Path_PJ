@@ -22,6 +22,8 @@ model Profile {
   bio            String?   @db.Text
   githubLink     String?   @map("github_link")
   streakCount    Int       @default(0) @map("streak_count")
+  currentStreak  Int       @default(0) @map("current_streak")
+  longestStreak  Int       @default(0) @map("longest_streak")
   lastActivityAt DateTime? @map("last_activity_at") @db.Timestamptz
   updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamptz
   isDeleted      Boolean   @default(false) @map("is_deleted")
@@ -270,7 +272,6 @@ model Reward {
   reward_type_id Int
   reward_type    RewardType   @relation(fields: [reward_type_id], references: [id])
   user_rewards   UserReward[]
-  milestones     Milestone[]
 
   @@map("rewards")
 }
@@ -290,8 +291,6 @@ model Milestone {
   id               Int      @id @default(autoincrement())
   roadmapId        Int?     @map("roadmap_id")
   name             String   @unique // Thêm @unique vì có icon vân tay trên Supabase
-  requiredProgress Float?   @map("required_progress") // Float tương ứng với double precision trong SQL
-  rewardId         Int?     @map("reward_id")
 
   // Thêm 3 trường mới cho khớp với ảnh
   description      String?  @db.Text
@@ -300,7 +299,6 @@ model Milestone {
 
   // Thiết lập khóa ngoại (Relations)
   roadmap          Roadmap? @relation(fields: [roadmapId], references: [id])
-  reward           Reward?  @relation(fields: [rewardId], references: [id])
   userMilestones   UserMilestone[]
   
   @@map("milestones")

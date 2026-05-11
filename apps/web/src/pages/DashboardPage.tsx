@@ -411,7 +411,7 @@ export const DashboardPage: React.FC = () => {
                         borderColor: isActive ? color.border : undefined,
                         background: isActive ? color.bg : undefined,
                       }}
-                      onClick={() => navigate('/roadmaps/' + rm.roadmapId)}
+                      onClick={() => setSelectedRoadmapIdx(idx)}
                     >
                       <div className="roadmap-card-top">
                         <span className="roadmap-card-icon">{icon}</span>
@@ -435,13 +435,17 @@ export const DashboardPage: React.FC = () => {
                           }}
                         />
                       </div>
-                      <div 
-                        className={`mt-4 text-sm font-bold text-center transition-opacity flex items-center justify-center gap-1 ${isActive ? "opacity-100" : "opacity-0 h-0 overflow-hidden mt-0"}`}
-                        style={{ color: color.accent }}
+                      <button 
+                        className={`mt-4 w-full text-sm font-bold text-center transition-opacity flex items-center justify-center gap-1 ${isActive ? "opacity-100" : "opacity-0 h-0 overflow-hidden mt-0"}`}
+                        style={{ color: color.accent, background: 'transparent', border: 'none', cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/roadmaps/' + rm.roadmapId);
+                        }}
                       >
                         Continue Learning
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                      </div>
+                      </button>
                     </div>
                   );
                 })}

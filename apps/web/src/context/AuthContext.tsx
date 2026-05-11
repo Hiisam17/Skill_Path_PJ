@@ -29,16 +29,31 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<UserDto | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!getAuthToken());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(!!getAuthToken());
   const [error, setError] = useState<string | null>(null);
 
   // Restore auth session from localStorage on mount.
   useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      // TODO(auth): Validate token via GET /auth/me and populate user state.
-      console.log('User session found in localStorage');
-    }
+    const fetchUser = async () => {
+      const token = getAuthToken();
+      if (token) {
+        try {
+          setIsLoading(true);
+          const response = await api.get("/auth/me");
+          if (response.data && response.data.user) {
+            setUser(response.data.user);
+            setIsAuthenticated(true);
+          }
+        } catch (err) {
+          console.error("Failed to restore session:", err);
+          clearAuthToken();
+          setIsAuthenticated(false);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchUser();
   }, []);
 
   /**

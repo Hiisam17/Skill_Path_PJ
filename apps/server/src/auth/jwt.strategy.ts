@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { passportJwtSecret } from 'jwks-rsa';
+import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * JWT strategy that validates tokens against Supabase's JWKS endpoint.
@@ -11,7 +12,10 @@ import { passportJwtSecret } from 'jwks-rsa';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly logger = new Logger(JwtStrategy.name);
-    constructor(configService: ConfigService) {
+    constructor(
+        configService: ConfigService,
+        private prisma: PrismaService
+    ) {
         const supabaseUrl = configService.get<string>('SUPABASE_URL');
 
         super({
@@ -24,7 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
                 jwksRequestsPerMinute: 5,
                 jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
             }),
-            algorithms: ['RS256', 'HS256'],
+            algorithms: ['RS256', 'HS256', 'ES256'],
         });
         this.logger.debug(`JwtStrategy initialized with JWKS URI: ${supabaseUrl}/auth/v1/.well-known/jwks.json`);
     }
@@ -38,7 +42,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     async validate(payload: any) {
         try {
             this.logger.debug(`Token payload received: sub=${payload?.sub} email=${payload?.email}`);
-            return { userId: payload.sub, email: payload.email, role: payload.role };
+            
+            // Fetch profile info from local DB
+            const profile = await this.prisma.profile.findUnique({
+                where: { userId: payload.sub },
+                select: { fullName: true, avatarUrl: true }
+            });
+
+            return { 
+                id: payload.sub, 
+                email: payload.email, 
+                role: payload.role,
+                fullName: profile?.fullName || null,
+                avatarUrl: profile?.avatarUrl || null,
+            };
         } catch (err) {
             this.logger.error('Error while validating JWT payload', err as any);
             throw err;

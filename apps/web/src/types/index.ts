@@ -25,6 +25,8 @@ export type UserSkillStatus =
 export interface UserDto {
   id: string;
   email: string;
+  fullName?: string;
+  avatarUrl?: string;
   createdAt: string;
 }
 

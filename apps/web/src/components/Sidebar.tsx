@@ -36,7 +36,7 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <aside className="sidebar">
@@ -79,10 +79,23 @@ export default function Sidebar() {
         </div>
 
         <div className="sidebar-user-card">
-          <div className="sidebar-avatar">JD</div>
+          <div className="sidebar-avatar">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.fullName || "User"} />
+            ) : (
+              (user?.fullName || user?.email || "U")
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)
+            )}
+          </div>
           <div className="sidebar-user-info">
-            <div className="sidebar-user-name">Architect Navigator</div>
-            <div className="sidebar-user-level">Lvl 24 Dev</div>
+            <div className="sidebar-user-name">
+              {user?.fullName || user?.email?.split("@")[0] || "User"}
+            </div>
+            <div className="sidebar-user-level">A Thịnh Đẹp Trai</div>
           </div>
         </div>
       </div>

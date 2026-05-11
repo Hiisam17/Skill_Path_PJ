@@ -93,9 +93,19 @@ export class AuthService {
 
     this.logger.debug(`Login successful for email=${email}, userId=${data.user?.id}`);
 
+    // Fetch additional profile info from the local database
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId: data.user.id },
+      select: { fullName: true, avatarUrl: true }
+    });
+
     return {
       access_token: data.session.access_token,
-      user: data.user,
+      user: {
+        ...data.user,
+        fullName: profile?.fullName || null,
+        avatarUrl: profile?.avatarUrl || null,
+      },
     };
   }
 }

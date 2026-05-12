@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./DashboardPage.css";
 import { api } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
 /* ── Types ── */
 interface RoadmapProgress {
@@ -124,10 +125,12 @@ export const DashboardPage: React.FC = () => {
   const [streakData, setStreakData] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastActivityAt: null });
   const [unlockedMilestones, setUnlockedMilestones] = useState<MilestoneData[]>([]);
 
-  // Giả định userId lấy từ Auth Context hoặc LocalStorage
-  const userId = "daa69b29-004d-49ea-87b3-57ebe211705b"; 
+  const { user } = useAuth();
+  const userId = user?.id;
 
   useEffect(() => {
+    if (!userId) return;
+
     const fetchDashboardData = async () => {
       setIsLoading(true);
 
@@ -242,7 +245,7 @@ export const DashboardPage: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [userId]);
 
   /** Handles skill completion with optimistic update and API sync. */
   const handleCompleteSkill = async (skillId: number) => {

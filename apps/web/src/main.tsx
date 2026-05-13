@@ -4,12 +4,15 @@ import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
 import { AuthProvider } from "./context/AuthContext";
+import { ProgressSyncProvider } from "./context/ProgressSyncContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <ProgressSyncProvider>
+          <App />
+        </ProgressSyncProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

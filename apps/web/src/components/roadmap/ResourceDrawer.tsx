@@ -5,6 +5,7 @@ import { Card } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { RotateCcw, ChevronDown } from 'lucide-react';
 import apiClient from '@/lib/axios';
+import { useProgressSync } from '@/context/ProgressSyncContext';
 
 export interface Resource {
   id: number;
@@ -86,40 +87,30 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
   roadmapSkillId,
   onStatusChange 
 }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { enqueue } = useProgressSync();
 
   const currentStatusId = data?.statusId || null;
 
   const handleStatusChange = async (statusId: number) => {
     if (!roadmapSkillId) return;
 
-    setIsSubmitting(true);
-    try {
-      await apiClient.patch(`/progress/skills/${roadmapSkillId}`, { statusId });
-      console.log(`🛑 Status changed to ${statusId} for roadmap skill ${roadmapSkillId}`);
-      onStatusChange?.(roadmapSkillId, statusId);
-    } catch (error: any) {
-      console.error("🛑 API Error:", error);
-      alert(error.response?.data?.message || "Lỗi khi cập nhật trạng thái!");
-    } finally {
-      setIsSubmitting(false);
-    }
+    // 1. Đưa vào hàng đợi Sync (Background)
+    enqueue(roadmapSkillId, statusId);
+    
+    // 2. Cập nhật UI ngay lập tức (Optimistic Update)
+    onStatusChange?.(roadmapSkillId, statusId);
+    console.log(`[BatchSync] 📥 Đã đưa roadmapSkillId=${roadmapSkillId} vào hàng đợi với statusId=${statusId}`);
   };
 
   const handleReset = async () => {
     if (!roadmapSkillId) return;
 
-    setIsSubmitting(true);
-    try {
-      await apiClient.delete(`/progress/skills/${roadmapSkillId}`);
-      console.log(`🛑 Status reset for roadmap skill ${roadmapSkillId}`);
-      onStatusChange?.(roadmapSkillId, null);
-    } catch (error: any) {
-      console.error("🛑 API Error:", error);
-      alert(error.response?.data?.message || "Lỗi khi reset trạng thái!");
-    } finally {
-      setIsSubmitting(false);
-    }
+    // 1. Đưa lệnh Reset (statusId = null) vào hàng đợi
+    enqueue(roadmapSkillId, null);
+    
+    // 2. Cập nhật UI ngay lập tức
+    onStatusChange?.(roadmapSkillId, null);
+    console.log(`[BatchSync] 📥 Đã đưa lệnh RESET roadmapSkillId=${roadmapSkillId} vào hàng đợi`);
   };
 
   if (!isOpen && !data && !isLoading) return null;
@@ -162,38 +153,28 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
                 <select
                   value={currentStatusId || ''}
                   onChange={(e) => handleStatusChange(Number(e.target.value))}
-                  disabled={isSubmitting}
-                  className={`w-full appearance-none bg-black/20 backdrop-blur-md border border-white/10 px-4 py-2.5 font-bold text-white text-xs uppercase tracking-wider shadow-lg focus:outline-none transition-all cursor-pointer disabled:opacity-80 ${isSubmitting ? 'border-cyan-500/50' : ''}`}
+                  className="w-full appearance-none bg-black/20 backdrop-blur-md border border-white/10 px-4 py-2.5 font-bold text-white text-xs uppercase tracking-wider shadow-lg focus:outline-none transition-all cursor-pointer"
                 >
                   <option value="" disabled className="bg-[#131b2e]">
-                    {isSubmitting 
-                      ? 'Saving Status...' 
-                      : currentStatusId === 1 ? 'Current: COMPLETED'
-                      : currentStatusId === 2 ? 'Current: IN PROGRESS'
-                      : currentStatusId === 3 ? 'Current: SKIPPED'
-                      : 'Update Status'}
+                    Update Status
                   </option>
                   <option value="1" className="bg-[#131b2e] font-bold text-cyan-400">Completed</option>
                   <option value="2" className="bg-[#131b2e] font-bold text-amber-500">In Progress</option>
                   <option value="3" className="bg-[#131b2e] font-bold text-slate-400">Skipped</option>
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none border-l border-white/20 pl-2">
-                  {isSubmitting ? (
-                    <div className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-white/70 stroke-[3]" />
-                  )}
+                  <ChevronDown className="w-4 h-4 text-white/70 stroke-[3]" />
                 </div>
               </div>
 
               {/* Reset Button - Red Glass Style */}
               <button
                 onClick={handleReset}
-                disabled={isSubmitting || !currentStatusId}
+                disabled={!currentStatusId}
                 title="Reset progress"
                 className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 flex items-center justify-center shadow-lg transition-all duration-500 hover:bg-red-500/20 hover:rotate-180 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed group"
               >
-                <RotateCcw className={`w-5 h-5 stroke-[3] ${isSubmitting ? 'animate-spin' : ''}`} />
+                <RotateCcw className="w-5 h-5 stroke-[3]" />
               </button>
             </div>
           )}

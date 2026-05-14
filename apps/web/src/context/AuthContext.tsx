@@ -14,6 +14,7 @@ interface AuthContextType {
   error: string | null;
   login: (loginDto: LoginDto) => Promise<void>;
   logout: () => void;
+  updateUser: (userData: Partial<UserDto>) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -96,12 +97,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
   };
 
+  /** Updates user profile data locally and optionally on server if needed. */
+  const updateUser = async (updatedData: Partial<UserDto>): Promise<void> => {
+    try {
+      const response = await api.patch("/users/profile", updatedData);
+      if (response.data) {
+        setUser(prev => prev ? { ...prev, ...response.data } : response.data);
+      }
+    } catch (err) {
+      console.error("Failed to update user profile:", err);
+      throw err;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
     error,
     login,
     logout,
+    updateUser,
     isAuthenticated,
   };
 

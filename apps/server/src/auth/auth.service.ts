@@ -96,7 +96,7 @@ export class AuthService {
     // Fetch additional profile info from the local database
     const profile = await this.prisma.profile.findUnique({
       where: { userId: data.user.id },
-      select: { fullName: true, avatarUrl: true }
+      select: { fullName: true, avatarUrl: true, bio: true, githubLink: true }
     });
 
     return {
@@ -105,6 +105,8 @@ export class AuthService {
         ...data.user,
         fullName: profile?.fullName || null,
         avatarUrl: profile?.avatarUrl || null,
+        bio: profile?.bio || null,
+        githubLink: profile?.githubLink || null,
       },
     };
   }

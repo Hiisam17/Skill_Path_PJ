@@ -59,6 +59,29 @@ export class UsersService {
     return roadmapId;
   }
 
+
+  /**
+   * Update user profile information
+   *
+   * @param userId - UUID of authenticated user
+   * @param updateProfileDto - Contains profile fields to update
+   * @returns Updated profile
+   */
+  async updateProfile(
+    userId: string,
+    updateProfileDto: {
+      fullName?: string;
+      avatarUrl?: string;
+      bio?: string;
+      githubLink?: string;
+    },
+  ) {
+    return this.prisma.profile.update({
+      where: { userId },
+      data: updateProfileDto,
+    });
+  }
+
   /**
    * Retrieve the user's currently selected roadmap
    * Returns the roadmap the user is actively working through

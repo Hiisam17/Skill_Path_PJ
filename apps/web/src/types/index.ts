@@ -27,6 +27,8 @@ export interface UserDto {
   email: string;
   fullName?: string;
   avatarUrl?: string;
+  bio?: string;
+  githubLink?: string;
   createdAt: string;
 }
 

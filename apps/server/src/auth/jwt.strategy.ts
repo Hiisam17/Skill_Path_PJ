@@ -46,7 +46,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             // Fetch profile info from local DB
             const profile = await this.prisma.profile.findUnique({
                 where: { userId: payload.sub },
-                select: { fullName: true, avatarUrl: true }
+                select: { fullName: true, avatarUrl: true, bio: true, githubLink: true }
             });
 
             return { 
@@ -55,6 +55,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
                 role: payload.role,
                 fullName: profile?.fullName || null,
                 avatarUrl: profile?.avatarUrl || null,
+                bio: profile?.bio || null,
+                githubLink: profile?.githubLink || null,
             };
         } catch (err) {
             this.logger.error('Error while validating JWT payload', err as any);

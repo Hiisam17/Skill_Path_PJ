@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "./DashboardPage.css";
 import { api } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import MilestonesModal from "@/components/milestones/MilestonesModal";
 
 /* ── Types ── */
 interface RoadmapProgress {
@@ -121,9 +122,10 @@ export const DashboardPage: React.FC = () => {
   const [localSkills, setLocalSkills] = useState<any[]>([]);
   const [marketStats, setMarketStats] = useState<any[]>([]);
   
-  // Gamification State
+   // Gamification State
   const [streakData, setStreakData] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastActivityAt: null });
   const [unlockedMilestones, setUnlockedMilestones] = useState<MilestoneData[]>([]);
+  const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false);
 
   const { user } = useAuth();
   const userId = user?.id;
@@ -333,7 +335,13 @@ export const DashboardPage: React.FC = () => {
             <div className="bento-card card-milestones">
               <div className="card-header">
                 <span className="card-header-label">EARNED MILESTONES</span>
-                <Link to="/career-paths" className="card-header-link">View All</Link>
+                <button 
+                  onClick={() => setIsMilestonesModalOpen(true)} 
+                  className="card-header-link"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  View All
+                </button>
               </div>
               <div className="milestones-row">
                 {unlockedMilestones.length > 0 ? (
@@ -513,6 +521,12 @@ export const DashboardPage: React.FC = () => {
           <p className="footer-copyright">© 2024 DevPath. The Architectural Navigator.</p>
         </footer>
       </main>
+
+      <MilestonesModal 
+        isOpen={isMilestonesModalOpen} 
+        onClose={() => setIsMilestonesModalOpen(false)} 
+        milestones={unlockedMilestones}
+      />
     </div>
   );
 };

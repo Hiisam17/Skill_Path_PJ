@@ -49,6 +49,17 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="profile-modal-overlay" onClick={onClose}>
       <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -69,15 +80,33 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="avatarUrl">Link Avatar</label>
-            <input
-              type="text"
-              id="avatarUrl"
-              name="avatarUrl"
-              value={formData.avatarUrl}
-              onChange={handleChange}
-              placeholder="Dán link ảnh đại diện"
-            />
+            <label htmlFor="avatarUrl">Ảnh đại diện</label>
+            <div className="avatar-upload-options">
+              <input
+                type="text"
+                id="avatarUrl"
+                name="avatarUrl"
+                value={formData.avatarUrl}
+                onChange={handleChange}
+                placeholder="Dán link ảnh đại diện"
+              />
+              <span className="or-divider">hoặc</span>
+              <label htmlFor="avatarFile" className="file-upload-btn">
+                Tải ảnh lên
+                <input
+                  type="file"
+                  id="avatarFile"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+            {formData.avatarUrl && (
+              <div className="avatar-preview">
+                <img src={formData.avatarUrl} alt="Avatar Preview" />
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label htmlFor="githubLink">Link GitHub</label>

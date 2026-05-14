@@ -18,7 +18,7 @@ model Profile {
   // Prisma không quản lý bảng auth.users nên chúng ta chỉ lưu userId làm khóa ngoại.
   userId         String    @id @map("user_id") @db.Uuid
   fullName       String?   @map("full_name")
-  avatarUrl      String?   @map("avatar_url")
+  avatarUrl      String?   @map("avatar_url") @db.Text
   bio            String?   @db.Text
   githubLink     String?   @map("github_link")
   streakCount    Int       @default(0) @map("streak_count")

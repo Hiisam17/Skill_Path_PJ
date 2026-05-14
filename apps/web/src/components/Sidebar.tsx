@@ -102,7 +102,7 @@ export default function Sidebar() {
             <div className="sidebar-user-name">
               {user?.fullName || user?.email?.split("@")[0] || "User"}
             </div>
-            <div className="sidebar-user-level">A Thịnh Đẹp Trai</div>
+            <div className="sidebar-user-level">{user?.bio || "Học viên xuất sắc"}</div>
           </div>
         </div>
       </div>

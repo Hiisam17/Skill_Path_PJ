@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { JobSelector } from "@/features/JobSelector";
+import { JdParser } from "@/components/JdParser";
 import { analyzeGap, getLastGapAnalysis } from "@/services/gapService";
 import type { SuggestedJob } from "@/data/mockGaps";
 import "./JobMarketPage.css";
@@ -57,6 +58,7 @@ export const JobMarketPage: React.FC = () => {
 
       <div className="job-market-content">
         <JobSelector onAnalyze={handleAnalyzeJob} isAnalyzing={isAnalyzingJob} />
+        <JdParser />
       </div>
     </div>
   );

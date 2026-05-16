@@ -10,6 +10,14 @@ import {
 import { JobsService } from './jobs.service';
 import { ProgressService } from '../progress/progress.service';
 
+import { IsString, MinLength } from 'class-validator';
+
+class ParseJdDto {
+  @IsString()
+  @MinLength(50, { message: 'JD text must be at least 50 characters' })
+  rawJdText!: string;
+}
+
 /**
  * DTO for the analyze-gap request body.
  */
@@ -88,6 +96,41 @@ export class JobsController {
           message: 'AI gap analysis failed',
           error: error.message,
         },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * POST /api/jobs/parse-jd
+   * Parses an arbitrary JD to find skill gaps and roadmap type.
+   */
+  @Post('parse-jd')
+  async parseJd(@Body() body: ParseJdDto) {
+    try {
+      const userId = await this.progressService.getDemoUserId();
+      this.logger.log(`JD Parse request: userId=${userId}`);
+
+      const result = await this.jobsService.parseJd(body.rawJdText, userId);
+
+      return {
+        requiredSkillIds: result.requiredSkillIds,
+        gapSkillIds: result.gapSkillIds,
+        matchScore: result.matchScore,
+        summary: result.summary,
+        roadmapType: result.roadmapType,
+        roadmapPath: result.roadmapPath,
+        isNewUser: result.isNewUser,
+      };
+    } catch (error: any) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(`JD Parse failed: ${error.message}`, error.stack);
+
+      throw new HttpException(
+        { message: 'AI JD parsing failed', error: error.message },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

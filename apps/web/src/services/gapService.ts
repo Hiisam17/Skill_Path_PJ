@@ -11,6 +11,11 @@ export interface GapAnalysisResponse {
   isNewUser: boolean;
 }
 
+export interface ParseJdResponse extends GapAnalysisResponse {
+  roadmapType: "frontend" | "backend" | "devops" | "unknown";
+  roadmapPath: string | null;
+}
+
 export interface JobData {
   id: number;
   title: string;
@@ -69,4 +74,15 @@ export function getLastGapAnalysis(): GapAnalysisResponse | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Parses an arbitrary job description to find skill gaps and roadmap path.
+ */
+export async function parseJdGap(rawJdText: string): Promise<ParseJdResponse> {
+  const response = await api.post<ParseJdResponse>("/jobs/parse-jd", {
+    rawJdText,
+  });
+
+  return response.data;
 }

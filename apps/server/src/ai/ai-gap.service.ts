@@ -14,6 +14,13 @@ export interface GapAnalysisResult {
 }
 
 /**
+ * Response structure from AI for JD parsing.
+ */
+export interface GapAnalysisJdResult extends GapAnalysisResult {
+  roadmapType: 'frontend' | 'backend' | 'devops' | 'unknown';
+}
+
+/**
  * Minimal Job type used by AiGapService.
  */
 export interface JobInput {
@@ -202,6 +209,117 @@ Return the JSON analysis.`;
       }
       this.logger.error(`Groq API error: ${error.message}`, error.stack);
       throw new Error(`AI analysis failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Analyzes an arbitrary job description and returns required skills, gaps, and roadmap type.
+   *
+   * @param rawJdText - The raw job description text
+   * @param userSkills - Skills the user has already completed
+   * @returns Parsed gap analysis result with roadmapType
+   */
+  async parseJd(rawJdText: string, userSkills: SkillInput[]): Promise<GapAnalysisJdResult> {
+    const validSkills = await this.getValidSkillCatalog();
+    const validNodeIds = new Set(validSkills.map((s) => s.nodeId));
+
+    const skillCatalog = validSkills.map(
+      (s) => `  - ${s.nodeId}: ${s.name}${s.description ? ` (${s.description.substring(0, 80)})` : ''}`,
+    ).join('\n');
+
+    const userSkillList = userSkills.length > 0
+      ? userSkills.map((s) => `  - ${s.nodeId} (${s.name})`).join('\n')
+      : '  (User has no completed skills yet)';
+
+    const systemPrompt = `Bạn là technical recruiter. Skill IDs hợp lệ:
+[
+${skillCatalog}
+]
+Chỉ trả về JSON thuần, không markdown, không giải thích:
+{
+  "requiredSkillIds": string[],
+  "gapSkillIds": string[],
+  "matchScore": number,
+  "summary": string,
+  "roadmapType": "frontend" | "backend" | "devops" | "unknown"
+}`;
+
+    const userPrompt = `Đây là JD paste từ trang tuyển dụng:
+${rawJdText}
+
+User đã có các skill (nodeId + tên đầy đủ):
+${userSkillList}
+
+Hãy:
+1. Extract tất cả required skills và map vào nodeId hợp lệ
+2. Tính matchScore từ 0-100
+3. Xác định roadmapType dựa trên nội dung JD
+4. Viết summary bằng tiếng Việt, ngắn gọn 2-3 câu`;
+
+    this.logger.log(`Calling Groq for JD parsing`);
+
+    try {
+      const response = await this.groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+      });
+
+      const rawText = response.choices[0]?.message?.content?.trim() || '';
+      
+      if (!rawText) {
+        throw new Error('Groq returned empty response');
+      }
+
+      let jsonStr = rawText;
+      const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1].trim();
+      }
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        this.logger.error(`Failed to parse Groq response as JSON: ${rawText}`);
+        throw new Error('Groq returned invalid JSON. Raw response: ' + rawText.substring(0, 300));
+      }
+
+      if (
+        !Array.isArray(parsed.requiredSkillIds) ||
+        !Array.isArray(parsed.gapSkillIds) ||
+        typeof parsed.matchScore !== 'number' ||
+        typeof parsed.summary !== 'string' ||
+        !['frontend', 'backend', 'devops', 'unknown'].includes(parsed.roadmapType)
+      ) {
+        throw new Error(
+          'Groq response is missing required fields or has invalid roadmapType',
+        );
+      }
+
+      const filteredRequired = parsed.requiredSkillIds.filter((id: string) => validNodeIds.has(id));
+      const filteredGaps = parsed.gapSkillIds.filter((id: string) => validNodeIds.has(id));
+
+      const result: GapAnalysisJdResult = {
+        requiredSkillIds: filteredRequired,
+        gapSkillIds: filteredGaps,
+        matchScore: Math.max(0, Math.min(100, Math.round(parsed.matchScore))),
+        summary: parsed.summary,
+        roadmapType: parsed.roadmapType,
+      };
+
+      this.logger.log(`JD Parsing complete: roadmapType=${result.roadmapType}, matchScore=${result.matchScore}%`);
+      return result;
+    } catch (error: any) {
+      if (error.message?.includes('Groq returned')) {
+        throw error;
+      }
+      this.logger.error(`Groq API error: ${error.message}`, error.stack);
+      throw new Error(`AI JD analysis failed: ${error.message}`);
     }
   }
 }

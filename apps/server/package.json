@@ -37,6 +37,8 @@
     "@types/bcrypt": "^6.0.0",
     "@types/node-schedule": "^2.1.8",
     "bcrypt": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "dotenv": "^16.6.1",
     "groq-sdk": "^1.2.0",
     "jwks-rsa": "^4.0.1",

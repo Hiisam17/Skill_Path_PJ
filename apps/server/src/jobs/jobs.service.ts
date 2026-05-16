@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiGapService, GapAnalysisResult } from '../ai/ai-gap.service';
 
@@ -103,6 +103,66 @@ export class JobsService {
 
     return {
       ...aiResult,
+      isNewUser,
+    };
+  }
+
+  /**
+   * Analyzes an arbitrary JD text.
+   *
+   * @param rawJdText - User provided job description
+   * @param userId - ID of the authenticated user
+   */
+  async parseJd(rawJdText: string, userId: string) {
+    if (!rawJdText || rawJdText.length < 50) {
+      throw new BadRequestException('JD text must be at least 50 characters');
+    }
+
+    const completedStatusId = await this.getCompletedStatusId();
+
+    const userProgress = await this.prisma.userSkillProgress.findMany({
+      where: {
+        userId,
+        statusId: completedStatusId,
+        skill: { nodeId: { not: null } },
+      },
+      include: {
+        skill: {
+          select: { nodeId: true, name: true, description: true },
+        },
+      },
+    });
+
+    const seenNodeIds = new Set<string>();
+    const userCompletedSkills = userProgress
+      .filter((p) => p.skill?.nodeId)
+      .filter((p) => {
+        if (seenNodeIds.has(p.skill!.nodeId!)) return false;
+        seenNodeIds.add(p.skill!.nodeId!);
+        return true;
+      })
+      .map((p) => ({
+        nodeId: p.skill!.nodeId!,
+        name: p.skill!.name,
+        description: p.skill!.description,
+      }));
+
+    const isNewUser = userCompletedSkills.length === 0;
+
+    const aiResult = await this.aiGapService.parseJd(rawJdText, userCompletedSkills);
+
+    const roadmapMap: Record<string, string | null> = {
+      frontend: '/roadmaps/1',
+      backend: '/roadmaps/2',
+      devops: '/roadmaps/3',
+      unknown: null,
+    };
+    
+    const roadmapPath = roadmapMap[aiResult.roadmapType] ?? null;
+
+    return {
+      ...aiResult,
+      roadmapPath,
       isNewUser,
     };
   }

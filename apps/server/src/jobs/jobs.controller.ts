@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   HttpException,
   HttpStatus,
@@ -28,6 +29,15 @@ export class JobsController {
     private readonly jobsService: JobsService,
     private readonly progressService: ProgressService,
   ) {}
+
+  /**
+   * GET /api/jobs
+   * Retrieves all jobs.
+   */
+  @Get()
+  async findAll() {
+    return this.jobsService.findAll();
+  }
 
   /**
    * POST /api/jobs/analyze-gap

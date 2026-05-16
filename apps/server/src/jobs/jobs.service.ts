@@ -23,6 +23,15 @@ export class JobsService {
   ) {}
 
   /**
+   * Retrieves all jobs from the database.
+   */
+  async findAll() {
+    return this.prisma.job.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
    * Analyzes the skill gap between a job's requirements and a user's completed skills.
    *
    * @param jobId - Database ID of the job posting

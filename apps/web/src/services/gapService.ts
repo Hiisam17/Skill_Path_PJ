@@ -11,9 +11,31 @@ export interface GapAnalysisResponse {
   isNewUser: boolean;
 }
 
+export interface JobData {
+  id: number;
+  title: string;
+  company: string;
+  location?: string;
+  skills?: string[];
+  jobType?: string;
+  description: string;
+  requirements?: string;
+  source?: string;
+  sourceUrl?: string;
+  roadmapPath: string;
+}
+
+/**
+ * Fetches all available jobs from the backend.
+ */
+export async function fetchJobs(): Promise<JobData[]> {
+  const response = await api.get<JobData[]>("/jobs");
+  return response.data;
+}
+
 /**
  * Analyzes the gap between a user's skills and a job's requirements.
- * Calls the real backend API which uses Claude AI for analysis.
+ * Calls the real backend API which uses Claude/Gemini/Groq AI for analysis.
  *
  * @param jobId The database ID of the target job to analyze against
  * @returns A promise that resolves to an array of missing skill/node IDs

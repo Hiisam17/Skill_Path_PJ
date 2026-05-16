@@ -90,6 +90,7 @@ enum SkillLabel {
 model Skill {
   id           Int        @id @default(autoincrement())
   name         String     @unique
+  nodeId       String?    @unique @map("node_id")
   description  String?    @db.Text
   levelId      Int?       @map("level_id")
   canonicalUrl String?    @map("canonical_url")
@@ -297,4 +298,25 @@ model Milestone {
   reward           Reward?  @relation(fields: [rewardId], references: [id])
 
   @@map("milestones")
+}
+
+// =======================================
+// 7. JOB MARKET
+// =======================================
+
+model Job {
+  id           Int       @id @default(autoincrement())
+  title        String
+  company      String
+  location     String?
+  description  String    @db.Text
+  requirements String?   @db.Text
+  skills       String[]  @default([])
+  jobType      String?   @map("job_type")
+  source       String?
+  sourceUrl    String?   @map("source_url")
+  roadmapPath  String?   @map("roadmap_path")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("jobs")
 }

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { JobSelector } from "@/features/JobSelector";
-import { analyzeGap } from "@/services/gapService";
+import { analyzeGap, getLastGapAnalysis } from "@/services/gapService";
 import type { SuggestedJob } from "@/data/mockGaps";
 import "./JobMarketPage.css";
 
@@ -13,25 +13,37 @@ export const JobMarketPage: React.FC = () => {
     setIsAnalyzingJob(true);
 
     const timeoutId = setTimeout(() => {
-      alert("Error: Server took too long to respond (15s timeout).");
+      alert("Error: Server took too long to respond (30s timeout).");
       setIsAnalyzingJob(false);
-    }, 15000);
+    }, 30000);
 
     try {
       const gapNodeIds = await analyzeGap(job.id);
       clearTimeout(timeoutId);
 
+      // Check if the user is new (no completed skills)
+      const analysis = getLastGapAnalysis();
+      if (analysis?.isNewUser) {
+        alert(
+          "Lưu ý: Kết quả dựa trên lộ trình bạn đã hoàn thành trong app. " +
+          "Bạn có thể đã có kinh nghiệm trước đó chưa được tính."
+        );
+      }
+
       localStorage.setItem("activeGapAnalysis", JSON.stringify({
         roadmapPath: job.roadmapPath,
         jobTitle: job.title,
         companyName: job.companyName,
-        gapNodes: gapNodeIds
+        gapNodes: gapNodeIds,
+        matchScore: analysis?.matchScore,
+        summary: analysis?.summary,
       }));
 
       navigate(job.roadmapPath);
-    } catch (e) {
+    } catch (e: any) {
       clearTimeout(timeoutId);
-      alert("Error analyzing gap");
+      const errorMsg = e?.response?.data?.message || e?.message || "Error analyzing gap";
+      alert(`Gap analysis failed: ${errorMsg}`);
       setIsAnalyzingJob(false);
     }
   };

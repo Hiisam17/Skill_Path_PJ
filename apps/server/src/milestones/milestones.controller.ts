@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UseFilters } from '@nestjs/common';
+import { Controller, Get, Param, Post, UseFilters, ParseIntPipe } from '@nestjs/common';
 import { MilestonesService } from './milestones.service';
 
 @Controller('dashboard')
@@ -22,4 +22,5 @@ export class MilestonesController {
   async updateActivity(@Param('userId') userId: string) {
     return await this.milestonesService.updateUserActivity(userId);
   }
+
 }

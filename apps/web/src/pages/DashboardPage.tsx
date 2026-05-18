@@ -119,7 +119,7 @@ export const DashboardPage: React.FC = () => {
   const [multiProgress, setMultiProgress] = useState<MultiProgress | null>(null);
   const [selectedRoadmapIdx, setSelectedRoadmapIdx] = useState<number | null>(null); // null = overall
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [localSkills, setLocalSkills] = useState<any[]>([]);
+
   const [marketStats, setMarketStats] = useState<any[]>([]);
   
    // Gamification State
@@ -183,14 +183,13 @@ export const DashboardPage: React.FC = () => {
         
         const pStats = api.get(`/dashboard/stats/${userId}`);
         const pProgress = api.get("/users/progress");
-        const pSkills = api.get("/dashboard/skills");
         const pMarket = Promise.resolve([
           { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
           { name: "Rust", value: "+8.7%", color: "purple" as const },
           { name: "Next.js", value: "+22.5%", color: "orange" as const },
         ]);
 
-        const results = await Promise.allSettled([pStats, pProgress, pSkills, pMarket]);
+        const results = await Promise.allSettled([pStats, pProgress, pMarket]);
 
         // Handle Gamification Stats
         if (results[0].status === "fulfilled") {
@@ -229,14 +228,9 @@ export const DashboardPage: React.FC = () => {
           });
         }
 
-        // Handle Skills
-        if (results[2].status === "fulfilled") {
-          setLocalSkills(results[2].value.data);
-        }
-
         // Handle Market Stats
-        if (results[3].status === "fulfilled") {
-          setMarketStats(results[3].value);
+        if (results[2].status === "fulfilled") {
+          setMarketStats(results[2].value);
         }
 
       } catch (error) {
@@ -249,24 +243,7 @@ export const DashboardPage: React.FC = () => {
     fetchDashboardData();
   }, [userId]);
 
-  /** Handles skill completion with optimistic update and API sync. */
-  const handleCompleteSkill = async (skillId: number) => {
-    const previousProgress = multiProgress;
-    const previousSkills = [...localSkills];
 
-    setLocalSkills(prev => prev.map(s =>
-      s.id === skillId ? { ...s, isCompleted: true } : s
-    ));
-
-    try {
-      await api.post(`/skills/${skillId}/complete`);
-    } catch (error) {
-      console.error('Failed to save progress:', error);
-      setMultiProgress(previousProgress);
-      setLocalSkills(previousSkills);
-      alert('Connection error! Please try again.');
-    }
-  };
 
 
   /* ── Determine what to show in the ring ── */
@@ -301,7 +278,7 @@ export const DashboardPage: React.FC = () => {
           <header className="dashboard-header">
             <div className="dashboard-header-left">
               <h2>Dashboard</h2>
-              <p>Welcome back, Architect. Your next milestone is 1.2k XP away.</p>
+              <p>Welcome back, {user?.fullName || "Architect"}. Let's continue your learning journey.</p>
             </div>
             <div className="streak-badge">
               <span>🔥</span>
@@ -472,41 +449,7 @@ export const DashboardPage: React.FC = () => {
             ) : null}
           </section>
 
-          {/* ── Recommended Skills ── */}
-          <section className="skills-section">
-            <div className="skills-section-header">
-              <div className="skills-section-header-left">
-                <span className="section-label">UP NEXT</span>
-                <h3>Recommended Skills</h3>
-              </div>
-              <Link to="/career-paths" className="explore-tree-btn">
-                Explore Tree
-              </Link>
-            </div>
 
-            <div className="skills-grid">
-              {localSkills.map((skill) => (
-                <div key={skill.id} className="skill-card">
-                  <div className="skill-card-icon">{skill.icon}</div>
-                  <h4 className="skill-card-title">{skill.title}</h4>
-                  <p className="skill-card-desc">{skill.desc}</p>
-                  <div className="skill-card-bottom">
-                    <span className="skill-xp-badge">{skill.xp} XP</span>
-                    <button
-                      onClick={() => handleCompleteSkill(skill.id)}
-                      disabled={skill.isCompleted}
-                      className={`skill-start-btn transition-all duration-300 ${skill.isCompleted
-                        ? "bg-[#4cd7f6] text-[#171f33] opacity-80 cursor-not-allowed font-bold"
-                        : ""
-                        }`}
-                    >
-                      {skill.isCompleted ? "✓ Completed" : "Start"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
 
 
         </div>

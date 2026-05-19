@@ -36,17 +36,17 @@ export class RoadmapsService {
   }
 
   /**
-   * Finds a single roadmap by its ID.
+   * Finds a single roadmap by its title.
    *
    * @throws NotFoundException if the roadmap does not exist.
    */
-  async findById(roadmapId: number): Promise<RoadmapDto> {
+  async findByTitle(title: string): Promise<RoadmapDto> {
     const roadmap = await this.prisma.roadmap.findUnique({
-      where: { id: roadmapId },
+      where: { title },
     });
 
     if (!roadmap) {
-      throw new NotFoundException(`Roadmap ${roadmapId} not found`);
+      throw new NotFoundException(`Roadmap ${title} not found`);
     }
 
     return this.toDto(roadmap);
@@ -93,9 +93,9 @@ export class RoadmapsService {
    * Transforms a roadmap into React Flow nodes and edges for frontend visualization.
    * Sections become primary nodes connected vertically; skills branch out from each section.
    */
-  async getRoadmapFlow(roadmapId: number, userId?: string) {
+  async getRoadmapFlow(title: string, userId?: string) {
     const roadmap = await this.prisma.roadmap.findUnique({
-      where: { id: roadmapId },
+      where: { title },
       include: {
         sections: {
           orderBy: { sortOrder: 'asc' },
@@ -116,7 +116,7 @@ export class RoadmapsService {
     });
 
     if (!roadmap) {
-      throw new NotFoundException(`Roadmap ${roadmapId} not found`);
+      throw new NotFoundException(`Roadmap ${title} not found`);
     }
 
     const nodes: any[] = [];

@@ -13,10 +13,27 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({
   children,
 }: ProtectedRouteProps) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // While we're checking the token or fetching user data on refresh,
+  // show a loading screen to avoid premature redirection.
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        background: '#0b1326',
+        color: '#dae2fd'
+      }}>
+        Loading session...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

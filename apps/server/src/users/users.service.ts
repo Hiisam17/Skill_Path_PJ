@@ -12,29 +12,28 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Store user's selected career path and roadmap choice
+   * Store user's selected roadmap choice
    * Creates association between user and their chosen roadmap for learning tracking
    *
    * @param userId - UUID of authenticated user
    * @param selectRoadmapDto - Contains careerPathId to associate with user
-   * @returns void
+   * @returns Selected roadmap id and title for frontend navigation
    * @throws NotFoundException if user or careerPath not found
    *
    * Example:
-   * await usersService.selectRoadmap('user-id', { careerPathId: 'backend-path-id' })
+   * await usersService.selectRoadmap('user-id', { careerPathId: '1' })
    */
   async selectRoadmap(
     userId: string,
     selectRoadmapDto: SelectRoadmapDto,
-  ): Promise<number> {
+  ): Promise<{ id: number; title: string }> {
     const careerPathId = parseInt(selectRoadmapDto.careerPathId);
     if (isNaN(careerPathId)) throw new Error('Invalid careerPathId');
 
-    // Find the first system roadmap for this career path
     const roadmaps = await this.prisma.roadmap.findMany({
       where: {
-        careerPathId: careerPathId,
-        userId: null, // System roadmap
+        careerPathId,
+        userId: null,
       },
       orderBy: { id: 'asc' },
       take: 1,
@@ -44,7 +43,8 @@ export class UsersService {
       throw new Error('No roadmap found for this career path');
     }
 
-    const roadmapId = roadmaps[0].id;
+    const roadmap = roadmaps[0];
+    const roadmapId = roadmap.id;
 
     // Create tracking record if it doesn't exist
     await this.prisma.userRoadmap.upsert({
@@ -63,7 +63,30 @@ export class UsersService {
       }
     });
 
-    return roadmapId;
+    return { id: roadmap.id, title: roadmap.title };
+  }
+
+
+  /**
+   * Update user profile information
+   *
+   * @param userId - UUID of authenticated user
+   * @param updateProfileDto - Contains profile fields to update
+   * @returns Updated profile
+   */
+  async updateProfile(
+    userId: string,
+    updateProfileDto: {
+      fullName?: string;
+      avatarUrl?: string;
+      bio?: string;
+      githubLink?: string;
+    },
+  ) {
+    return this.prisma.profile.update({
+      where: { userId },
+      data: updateProfileDto,
+    });
   }
 
   /**

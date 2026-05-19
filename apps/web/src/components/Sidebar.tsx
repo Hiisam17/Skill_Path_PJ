@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import ProfileModal from "./profile/ProfileModal";
 import "./Sidebar.css";
 
 const HomeIcon = () => (
@@ -18,9 +20,10 @@ const JobMarketIcon = () => (
   </svg>
 );
 
-const SettingsIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="10" cy="10" r="3" /><path d="M10 1.5v2M10 16.5v2M3.15 3.15l1.42 1.42M15.43 15.43l1.42 1.42M1.5 10h2M16.5 10h2M3.15 16.85l1.42-1.42M15.43 4.57l1.42-1.42" />
+const UserEditIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );
 const LogoutIcon = () => (
@@ -31,18 +34,19 @@ const LogoutIcon = () => (
 
 const navItems = [
   { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
-  { path: "/roadmaps/2", label: "Roadmap", icon: <RoadmapIcon /> },
+  { path: "/explore", label: "Roadmap", icon: <RoadmapIcon /> },
   { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },
 ];
 
 export default function Sidebar() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
         <div className="sidebar-brand">
-          <NavLink to="/career-paths" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <NavLink to="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
             <h1>DevPath</h1>
           </NavLink>
         </div>
@@ -65,9 +69,12 @@ export default function Sidebar() {
 
       <div className="sidebar-bottom">
         <div className="sidebar-bottom-links">
-          <a href="#settings">
-            <span className="nav-icon"><SettingsIcon /></span>
-            Settings
+          <a href="#" onClick={(e) => {
+            e.preventDefault();
+            setIsProfileModalOpen(true);
+          }}>
+            <span className="nav-icon"><UserEditIcon /></span>
+            Edit Profile
           </a>
           <a href="#" onClick={(e) => {
             e.preventDefault();
@@ -79,13 +86,31 @@ export default function Sidebar() {
         </div>
 
         <div className="sidebar-user-card">
-          <div className="sidebar-avatar">JD</div>
+          <div className="sidebar-avatar">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.fullName || "User"} />
+            ) : (
+              (user?.fullName || user?.email || "U")
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)
+            )}
+          </div>
           <div className="sidebar-user-info">
-            <div className="sidebar-user-name">Architect Navigator</div>
-            <div className="sidebar-user-level">Lvl 24 Dev</div>
+            <div className="sidebar-user-name">
+              {user?.fullName || user?.email?.split("@")[0] || "User"}
+            </div>
+            <div className="sidebar-user-level">{user?.bio || "Học viên xuất sắc"}</div>
           </div>
         </div>
       </div>
+
+      <ProfileModal 
+        isOpen={isProfileModalOpen} 
+        onClose={() => setIsProfileModalOpen(false)} 
+      />
     </aside>
   );
 }

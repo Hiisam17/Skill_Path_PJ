@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./DashboardPage.css";
 import { api } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
+import MilestonesModal from "@/components/milestones/MilestonesModal";
 
 /* ── Types ── */
 interface RoadmapProgress {
@@ -19,6 +21,19 @@ interface MultiProgress {
     percentage: number;
   };
   roadmaps: RoadmapProgress[];
+}
+
+interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  lastActivityAt: string | null;
+}
+
+interface MilestoneData {
+  id: number;
+  name: string;
+  icon: string;
+  description: string;
 }
 
 const ArrowUpIcon = () => (
@@ -104,16 +119,26 @@ export const DashboardPage: React.FC = () => {
   const [multiProgress, setMultiProgress] = useState<MultiProgress | null>(null);
   const [selectedRoadmapIdx, setSelectedRoadmapIdx] = useState<number | null>(null); // null = overall
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [localSkills, setLocalSkills] = useState<any[]>([]);
-  const [milestones, setMilestones] = useState<any[]>([]);
+
   const [marketStats, setMarketStats] = useState<any[]>([]);
+  
+   // Gamification State
+  const [streakData, setStreakData] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastActivityAt: null });
+  const [unlockedMilestones, setUnlockedMilestones] = useState<MilestoneData[]>([]);
+  const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false);
+
+  const { user } = useAuth();
+  const userId = user?.id;
 
   useEffect(() => {
+    if (!userId) return;
+
     const fetchDashboardData = async () => {
       setIsLoading(true);
 
       const localRoadmaps: RoadmapProgress[] = [];
 
+      // Khôi phục logic đọc localStorage
       try {
         const saved = localStorage.getItem("frontendRoadmapProgress");
         if (saved) {
@@ -152,42 +177,45 @@ export const DashboardPage: React.FC = () => {
         }
       } catch { /* ignore */ }
 
-      const p1 = api.get("/users/progress");
-      const p2 = api.get("/dashboard/skills");
-      const p3 = Promise.resolve([
-        { icon: "🚀", label: "First Step", variant: "unlocked-cyan" as const },
-        { icon: "🌱", label: "Beginner", variant: "unlocked-purple" as const },
-        { icon: "🧭", label: "Explorer", variant: "unlocked-orange" as const },
-        { icon: "🏛️", label: "Architect", variant: "locked" as const },
-      ]);
-      const p4 = Promise.resolve([
-        { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
-        { name: "Rust", value: "+8.7%", color: "purple" as const },
-        { name: "Next.js", value: "+22.5%", color: "orange" as const },
-      ]);
+      try {
+        // BƯỚC 1: Gọi API điểm danh
+        await api.post(`/dashboard/activity/${userId}`);
+        
+        const pStats = api.get(`/dashboard/stats/${userId}`);
+        const pProgress = api.get("/users/progress");
+        const pMarket = Promise.resolve([
+          { name: "TypeScript", value: "+14.2%", color: "cyan" as const },
+          { name: "Rust", value: "+8.7%", color: "purple" as const },
+          { name: "Next.js", value: "+22.5%", color: "orange" as const },
+        ]);
 
-      const results = await Promise.allSettled([p1, p2, p3, p4]);
+        const results = await Promise.allSettled([pStats, pProgress, pMarket]);
 
-      // Handle Progress (p1)
-      if (results[0].status === "fulfilled") {
-        const data: MultiProgress = results[0].value.data;
-        for (const lr of localRoadmaps) {
-          if (lr.completedSkills > 0) {
-            const nameKey = lr.roadmapName.toLowerCase();
-            const alreadyInApi = data.roadmaps.some(r => r.roadmapName.toLowerCase().includes(nameKey));
-            if (!alreadyInApi) {
-              data.roadmaps.push(lr);
-              data.overall.completedSkills += lr.completedSkills;
-              data.overall.totalSkills += lr.totalSkills;
+        // Handle Gamification Stats
+        if (results[0].status === "fulfilled") {
+          setStreakData(results[0].value.data.streakData);
+          setUnlockedMilestones(results[0].value.data.unlockedMilestones);
+        }
+
+        // Handle Progress & Merge with Local
+        if (results[1].status === "fulfilled") {
+          const data: MultiProgress = results[1].value.data;
+          for (const lr of localRoadmaps) {
+            if (lr.completedSkills > 0) {
+              const nameKey = lr.roadmapName.toLowerCase();
+              const alreadyInApi = data.roadmaps.some(r => r.roadmapName.toLowerCase().includes(nameKey));
+              if (!alreadyInApi) {
+                data.roadmaps.push(lr);
+                data.overall.completedSkills += lr.completedSkills;
+                data.overall.totalSkills += lr.totalSkills;
+              }
             }
           }
-        }
-        if (data.overall.totalSkills > 0) {
-          data.overall.percentage = Math.round((data.overall.completedSkills / data.overall.totalSkills) * 100);
-        }
-        setMultiProgress(data);
-      } else {
-        if (localRoadmaps.length > 0) {
+          if (data.overall.totalSkills > 0) {
+            data.overall.percentage = Math.round((data.overall.completedSkills / data.overall.totalSkills) * 100);
+          }
+          setMultiProgress(data);
+        } else if (localRoadmaps.length > 0) {
           const totalCompleted = localRoadmaps.reduce((s, r) => s + r.completedSkills, 0);
           const totalSkills = localRoadmaps.reduce((s, r) => s + r.totalSkills, 0);
           setMultiProgress({
@@ -198,55 +226,24 @@ export const DashboardPage: React.FC = () => {
             },
             roadmaps: localRoadmaps,
           });
-        } else {
-          setMultiProgress({
-            overall: { completedSkills: 0, totalSkills: 0, percentage: 0 },
-            roadmaps: [],
-          });
         }
-      }
 
-      // Handle Skills (p2)
-      if (results[1].status === "fulfilled") {
-        setLocalSkills(results[1].value.data);
-      } else {
-        console.error("Failed to fetch skills data:", results[1].reason);
-      }
+        // Handle Market Stats
+        if (results[2].status === "fulfilled") {
+          setMarketStats(results[2].value);
+        }
 
-      // Handle Milestones (p3)
-      if (results[2].status === "fulfilled") {
-        setMilestones(results[2].value);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setIsLoading(false);
       }
-
-      // Handle Market Stats (p4)
-      if (results[3].status === "fulfilled") {
-        setMarketStats(results[3].value);
-      }
-
-      setIsLoading(false);
     };
 
     fetchDashboardData();
-  }, []);
+  }, [userId]);
 
-  /** Handles skill completion with optimistic update and API sync. */
-  const handleCompleteSkill = async (skillId: number) => {
-    const previousProgress = multiProgress;
-    const previousSkills = [...localSkills];
 
-    setLocalSkills(prev => prev.map(s =>
-      s.id === skillId ? { ...s, isCompleted: true } : s
-    ));
-
-    try {
-      await api.post(`/skills/${skillId}/complete`);
-    } catch (error) {
-      console.error('Failed to save progress:', error);
-      setMultiProgress(previousProgress);
-      setLocalSkills(previousSkills);
-      alert('Connection error! Please try again.');
-    }
-  };
 
 
   /* ── Determine what to show in the ring ── */
@@ -281,11 +278,11 @@ export const DashboardPage: React.FC = () => {
           <header className="dashboard-header">
             <div className="dashboard-header-left">
               <h2>Dashboard</h2>
-              <p>Welcome back, Architect. Your next milestone is 1.2k XP away.</p>
+              <p>Welcome back, {user?.fullName || "Architect"}. Let's continue your learning journey.</p>
             </div>
             <div className="streak-badge">
               <span>🔥</span>
-              <span>18 Day Streak</span>
+              <span>{streakData.currentStreak} Day Streak</span>
             </div>
           </header>
 
@@ -315,15 +312,27 @@ export const DashboardPage: React.FC = () => {
             <div className="bento-card card-milestones">
               <div className="card-header">
                 <span className="card-header-label">EARNED MILESTONES</span>
-                <Link to="/career-paths" className="card-header-link">View All</Link>
+                <button 
+                  onClick={() => setIsMilestonesModalOpen(true)} 
+                  className="card-header-link"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  View All
+                </button>
               </div>
               <div className="milestones-row">
-                {milestones.map((m) => (
-                  <div key={m.label} className={`milestone-badge ${m.variant}`}>
-                    <div className="milestone-icon-circle">{m.icon}</div>
-                    <span className="milestone-label">{m.label}</span>
-                  </div>
-                ))}
+                {unlockedMilestones.length > 0 ? (
+                  unlockedMilestones.map((m) => (
+                    <div key={m.id} className="milestone-badge unlocked-cyan">
+                      <div className="milestone-icon-circle">{m.icon}</div>
+                      <span className="milestone-label">{m.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-sm italic py-4">
+                    Bạn chưa có huy hiệu nào. Hãy tiếp tục học tập để mở khóa nhé!
+                  </p>
+                )}
               </div>
             </div>
 
@@ -390,7 +399,7 @@ export const DashboardPage: React.FC = () => {
                         borderColor: isActive ? color.border : undefined,
                         background: isActive ? color.bg : undefined,
                       }}
-                      onClick={() => navigate('/roadmaps/' + rm.roadmapId)}
+                      onClick={() => navigate('/roadmaps/' + encodeURIComponent(rm.roadmapName))}
                     >
                       <div className="roadmap-card-top">
                         <span className="roadmap-card-icon">{icon}</span>
@@ -414,13 +423,17 @@ export const DashboardPage: React.FC = () => {
                           }}
                         />
                       </div>
-                      <div 
-                        className={`mt-4 text-sm font-bold text-center transition-opacity flex items-center justify-center gap-1 ${isActive ? "opacity-100" : "opacity-0 h-0 overflow-hidden mt-0"}`}
-                        style={{ color: color.accent }}
+                      <button 
+                        className={`mt-4 w-full text-sm font-bold text-center transition-opacity flex items-center justify-center gap-1 ${isActive ? "opacity-100" : "opacity-0 h-0 overflow-hidden mt-0"}`}
+                        style={{ color: color.accent, background: 'transparent', border: 'none', cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/roadmaps/' + encodeURIComponent(rm.roadmapName));
+                        }}
                       >
                         Continue Learning
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                      </div>
+                      </button>
                     </div>
                   );
                 })}
@@ -429,48 +442,14 @@ export const DashboardPage: React.FC = () => {
               <div className="roadmaps-empty">
                 <span className="roadmaps-empty-icon">📭</span>
                 <p>You haven't started any roadmaps yet.</p>
-                <Link to="/career-paths" className="roadmaps-empty-cta">
+                <Link to="/explore" className="roadmaps-empty-cta">
                   Explore Career Paths →
                 </Link>
               </div>
             ) : null}
           </section>
 
-          {/* ── Recommended Skills ── */}
-          <section className="skills-section">
-            <div className="skills-section-header">
-              <div className="skills-section-header-left">
-                <span className="section-label">UP NEXT</span>
-                <h3>Recommended Skills</h3>
-              </div>
-              <Link to="/career-paths" className="explore-tree-btn">
-                Explore Tree
-              </Link>
-            </div>
 
-            <div className="skills-grid">
-              {localSkills.map((skill) => (
-                <div key={skill.id} className="skill-card">
-                  <div className="skill-card-icon">{skill.icon}</div>
-                  <h4 className="skill-card-title">{skill.title}</h4>
-                  <p className="skill-card-desc">{skill.desc}</p>
-                  <div className="skill-card-bottom">
-                    <span className="skill-xp-badge">{skill.xp} XP</span>
-                    <button
-                      onClick={() => handleCompleteSkill(skill.id)}
-                      disabled={skill.isCompleted}
-                      className={`skill-start-btn transition-all duration-300 ${skill.isCompleted
-                        ? "bg-[#4cd7f6] text-[#171f33] opacity-80 cursor-not-allowed font-bold"
-                        : ""
-                        }`}
-                    >
-                      {skill.isCompleted ? "✓ Completed" : "Start"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
 
 
         </div>
@@ -485,6 +464,12 @@ export const DashboardPage: React.FC = () => {
           <p className="footer-copyright">© 2024 DevPath. The Architectural Navigator.</p>
         </footer>
       </main>
+
+      <MilestonesModal 
+        isOpen={isMilestonesModalOpen} 
+        onClose={() => setIsMilestonesModalOpen(false)} 
+        milestones={unlockedMilestones}
+      />
     </div>
   );
 };

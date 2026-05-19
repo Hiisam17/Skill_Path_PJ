@@ -8,20 +8,33 @@ describe('RoadmapsController', () => {
   let roadmapsService: RoadmapsService;
   let progressService: ProgressService;
 
-  const mockRoadmapsService = {
-    findAllCareerPaths: jest.fn(),
-    getSystemRoadmapsByCareerPath: jest.fn(),
-    findAll: jest.fn(),
-    findByCareerPath: jest.fn(),
-    getRoadmapFlow: jest.fn(),
-    findById: jest.fn(),
+  let mockRoadmapsService: {
+    findAllCareerPaths: jest.Mock;
+    getSystemRoadmapsByCareerPath: jest.Mock;
+    findAll: jest.Mock;
+    findByCareerPath: jest.Mock;
+    getRoadmapFlow: jest.Mock;
+    findByTitle: jest.Mock;
   };
 
-  const mockProgressService = {
-    getDemoUserId: jest.fn().mockResolvedValue('demo-id'),
+  let mockProgressService: {
+    getDemoUserId: jest.Mock;
   };
 
   beforeEach(async () => {
+    mockRoadmapsService = {
+      findAllCareerPaths: jest.fn().mockResolvedValue([]),
+      getSystemRoadmapsByCareerPath: jest.fn(),
+      findAll: jest.fn(),
+      findByCareerPath: jest.fn(),
+      getRoadmapFlow: jest.fn().mockResolvedValue({}),
+      findByTitle: jest.fn(),
+    };
+
+    mockProgressService = {
+      getDemoUserId: jest.fn().mockResolvedValue('demo-id'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RoadmapsController],
       providers: [
@@ -54,9 +67,21 @@ describe('RoadmapsController', () => {
 
   describe('getRoadmapFlow', () => {
     it('should fetch demo user ID and call roadmapsService.getRoadmapFlow', async () => {
-      await controller.getRoadmapFlow(1);
+      await controller.getRoadmapFlow('javascript');
       expect(progressService.getDemoUserId).toHaveBeenCalled();
-      expect(roadmapsService.getRoadmapFlow).toHaveBeenCalledWith(1, 'demo-id');
+      expect(roadmapsService.getRoadmapFlow).toHaveBeenCalledWith('javascript', 'demo-id');
+    });
+  });
+
+  describe('findByTitle', () => {
+    it('should call roadmapsService.findByTitle with the route title', async () => {
+      const roadmap = { id: '1', careerPathId: '10', level: '1' };
+      mockRoadmapsService.findByTitle.mockResolvedValue(roadmap);
+
+      const result = await controller.findByTitle('javascript');
+
+      expect(result).toBe(roadmap);
+      expect(roadmapsService.findByTitle).toHaveBeenCalledWith('javascript');
     });
   });
 });

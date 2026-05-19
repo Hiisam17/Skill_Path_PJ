@@ -7,7 +7,7 @@ describe('CareerPathsService', () => {
   let prisma: PrismaService;
 
   const mockPrismaService = {
-    careerPath: {
+    roadmap: {
       findMany: jest.fn(),
     },
   };
@@ -37,27 +37,34 @@ describe('CareerPathsService', () => {
         { id: 1, name: 'Backend Developer', description: 'Logic & database' },
         { id: 2, name: 'Frontend Developer', description: 'Interface & experience' },
       ];
-      mockPrismaService.careerPath.findMany.mockResolvedValue(mockResult);
+      mockPrismaService.roadmap.findMany.mockResolvedValue(
+        mockResult.map((careerPath) => ({
+          id: careerPath.id,
+          title: careerPath.name,
+          description: careerPath.description,
+        })),
+      );
 
       const result = await service.findAll();
 
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('Backend Developer');
       expect(result[1].id).toBe("2");
-      expect(mockPrismaService.careerPath.findMany).toHaveBeenCalledWith({
-        orderBy: { name: 'asc' },
+      expect(mockPrismaService.roadmap.findMany).toHaveBeenCalledWith({
+        where: { userId: null },
+        orderBy: { title: 'asc' },
       });
     });
 
     it('should return an empty array if no records found', async () => {
-      mockPrismaService.careerPath.findMany.mockResolvedValue([]);
+      mockPrismaService.roadmap.findMany.mockResolvedValue([]);
       const result = await service.findAll();
       expect(result).toEqual([]);
     });
 
     it('should map null description to empty string', async () => {
-      mockPrismaService.careerPath.findMany.mockResolvedValue([
-        { id: 3, name: 'DevOps', description: null }
+      mockPrismaService.roadmap.findMany.mockResolvedValue([
+        { id: 3, title: 'DevOps', description: null }
       ]);
       const result = await service.findAll();
       expect(result[0].description).toBe('');

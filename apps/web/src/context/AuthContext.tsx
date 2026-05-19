@@ -14,6 +14,7 @@ interface AuthContextType {
   error: string | null;
   login: (loginDto: LoginDto) => Promise<void>;
   logout: () => void;
+  updateUser: (userData: Partial<UserDto>) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -29,16 +30,31 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<UserDto | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!getAuthToken());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(!!getAuthToken());
   const [error, setError] = useState<string | null>(null);
 
   // Restore auth session from localStorage on mount.
   useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      // TODO(auth): Validate token via GET /auth/me and populate user state.
-      console.log('User session found in localStorage');
-    }
+    const fetchUser = async () => {
+      const token = getAuthToken();
+      if (token) {
+        try {
+          setIsLoading(true);
+          const response = await api.get("/auth/me");
+          if (response.data && response.data.user) {
+            setUser(response.data.user);
+            setIsAuthenticated(true);
+          }
+        } catch (err) {
+          console.error("Failed to restore session:", err);
+          clearAuthToken();
+          setIsAuthenticated(false);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchUser();
   }, []);
 
   /**
@@ -81,12 +97,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
   };
 
+  /** Updates user profile data locally and optionally on server if needed. */
+  const updateUser = async (updatedData: Partial<UserDto>): Promise<void> => {
+    try {
+      const response = await api.patch("/users/profile", updatedData);
+      if (response.data) {
+        setUser(prev => prev ? { ...prev, ...response.data } : response.data);
+      }
+    } catch (err) {
+      console.error("Failed to update user profile:", err);
+      throw err;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
     error,
     login,
     logout,
+    updateUser,
     isAuthenticated,
   };
 

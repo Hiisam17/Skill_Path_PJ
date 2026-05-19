@@ -1,4 +1,4 @@
-import { type Edge } from 'reactflow';
+import { type Edge, MarkerType } from 'reactflow';
 import type { RoadmapNode } from '../types/roadmap';
 
 const SECTION_W = 250;
@@ -116,7 +116,13 @@ export const getLayoutedElements = (nodes: RoadmapNode[], edges: Edge[], canvasW
         sourceHandle: 'bottom',
         targetHandle: 'top',
         animated: false,
-        style: { stroke: '#4cd7f6', strokeWidth: Math.max(2, 6 - idx) }
+        style: { stroke: '#4cd7f6', strokeWidth: Math.max(2, 6 - idx) },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+          color: '#4cd7f6',
+        },
       };
     } else {
       const sectionIndex = sectionNodes.findIndex(n => n.id === edge.source);

@@ -64,7 +64,7 @@ function App() {
       >
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/job-market" element={<JobMarketPage />} />
-        <Route path="/roadmaps/:roadmapId" element={<SkillsTreePage />} />
+        <Route path="/roadmaps/:title" element={<SkillsTreePage />} />
         {/* <Route path="/frontend-roadmap" element={<FrontendRoadmapPage />} /> */}
         {/* <Route path="/javascript-roadmap" element={<JavaScriptSkillTreePage />} /> */}
       </Route>

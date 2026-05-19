@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SuggestedJob } from '../data/mockGaps';
-import { MOCK_JOBS } from '../data/mockGaps';
+import { fetchJobs } from '../services/gapService';
+import type { JobData } from '../services/gapService';
 import './JobSelector.css';
 
 interface JobSelectorProps {
@@ -9,15 +10,49 @@ interface JobSelectorProps {
 }
 
 export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing }) => {
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [jobs, setJobs] = useState<JobData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const selectedJob = MOCK_JOBS.find(j => j.id === selectedJobId);
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        const data = await fetchJobs();
+        setJobs(data);
+      } catch (error) {
+        console.error('Failed to fetch jobs:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadJobs();
+  }, []);
+
+  const selectedJob = jobs.find(j => j.id === selectedJobId);
 
   const handleAnalyzeClick = () => {
     if (selectedJob) {
-      onAnalyze(selectedJob);
+      // Map JobData to SuggestedJob for backward compatibility with the existing analyze function
+      onAnalyze({
+        id: String(selectedJob.id),
+        title: selectedJob.title,
+        companyName: selectedJob.company,
+        description: selectedJob.description,
+        roadmapPath: selectedJob.roadmapPath,
+        skills: selectedJob.skills,
+        location: selectedJob.location,
+        jobType: selectedJob.jobType,
+        requirements: selectedJob.requirements,
+        source: selectedJob.source,
+        sourceUrl: selectedJob.sourceUrl,
+        gapNodes: [], // Not used here, fetched by API
+      });
     }
   };
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-slate-400">Loading jobs from database...</div>;
+  }
 
   return (
     <div className="job-selector-container">
@@ -27,7 +62,7 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
       </div>
 
       <div className="job-selector-grid">
-        {MOCK_JOBS.map((job) => {
+        {jobs.map((job) => {
           const isSelected = selectedJobId === job.id;
           return (
             <div
@@ -43,12 +78,11 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
                 </div>
               )}
               <div className="job-card-header">
-                {job.logo && <img src={job.logo} alt={job.companyName} className="job-card-logo" />}
-                {job.isHot && <span className="job-card-badge">Hot</span>}
+                {/* Fallback to a placeholder icon or remove logo support if DB doesn't have it */}
               </div>
               <div className="job-card-info">
                 <h3>{job.title}</h3>
-                <p>{job.companyName}</p>
+                <p>{job.company}</p>
                 {job.location && <p className="text-xs text-slate-400 mt-1">{job.location}  • {job.jobType}</p>}
               </div>
             </div>
@@ -88,7 +122,7 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
           {isAnalyzing ? (
              <>
                <span className="spinner"></span>
-               Đang thân tích...
+               Đang phân tích...
              </>
           ) : (
             "Phân tích lộ trình cho tôi"

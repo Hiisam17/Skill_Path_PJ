@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, UseGuards, Request } from '@nestjs/common';
 import type { MultiRoadmapProgressDto, SelectRoadmapDto } from '../types';
 import { ProgressService } from '../progress/progress.service';
 import { UsersService } from './users.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Request as ExpressRequest } from 'express';
 
 @Controller('users')
 export class UsersController {
@@ -17,9 +19,9 @@ export class UsersController {
 	}
 
 	@Post('select-roadmap')
-	async selectRoadmap(@Body() dto: SelectRoadmapDto): Promise<{ roadmapId: number }> {
+	async selectRoadmap(@Body() dto: SelectRoadmapDto): Promise<{ roadmapId: number; roadmapTitle: string }> {
 		const userId = await this.progressService.getDemoUserId();
-		const roadmapId = await this.usersService.selectRoadmap(userId, dto);
-		return { roadmapId };
+		const roadmap = await this.usersService.selectRoadmap(userId, dto);
+		return { roadmapId: roadmap.id, roadmapTitle: roadmap.title };
 	}
 }

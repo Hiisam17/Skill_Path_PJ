@@ -41,7 +41,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
       - Familiar with VueJS or ReactJS is a plus
       - Good communication and teamwork skills
     `,
-    roadmapPath: "/roadmaps/2",
+    roadmapPath: "/roadmaps/javascript",
     gapNodes: ["ASP.NET", "React", ".NET", "C#", "SQL"],
     source: "ITviec",
     sourceUrl: "https://itviec.com/it-jobs/back-end",
@@ -70,7 +70,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
       - Interest in fintech / securities domain
       - Ability to work in a fast-paced environment
     `,
-    roadmapPath: "/roadmaps/2",
+    roadmapPath: "/roadmaps/javascript",
     gapNodes: ["Java", "Maven", "Spring Boot", "Relational Databases", "SQL"],
     source: "ITviec",
     sourceUrl: "https://itviec.com/it-jobs/back-end",
@@ -99,7 +99,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
       - Business-level English communication
       - Experience with AI integration is a plus
     `,
-    roadmapPath: "/roadmaps/2",
+    roadmapPath: "/roadmaps/javascript",
     gapNodes: ["Go", "AWS", "Software Testing"],
     source: "ITviec",
     sourceUrl: "https://itviec.com/it-jobs/back-end",
@@ -128,7 +128,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
       - Understanding of MVC architecture
       - Passion for clean code and testing
     `,
-    roadmapPath: "/roadmaps/2",
+    roadmapPath: "/roadmaps/javascript",
     gapNodes: ["Ruby", "Ruby on Rails", "PostgreSQL", "Relational Databases", "REST"],
     source: "ITviec",
     sourceUrl: "https://itviec.com/it-jobs/back-end",
@@ -157,7 +157,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
       - Experience with Git and collaborative workflows
       - Knowledge of authentication patterns (JWT, OAuth) is a plus
     `,
-    roadmapPath: "/roadmaps/2",
+    roadmapPath: "/roadmaps/javascript",
     gapNodes: ["Node.js", "Express", "PostgreSQL", "REST", "Git"],
     source: "ITviec",
     sourceUrl: "https://itviec.com/it-jobs/back-end",

@@ -11,6 +11,7 @@ import { ProgressModule } from './progress/progress.module';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { RoadmapSectionsModule } from './roadmap-sections/roadmap-sections.module';
+import { JobsModule } from './jobs/jobs.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MilestonesModule } from './milestones/milestones.module';
 @Module({
@@ -28,7 +29,6 @@ import { MilestonesModule } from './milestones/milestones.module';
     SkillsModule,
     ProgressModule,
     RoadmapSectionsModule,
-    MilestonesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

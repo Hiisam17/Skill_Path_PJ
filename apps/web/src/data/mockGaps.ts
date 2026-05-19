@@ -1,4 +1,4 @@
-﻿export interface SuggestedJob {
+export interface SuggestedJob {
   id: string;
   title: string;
   companyName: string;
@@ -18,7 +18,7 @@
 
 export const MOCK_JOBS: SuggestedJob[] = [
   {
-    id: "itviec-001",
+    id: "1",
     title: "Backend Developer (.NET / ASP.NET)",
     companyName: "GrapeCity",
     location: "Hà Nội",
@@ -49,7 +49,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
     sourceUrl: "https://itviec.com/it-jobs/back-end",
   },
   {
-    id: "itviec-002",
+    id: "2",
     title: "Backend Developer (Java / Spring / Finance)",
     companyName: "Goline Corporation",
     location: "Hà Nội",
@@ -80,7 +80,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
     sourceUrl: "https://itviec.com/it-jobs/back-end",
   },
   {
-    id: "itviec-003",
+    id: "3",
     title: "Backend Developer (Golang / @WS / AI)",
     companyName: "ANDPAD VietNam Co., Ltd",
     location: "Hồ Chí Minh / Hà Nội",
@@ -111,7 +111,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
     sourceUrl: "https://itviec.com/it-jobs/back-end",
   },
   {
-    id: "itviec-004",
+    id: "4",
     title: "Backend Developer (Ruby on Rails / PostgreSQL)",
     companyName: "LIFULL Tech Vietnam",
     location: "Hồ Chí Minh",
@@ -142,7 +142,7 @@ export const MOCK_JOBS: SuggestedJob[] = [
     sourceUrl: "https://itviec.com/it-jobs/back-end",
   },
   {
-    id: "itviec-005",
+    id: "5",
     title: "Backend Developer (NodeJS / PostgreSQL / ExpressJS)",
     companyName: "OrgScale Recruitment",
     location: "Hà Nội",

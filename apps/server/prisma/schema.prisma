@@ -93,6 +93,7 @@ enum SkillLabel {
 model Skill {
   id           Int        @id @default(autoincrement())
   name         String     @unique
+  nodeId       String?    @unique @map("node_id")
   description  String?    @db.Text
   levelId      Int?       @map("level_id")
   canonicalUrl String?    @map("canonical_url")

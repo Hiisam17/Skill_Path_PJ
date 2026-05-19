@@ -390,7 +390,7 @@ export const DashboardPage: React.FC = () => {
                         borderColor: isActive ? color.border : undefined,
                         background: isActive ? color.bg : undefined,
                       }}
-                      onClick={() => navigate('/roadmaps/' + rm.roadmapId)}
+                      onClick={() => navigate('/roadmaps/' + encodeURIComponent(rm.roadmapName))}
                     >
                       <div className="roadmap-card-top">
                         <span className="roadmap-card-icon">{icon}</span>

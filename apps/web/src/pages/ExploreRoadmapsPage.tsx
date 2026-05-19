@@ -124,7 +124,7 @@ export const ExploreRoadmapsPage = () => {
     setSelectingId(careerPathId)
     try {
       const res = await apiClient.post('/users/select-roadmap', { careerPathId })
-      navigate(`/roadmaps/${res.data.roadmapId}`)
+      navigate(`/roadmaps/${encodeURIComponent(res.data.roadmapTitle)}`)
     } catch {
       setSelectingId(null)
     }

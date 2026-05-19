@@ -1,5 +1,83 @@
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { CheckCircle2, Clock, XCircle, Search, Star, GitBranch, Infinity as InfinityIcon } from 'lucide-react';
+import {
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  GitBranch,
+  Infinity as InfinityIcon,
+  Layers,
+  Search,
+  Sparkles,
+  Star,
+  Trophy,
+  XCircle,
+  type LucideIcon,
+} from 'lucide-react';
+
+type LabelType =
+  | 'RECOMMENDED'
+  | 'ALTERNATIVE'
+  | 'ANYTIME'
+  | 'BEGINNER'
+  | 'INTERMEDIATE'
+  | 'ADVANCED'
+  | 'OPTIONAL'
+  | 'STANDARD';
+
+type VisibleLabelType = Exclude<LabelType, 'STANDARD'>;
+
+type LabelTypeConfig = {
+  icon: LucideIcon;
+  title: string;
+  iconClassName: string;
+  borderStyleClass?: string;
+  opacityClass?: string;
+};
+
+const LABEL_TYPE_UI: Record<VisibleLabelType, LabelTypeConfig> = {
+  RECOMMENDED: {
+    icon: Star,
+    title: 'Khuyên dùng',
+    iconClassName: 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)] fill-purple-400/20',
+  },
+  ALTERNATIVE: {
+    icon: GitBranch,
+    title: 'Lựa chọn thay thế',
+    iconClassName: 'text-teal-600',
+    borderStyleClass: 'border-dashed',
+  },
+  ANYTIME: {
+    icon: InfinityIcon,
+    title: 'Học bất cứ lúc nào',
+    iconClassName: 'text-neutral-500 opacity-80',
+    borderStyleClass: 'border-dashed',
+    opacityClass: 'opacity-75',
+  },
+  BEGINNER: {
+    icon: BookOpen,
+    title: 'Beginner',
+    iconClassName: 'text-emerald-400',
+  },
+  INTERMEDIATE: {
+    icon: Layers,
+    title: 'Intermediate',
+    iconClassName: 'text-amber-400',
+  },
+  ADVANCED: {
+    icon: Trophy,
+    title: 'Advanced',
+    iconClassName: 'text-rose-400',
+  },
+  OPTIONAL: {
+    icon: Sparkles,
+    title: 'Tùy chọn',
+    iconClassName: 'text-sky-400',
+    borderStyleClass: 'border-dashed',
+  },
+};
+
+const isVisibleLabelType = (labelType: unknown): labelType is VisibleLabelType =>
+  typeof labelType === 'string' && labelType !== 'STANDARD' && labelType in LABEL_TYPE_UI;
 
 /** Capitalize first letter of each word */
 const titleCase = (str: string) =>
@@ -14,31 +92,15 @@ export default function SkillNode({ data }: NodeProps) {
   const isSkipped = statusId === 3;
   const isLeft = !!(data as any).isLeft;
   const isHighlighted = !!(data as any).isHighlighted;
-  const labelType = (data as any).labelType || 'STANDARD';
+  const labelType = (data as any).labelType;
+  const labelTypeConfig = isVisibleLabelType(labelType) ? LABEL_TYPE_UI[labelType] : null;
 
   // Label Type logic
-  let LabelIcon = null;
-  let labelIconClasses = "";
-  let labelTitle = "";
-  let borderStyleClass = "border-solid";
-  let opacityClass = "opacity-100";
-
-  if (labelType === 'RECOMMENDED') {
-    LabelIcon = Star;
-    labelIconClasses = "text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)] fill-purple-400/20";
-    labelTitle = "Khuyên dùng";
-  } else if (labelType === 'ALTERNATIVE') {
-    LabelIcon = GitBranch;
-    labelIconClasses = "text-teal-600";
-    borderStyleClass = "border-dashed";
-    labelTitle = "Lựa chọn thay thế";
-  } else if (labelType === 'ANYTIME') {
-    LabelIcon = InfinityIcon;
-    labelIconClasses = "text-neutral-500 opacity-80";
-    borderStyleClass = "border-dashed";
-    opacityClass = "opacity-75";
-    labelTitle = "Học bất cứ lúc nào";
-  }
+  const LabelIcon = labelTypeConfig?.icon;
+  const labelIconClasses = labelTypeConfig?.iconClassName || '';
+  const labelTitle = labelTypeConfig?.title || '';
+  const borderStyleClass = labelTypeConfig?.borderStyleClass || 'border-solid';
+  const opacityClass = labelTypeConfig?.opacityClass || 'opacity-100';
 
   // BASE GLASSMORPHISM
   const baseClasses = `w-full h-full flex items-center justify-center px-4 py-3 cursor-pointer transition-all duration-500 relative text-center min-w-[160px] rounded-xl bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] active:scale-[0.98] ${borderStyleClass} ${opacityClass}`;
@@ -104,4 +166,3 @@ export default function SkillNode({ data }: NodeProps) {
     </div>
   );
 }
-

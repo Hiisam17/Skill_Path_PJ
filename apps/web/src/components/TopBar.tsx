@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import "./TopBar.css";
 
 const SearchIcon = () => (
@@ -23,18 +24,25 @@ const SettingsIcon = () => (
 );
 
 export default function TopBar() {
+  const location = useLocation();
+  const isRoadmapPage = location.pathname.includes("roadmap");
+
   return (
     <header className="topbar">
-      <div className="topbar__search">
-        <span className="topbar__search-icon">
-          <SearchIcon />
-        </span>
-        <input
-          className="topbar__search-input"
-          type="text"
-          placeholder="Search skills, technologies..."
-        />
-      </div>
+      {isRoadmapPage ? (
+        <div className="topbar__search">
+          <span className="topbar__search-icon">
+            <SearchIcon />
+          </span>
+          <input
+            className="topbar__search-input"
+            type="text"
+            placeholder="Search skills, technologies..."
+          />
+        </div>
+      ) : (
+        <div className="topbar__search-placeholder" style={{ flex: 1 }}></div>
+      )}
 
       <div className="topbar__actions">
         <div className="topbar__icons">

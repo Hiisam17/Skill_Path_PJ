@@ -17,7 +17,7 @@ export class UsersService {
    *
    * @param userId - UUID of authenticated user
    * @param selectRoadmapDto - Contains careerPathId to associate with user
-   * @returns void
+   * @returns Selected roadmap id and title for frontend navigation
    * @throws NotFoundException if user or careerPath not found
    *
    * Example:
@@ -26,7 +26,7 @@ export class UsersService {
   async selectRoadmap(
     userId: string,
     selectRoadmapDto: SelectRoadmapDto,
-  ): Promise<number> {
+  ): Promise<{ id: number; title: string }> {
     const careerPathId = parseInt(selectRoadmapDto.careerPathId);
     if (isNaN(careerPathId)) throw new Error('Invalid careerPathId');
 
@@ -44,7 +44,8 @@ export class UsersService {
       throw new Error('No roadmap found for this career path');
     }
 
-    const roadmapId = roadmaps[0].id;
+    const roadmap = roadmaps[0];
+    const roadmapId = roadmap.id;
 
     // Create tracking record if it doesn't exist
     await this.prisma.userRoadmap.upsert({
@@ -63,7 +64,7 @@ export class UsersService {
       }
     });
 
-    return roadmapId;
+    return { id: roadmap.id, title: roadmap.title };
   }
 
   /**

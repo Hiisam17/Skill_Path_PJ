@@ -81,6 +81,51 @@ describe('SkillsService', () => {
       expect(res.resources[0].type).toBe('video');
     });
 
+    it('should remove duplicate resources by id', async () => {
+      mockPrismaService.roadmapSkill.findUnique.mockResolvedValue({
+        id: 10,
+        skill: {
+          id: 100,
+          name: 'Skill A',
+          description: 'Desc A',
+          resources: [],
+        },
+        resources: [
+          { id: 1000, title: 'Video A', url: 'v.com', resourceType: { name: 'video' } },
+          { id: 1000, title: 'Video A duplicate', url: 'v.com', resourceType: { name: 'video' } },
+          { id: 1001, title: 'Article A', url: 'a.com', resourceType: { name: 'article' } },
+        ],
+        userProgress: [{ statusId: 2, status: { name: 'IN_PROGRESS' } }],
+      });
+
+      const res = await service.getSkillDetail(10, 'u1');
+      expect(res.resources).toHaveLength(2);
+      expect(res.resources.map(resource => resource.id)).toEqual([1000, 1001]);
+    });
+
+    it('should prefer roadmap skill resources over duplicate skill resources', async () => {
+      mockPrismaService.roadmapSkill.findUnique.mockResolvedValue({
+        id: 10,
+        skill: {
+          id: 100,
+          name: 'Skill A',
+          description: 'Desc A',
+          resources: [
+            { id: 2000, title: 'Generic JS Guide', url: ' https://docs.example.com/js ', resourceType: { name: 'article' } },
+            { id: 2001, title: 'Generic Practice', url: 'https://practice.example.com/js', resourceType: { name: 'course' } },
+          ],
+        },
+        resources: [
+          { id: 1000, title: 'Roadmap JS Guide', url: 'https://docs.example.com/js', resourceType: { name: 'article' } },
+        ],
+        userProgress: [{ statusId: 2, status: { name: 'IN_PROGRESS' } }],
+      });
+
+      const res = await service.getSkillDetail(10, 'u1');
+      expect(res.resources).toHaveLength(2);
+      expect(res.resources.map(resource => resource.id)).toEqual([1000, 2001]);
+    });
+
     it('should throw NotFoundException if roadmapSkill invalid (Edge case)', async () => {
       mockPrismaService.roadmapSkill.findUnique.mockResolvedValue(null);
       await expect(service.getSkillDetail(999, 'u1')).rejects.toThrow(NotFoundException);

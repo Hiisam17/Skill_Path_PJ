@@ -17,9 +17,9 @@ export class UsersController {
 	}
 
 	@Post('select-roadmap')
-	async selectRoadmap(@Body() dto: SelectRoadmapDto): Promise<{ roadmapId: number }> {
+	async selectRoadmap(@Body() dto: SelectRoadmapDto): Promise<{ roadmapId: number; roadmapTitle: string }> {
 		const userId = await this.progressService.getDemoUserId();
-		const roadmapId = await this.usersService.selectRoadmap(userId, dto);
-		return { roadmapId };
+		const roadmap = await this.usersService.selectRoadmap(userId, dto);
+		return { roadmapId: roadmap.id, roadmapTitle: roadmap.title };
 	}
 }

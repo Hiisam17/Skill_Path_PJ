@@ -39,14 +39,16 @@ describe('UsersService', () => {
     const careerPathId = '1';
 
     it('should successfully associate user with a system roadmap (Happy Path)', async () => {
-      mockPrismaService.roadmap.findMany.mockResolvedValue([{ id: 10 }]);
+      mockPrismaService.roadmap.findMany.mockResolvedValue([{ id: 10, title: 'Roadmap 1' }]);
       mockPrismaService.userRoadmap.upsert.mockResolvedValue({});
 
       const result = await service.selectRoadmap(userId, { careerPathId });
 
-      expect(result).toBe(10);
+      expect(result).toEqual({ id: 10, title: 'Roadmap 1' });
       expect(prisma.roadmap.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: { careerPathId: 1, userId: null }
+        where: { careerPathId: 1, userId: null },
+        orderBy: { id: 'asc' },
+        take: 1,
       }));
       expect(prisma.userRoadmap.upsert).toHaveBeenCalledWith(expect.objectContaining({
         where: { userId_roadmapId: { userId, roadmapId: 10 } }

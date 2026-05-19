@@ -18,7 +18,7 @@ describe('UsersController (e2e)', () => {
   };
 
   const mockUsersService = {
-    selectRoadmap: jest.fn().mockResolvedValue(101),
+    selectRoadmap: jest.fn().mockResolvedValue({ id: 101, title: 'Roadmap 1' }),
   };
 
   const mockPrismaService = {
@@ -61,12 +61,12 @@ describe('UsersController (e2e)', () => {
   });
 
   describe('POST /api/users/select-roadmap', () => {
-    it('should return 201 and the selected roadmapId (Happy Path)', () => {
+    it('should return 201 and the selected roadmap title (Happy Path)', () => {
       return request(app.getHttpServer())
         .post('/api/users/select-roadmap')
         .send({ careerPathId: '1' })
         .expect(201)
-        .expect({ roadmapId: 101 });
+        .expect({ roadmapId: 101, roadmapTitle: 'Roadmap 1' });
     });
   });
 });

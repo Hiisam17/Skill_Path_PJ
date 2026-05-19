@@ -50,9 +50,13 @@ describe('UsersController', () => {
   });
 
   describe('selectRoadmap', () => {
-    it('should call usersService.selectRoadmap', async () => {
+    it('should call usersService.selectRoadmap and return the selected roadmap title', async () => {
       const dto = { careerPathId: '1' };
-      await controller.selectRoadmap(dto);
+      mockUsersService.selectRoadmap.mockResolvedValue({ id: 10, title: 'Roadmap 1' });
+
+      const result = await controller.selectRoadmap(dto);
+
+      expect(result).toEqual({ roadmapId: 10, roadmapTitle: 'Roadmap 1' });
       expect(usersService.selectRoadmap).toHaveBeenCalledWith('demo-id', dto);
     });
   });

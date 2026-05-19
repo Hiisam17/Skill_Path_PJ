@@ -42,18 +42,18 @@ export class RoadmapsController {
 	): Promise<RoadmapDto[]> {
 		return this.roadmapsService.findByCareerPath(careerPathId);
 	}
-	@Get('roadmaps/:roadmapId/flow')
+	@Get('roadmaps/:title/flow')
 	async getRoadmapFlow(
-		@Param('roadmapId', ParseIntPipe) roadmapId: number,
+		@Param('title') roadmapTitle: string,
 	) {
 		const userId = await this.progressService.getDemoUserId();
-		return this.roadmapsService.getRoadmapFlow(roadmapId, userId);
+		return this.roadmapsService.getRoadmapFlow(roadmapTitle, userId);
 	}
 
-	@Get('roadmaps/:roadmapId')
-	async findById(
-		@Param('roadmapId', ParseIntPipe) roadmapId: number,
+	@Get('roadmaps/:title')
+	async findByTitle(
+		@Param('title') title: string,
 	): Promise<RoadmapDto> {
-		return this.roadmapsService.findById(roadmapId);
+		return this.roadmapsService.findByTitle(title);
 	}
 }

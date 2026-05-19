@@ -34,7 +34,7 @@ const LogoutIcon = () => (
 
 const navItems = [
   { path: "/dashboard", label: "Home", icon: <HomeIcon /> },
-  { path: "/roadmaps/2", label: "Roadmap", icon: <RoadmapIcon /> },
+  { path: "/explore", label: "Roadmap", icon: <RoadmapIcon /> },
   { path: "/job-market", label: "Job Market", icon: <JobMarketIcon /> },
 ];
 
@@ -46,7 +46,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-top">
         <div className="sidebar-brand">
-          <NavLink to="/career-paths" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <NavLink to="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
             <h1>DevPath</h1>
           </NavLink>
         </div>

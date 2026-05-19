@@ -102,7 +102,7 @@ export const JdParser: React.FC = () => {
             >
               <option value="">-- Chọn lộ trình phù hợp --</option>
               <option value="/roadmaps/1">Frontend Developer</option>
-              <option value="/roadmaps/2">Backend Developer</option>
+              <option value="/roadmaps/Backend">Backend Developer</option>
               <option value="/roadmaps/3">DevOps Engineer</option>
             </select>
             <button 

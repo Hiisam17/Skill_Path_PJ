@@ -18,7 +18,7 @@ const nodeTypes: NodeTypes = {
 
 export default function SkillsTreePage() {
   // 1. SỬA LẠI TÊN PARAM CHO KHỚP VỚI App.tsx
-  const { roadmapId } = useParams<{ roadmapId: string }>();
+  const { title } = useParams<{ title: string }>();
   const navigate = useNavigate();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<RoadmapData>([]);
@@ -37,9 +37,11 @@ export default function SkillsTreePage() {
 
   useEffect(() => {
     const loadRoadmap = async () => {
+      if (!title) return;
+
       try {
         setLoading(true);
-        const { data } = await apiClient.get<RoadmapFlowResponse>(`/roadmaps/${roadmapId}/flow`);
+        const { data } = await apiClient.get<RoadmapFlowResponse>(`/roadmaps/${encodeURIComponent(title)}/flow`);
         if (data.title) setRoadmapTitle(data.title);
 
         const sidebarWidth = window.innerWidth > 960 ? 260 : 0;
@@ -113,8 +115,8 @@ export default function SkillsTreePage() {
       }
     };
 
-    if (roadmapId) loadRoadmap();
-  }, [roadmapId, setNodes, setEdges]);
+    if (title) loadRoadmap();
+  }, [title, setNodes, setEdges]);
 
   const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
     event.preventDefault();
@@ -365,7 +367,7 @@ export default function SkillsTreePage() {
         onStatusChange={handleStatusChange}
       />
 
-      <RoadmapLegend />
+      <RoadmapLegend nodes={nodes} />
     </div>
   );
 }

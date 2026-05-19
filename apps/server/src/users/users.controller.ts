@@ -19,24 +19,9 @@ export class UsersController {
 	}
 
 	@Post('select-roadmap')
-	async selectRoadmap(@Body() dto: SelectRoadmapDto): Promise<{ roadmapId: number }> {
+	async selectRoadmap(@Body() dto: SelectRoadmapDto): Promise<{ roadmapId: number; roadmapTitle: string }> {
 		const userId = await this.progressService.getDemoUserId();
-		const roadmapId = await this.usersService.selectRoadmap(userId, dto);
-		return { roadmapId };
-	}
-
-	@UseGuards(JwtAuthGuard)
-	@Patch('profile')
-	async updateProfile(
-		@Request() req: ExpressRequest & { user: any },
-		@Body() dto: {
-			fullName?: string;
-			avatarUrl?: string;
-			bio?: string;
-			githubLink?: string;
-		}
-	) {
-		const userId = req.user.id;
-		return this.usersService.updateProfile(userId, dto);
+		const roadmap = await this.usersService.selectRoadmap(userId, dto);
+		return { roadmapId: roadmap.id, roadmapTitle: roadmap.title };
 	}
 }

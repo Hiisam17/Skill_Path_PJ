@@ -399,7 +399,7 @@ export const DashboardPage: React.FC = () => {
                         borderColor: isActive ? color.border : undefined,
                         background: isActive ? color.bg : undefined,
                       }}
-                      onClick={() => setSelectedRoadmapIdx(idx)}
+                      onClick={() => navigate('/roadmaps/' + encodeURIComponent(rm.roadmapName))}
                     >
                       <div className="roadmap-card-top">
                         <span className="roadmap-card-icon">{icon}</span>
@@ -428,7 +428,7 @@ export const DashboardPage: React.FC = () => {
                         style={{ color: color.accent, background: 'transparent', border: 'none', cursor: 'pointer' }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate('/roadmaps/' + rm.roadmapId);
+                          navigate('/roadmaps/' + encodeURIComponent(rm.roadmapName));
                         }}
                       >
                         Continue Learning
@@ -442,7 +442,7 @@ export const DashboardPage: React.FC = () => {
               <div className="roadmaps-empty">
                 <span className="roadmaps-empty-icon">📭</span>
                 <p>You haven't started any roadmaps yet.</p>
-                <Link to="/career-paths" className="roadmaps-empty-cta">
+                <Link to="/explore" className="roadmaps-empty-cta">
                   Explore Career Paths →
                 </Link>
               </div>

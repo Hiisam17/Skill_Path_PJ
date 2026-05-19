@@ -5,12 +5,13 @@ import { Card } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { RotateCcw, ChevronDown } from 'lucide-react';
 import { useProgressSync } from '@/context/ProgressSyncContext';
+import { useNavigate } from 'react-router-dom';
 
 export interface Resource {
   id: number;
   type: string;
   title: string;
-  url: string;
+  url: string | null;
   source?: string;
   durationMinutes?: number;
 }
@@ -70,6 +71,23 @@ const getResourceIcon = (type?: string) => {
   return resourceIcons[normalizedType] || resourceIcons.default;
 };
 
+const ROADMAP_URL_PREFIX = '@roadmap:';
+
+const getRoadmapTitleFromResourceUrl = (url?: string | null) => {
+  const trimmedUrl = url?.trim() || '';
+
+  if (!trimmedUrl.toLowerCase().startsWith(ROADMAP_URL_PREFIX)) {
+    return null;
+  }
+
+  const cleanTitle = trimmedUrl
+    .slice(ROADMAP_URL_PREFIX.length)
+    .trim()
+    .toLowerCase();
+
+  return cleanTitle || null;
+};
+
 /**
  * Slide-over drawer displaying learning resources and details for a roadmap node.
  *
@@ -87,6 +105,7 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
   onStatusChange 
 }) => {
   const { enqueue } = useProgressSync();
+  const navigate = useNavigate();
 
   const currentStatusId = data?.statusId || null;
 
@@ -110,6 +129,26 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
     // 2. Cập nhật UI ngay lập tức
     onStatusChange?.(roadmapSkillId, null);
     console.log(`[BatchSync] 📥 Đã đưa lệnh RESET roadmapSkillId=${roadmapSkillId} vào hàng đợi`);
+  };
+
+  const handleResourceClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    resource: Resource,
+  ) => {
+    const cleanTitle = getRoadmapTitleFromResourceUrl(resource.url);
+
+    if (!resource.url) {
+      event.preventDefault();
+      return;
+    }
+
+    if (!cleanTitle) {
+      return;
+    }
+
+    event.preventDefault();
+    navigate(`/roadmaps/${encodeURIComponent(cleanTitle)}`);
+    onClose();
   };
 
   if (!isOpen && !data && !isLoading) return null;
@@ -214,12 +253,19 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
 
               {data.resources?.length > 0 ? (
                 <div className="flex flex-col gap-4">
-                  {data.resources.map((res) => (
+                  {data.resources.map((res) => {
+                    const cleanRoadmapTitle = getRoadmapTitleFromResourceUrl(res.url);
+                    const href = cleanRoadmapTitle
+                      ? `/roadmaps/${encodeURIComponent(cleanRoadmapTitle)}`
+                      : res.url || '#';
+
+                    return (
                     <a 
                       key={res.id} 
-                      href={res.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                      href={href}
+                      target={cleanRoadmapTitle || !res.url ? undefined : '_blank'}
+                      rel={cleanRoadmapTitle || !res.url ? undefined : 'noopener noreferrer'}
+                      onClick={(event) => handleResourceClick(event, res)}
                       className="block group outline-none focus-visible:ring-2 focus-visible:ring-[#4cd7f6] rounded-xl"
                     >
                       <Card className="p-3 border border-[#3d494c]/40 bg-[#171f33] transition-all duration-300 group-hover:-translate-y-1 group-hover:border-[#4cd7f6]/50 group-hover:shadow-[0_4px_15px_rgba(76,215,246,0.15)] flex flex-col gap-2">
@@ -245,7 +291,8 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
                         )}
                       </Card>
                     </a>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center text-center py-12 px-4 bg-[#171f33] rounded-2xl border border-dashed border-[#3d494c]">

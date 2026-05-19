@@ -56,10 +56,10 @@ describe('RoadmapsController (e2e)', () => {
     });
   });
 
-  describe('GET /api/roadmaps/:id', () => {
+  describe('GET /api/roadmaps/:title', () => {
     it('should return 200 and roadmap object (Happy Path)', async () => {
       return request(app.getHttpServer())
-        .get('/api/roadmaps/1')
+        .get('/api/roadmaps/Roadmap%201')
         .expect(200)
         .expect((res) => {
           expect(res.body).toHaveProperty('id');
@@ -69,15 +69,15 @@ describe('RoadmapsController (e2e)', () => {
     it('should return 404 if roadmap invalid (Edge case)', async () => {
       mockPrisma.roadmap.findUnique.mockResolvedValueOnce(null);
       return request(app.getHttpServer())
-        .get('/api/roadmaps/999')
+        .get('/api/roadmaps/missing')
         .expect(404);
     });
   });
 
-  describe('GET /api/roadmaps/:id/flow', () => {
+  describe('GET /api/roadmaps/:title/flow', () => {
     it('should return 200 and flow design (Happy Path)', async () => {
       return request(app.getHttpServer())
-        .get('/api/roadmaps/1/flow')
+        .get('/api/roadmaps/Roadmap%201/flow')
         .expect(200)
         .expect((res) => {
           expect(res.body).toHaveProperty('nodes');

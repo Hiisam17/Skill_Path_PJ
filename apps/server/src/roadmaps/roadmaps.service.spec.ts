@@ -43,16 +43,17 @@ describe('RoadmapsService', () => {
     });
   });
 
-  describe('findById', () => {
-    it('should return roadmap by ID (Happy Path)', async () => {
+  describe('findByTitle', () => {
+    it('should return roadmap by title (Happy Path)', async () => {
       mockPrismaService.roadmap.findUnique.mockResolvedValue({ id: 1, title: 'Roadmap 1', careerPathId: 10 });
-      const res = await service.findById(1);
+      const res = await service.findByTitle('Roadmap 1');
       expect(res.id).toBe("1");
+      expect(prisma.roadmap.findUnique).toHaveBeenCalledWith({ where: { title: 'Roadmap 1' } });
     });
 
     it('should throw NotFoundException if roadmap missing (Edge case)', async () => {
       mockPrismaService.roadmap.findUnique.mockResolvedValue(null);
-      await expect(service.findById(99)).rejects.toThrow(NotFoundException);
+      await expect(service.findByTitle('missing')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -78,7 +79,10 @@ describe('RoadmapsService', () => {
         ]
       });
 
-      const res = await service.getRoadmapFlow(1, 'u1');
+      const res = await service.getRoadmapFlow('Roadmap 1', 'u1');
+      expect(prisma.roadmap.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+        where: { title: 'Roadmap 1' },
+      }));
       expect(res.nodes).toHaveLength(2); // 1 section + 1 skill
       expect(res.nodes[1].id).toBe("100"); // RoadmapSkill ID
       expect(res.nodes[1].data.roadmapSkillId).toBe(100);

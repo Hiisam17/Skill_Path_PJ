@@ -18,10 +18,12 @@ model Profile {
   // Prisma không quản lý bảng auth.users nên chúng ta chỉ lưu userId làm khóa ngoại.
   userId         String    @id @map("user_id") @db.Uuid
   fullName       String?   @map("full_name")
-  avatarUrl      String?   @map("avatar_url")
+  avatarUrl      String?   @map("avatar_url") @db.Text
   bio            String?   @db.Text
   githubLink     String?   @map("github_link")
   streakCount    Int       @default(0) @map("streak_count")
+  currentStreak  Int       @default(0) @map("current_streak")
+  longestStreak  Int       @default(0) @map("longest_streak")
   lastActivityAt DateTime? @map("last_activity_at") @db.Timestamptz
   updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamptz
   isDeleted      Boolean   @default(false) @map("is_deleted")
@@ -32,6 +34,7 @@ model Profile {
   resourceProgress UserResourceProgress[]
   skillProgress    UserSkillProgress[]
   createdRoadmaps  Roadmap[] @relation("SystemUserRoadmaps")
+  userMilestones   UserMilestone[]
 
   @@map("profiles")
 }
@@ -270,7 +273,6 @@ model Reward {
   reward_type_id Int
   reward_type    RewardType   @relation(fields: [reward_type_id], references: [id])
   user_rewards   UserReward[]
-  milestones     Milestone[]
 
   @@map("rewards")
 }
@@ -289,34 +291,33 @@ model UserReward {
 model Milestone {
   id               Int      @id @default(autoincrement())
   roadmapId        Int?     @map("roadmap_id")
-  name             String
-  requiredProgress Float?   @map("required_progress") // Float tương ứng với double precision trong SQL
-  rewardId         Int?     @map("reward_id")
+  name             String   @unique // Thêm @unique vì có icon vân tay trên Supabase
+
+  // Thêm 3 trường mới cho khớp với ảnh
+  description      String?  @db.Text
+  icon             String?  
+  criteria         Json?    // Json sẽ map với kiểu jsonb trong PostgreSQL
 
   // Thiết lập khóa ngoại (Relations)
   roadmap          Roadmap? @relation(fields: [roadmapId], references: [id])
-  reward           Reward?  @relation(fields: [rewardId], references: [id])
-
+  userMilestones   UserMilestone[]
+  
   @@map("milestones")
 }
 
-// =======================================
-// 7. JOB MARKET
-// =======================================
+model UserMilestone {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id") @db.Uuid
+  milestoneId Int      @map("milestone_id")
+  unlockedAt  DateTime @default(now()) @map("unlocked_at") @db.Timestamptz
 
-model Job {
-  id           Int       @id @default(autoincrement())
-  title        String
-  company      String
-  location     String?
-  description  String    @db.Text
-  requirements String?   @db.Text
-  skills       String[]  @default([])
-  jobType      String?   @map("job_type")
-  source       String?
-  sourceUrl    String?   @map("source_url")
-  roadmapPath  String?   @map("roadmap_path")
-  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  // Nối thẳng vào bảng Profile (nằm cùng schema public), bỏ qua auth.users
+  user        Profile   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  // Nối vào bảng Milestone
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
 
-  @@map("jobs")
+  // Đảm bảo 1 user không nhận 1 huy hiệu 2 lần
+  @@unique([userId, milestoneId])
+  @@map("user_milestones") 
 }

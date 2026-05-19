@@ -29,6 +29,8 @@ import { MilestonesModule } from './milestones/milestones.module';
     SkillsModule,
     ProgressModule,
     RoadmapSectionsModule,
+    MilestonesModule,
+    JobsModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -321,3 +321,24 @@ model UserMilestone {
   @@unique([userId, milestoneId])
   @@map("user_milestones") 
 }
+
+// =======================================
+// 6. JOBS
+// =======================================
+
+model Job {
+  id           Int       @id @default(autoincrement())
+  title        String
+  company      String
+  location     String?
+  description  String    @db.Text
+  requirements String?   @db.Text
+  skills       String[]  @default([])
+  jobType      String?   @map("job_type")
+  source       String?
+  sourceUrl    String?   @map("source_url")
+  roadmapPath  String?   @map("roadmap_path")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("jobs")
+}

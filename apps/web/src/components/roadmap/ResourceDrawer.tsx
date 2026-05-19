@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { RotateCcw, ChevronDown } from 'lucide-react';
-import apiClient from '@/lib/axios';
 import { useProgressSync } from '@/context/ProgressSyncContext';
 
 export interface Resource {

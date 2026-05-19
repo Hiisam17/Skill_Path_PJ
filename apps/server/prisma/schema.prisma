@@ -81,6 +81,10 @@ enum SkillLabel {
   RECOMMENDED
   ALTERNATIVE
   ANYTIME
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  OPTIONAL
 }
 
 // =======================================
@@ -113,7 +117,7 @@ model CareerPath {
 
 model Roadmap {
   id                  Int       @id @default(autoincrement())
-  title               String
+  title               String    @unique
   description         String?   @db.Text
   userId              String?   @map("user_id") @db.Uuid // NULL = System Roadmap
   careerPathId              Int?      @map("career_id")

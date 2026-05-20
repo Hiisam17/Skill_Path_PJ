@@ -22,9 +22,150 @@
 }
 
 .job-market-content {
+  margin-top: 24px;
+}
+
+.job-market-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 280px) auto;
+  gap: 16px;
+  align-items: end;
   background: var(--bg-card);
-  border-radius: 16px;
   border: 1px solid var(--border-card);
-  padding: 32px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.job-market-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.job-market-field span {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.job-market-field input {
+  min-height: 42px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 0 12px;
+  outline: none;
+}
+
+.job-market-field input:focus {
+  border-color: #38bdf8;
+}
+
+.job-market-import-btn,
+.job-card-link {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: #0ea5e9;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 16px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.job-market-import-btn:disabled {
+  background: #475569;
+  cursor: not-allowed;
+}
+
+.job-market-alert {
+  border-radius: 8px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  font-weight: 700;
+}
+
+.job-market-alert.error {
+  background: #1e1111;
+  border: 1px solid #7f1d1d;
+  color: #fecaca;
+}
+
+.job-market-alert.success {
+  background: #10231b;
+  border: 1px solid #14532d;
+  color: #bbf7d0;
+}
+
+.job-market-empty {
+  border: 1px dashed #334155;
+  border-radius: 8px;
+  color: #94a3b8;
+  padding: 28px;
+  text-align: center;
+}
+
+.job-list {
+  display: grid;
+  gap: 16px;
+}
+
+.job-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.job-card-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.job-card h2 {
+  color: #f8fafc;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.job-card-meta {
+  color: #94a3b8;
+  margin: 6px 0 0;
+}
+
+.job-card-source {
+  align-self: flex-start;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 10px;
+}
+
+.job-card-description {
+  color: #cbd5e1;
+  line-height: 1.6;
+  margin: 16px 0;
+}
+
+@media (max-width: 760px) {
+  .job-market-page {
+    padding: 24px;
+  }
+
+  .job-market-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .job-card-main {
+    flex-direction: column;
+  }
 }

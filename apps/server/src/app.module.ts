@@ -12,11 +12,17 @@ import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { RoadmapSectionsModule } from './roadmap-sections/roadmap-sections.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { JobsModule } from './jobs/jobs.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: join(process.cwd(), '.env.development'), 
+      envFilePath: [
+        join(process.cwd(), '.env.development'),
+        join(process.cwd(), '.env'),
+        join(process.cwd(), 'apps/server/.env'),
+        join(process.cwd(), 'apps/server/.env.development'),
+      ],
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
@@ -27,8 +33,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     SkillsModule,
     ProgressModule,
     RoadmapSectionsModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

@@ -16,3 +16,9 @@ services:
         sync: false # User will set this in Render dashboard
       - key: DIRECT_URL
         sync: false # User will set this in Render dashboard
+      - key: ADZUNA_APP_ID
+        sync: false # User will set this in Render dashboard
+      - key: ADZUNA_APP_KEY
+        sync: false # User will set this in Render dashboard
+      - key: ADZUNA_COUNTRY
+        value: gb

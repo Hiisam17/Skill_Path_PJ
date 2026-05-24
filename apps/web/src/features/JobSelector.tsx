@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { SuggestedJob } from '../data/mockGaps';
-import { fetchJobs } from '../services/gapService';
-import type { JobData } from '../services/gapService';
+import { fetchJobs, type JobData } from '../services/jobService';
 import './JobSelector.css';
 
 interface JobSelectorProps {
@@ -30,7 +29,9 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
 
   const selectedJob = jobs.find(j => j.id === selectedJobId);
 
-  const handleAnalyzeClick = () => {
+  const handleAnalyzeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (selectedJob) {
       // Map JobData to SuggestedJob for backward compatibility with the existing analyze function
       onAnalyze({
@@ -38,13 +39,13 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
         title: selectedJob.title,
         companyName: selectedJob.company,
         description: selectedJob.description,
-        roadmapPath: selectedJob.roadmapPath,
+        roadmapPath: selectedJob.roadmapPath || "/roadmaps/Backend",
         skills: selectedJob.skills,
-        location: selectedJob.location,
-        jobType: selectedJob.jobType,
-        requirements: selectedJob.requirements,
-        source: selectedJob.source,
-        sourceUrl: selectedJob.sourceUrl,
+        location: selectedJob.location || undefined,
+        jobType: selectedJob.jobType || undefined,
+        requirements: selectedJob.requirements || undefined,
+        source: selectedJob.source || undefined,
+        sourceUrl: selectedJob.sourceUrl || undefined,
         gapNodes: [], // Not used here, fetched by API
       });
     }
@@ -115,6 +116,7 @@ export const JobSelector: React.FC<JobSelectorProps> = ({ onAnalyze, isAnalyzing
 
       <div className="job-selector-actions">
         <button
+          type="button"
           className={`job-selector-btn ${isAnalyzing ? 'job-selector-btn-loading' : ''}`}
           disabled={!selectedJobId || isAnalyzing}
           onClick={handleAnalyzeClick}

@@ -6,9 +6,12 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
-import { ProgressService } from '../progress/progress.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Request as ExpressRequest } from 'express';
 
 import { IsString, MinLength } from 'class-validator';
 
@@ -35,7 +38,6 @@ export class JobsController {
 
   constructor(
     private readonly jobsService: JobsService,
-    private readonly progressService: ProgressService,
   ) {}
 
   /**
@@ -55,7 +57,11 @@ export class JobsController {
    * @returns { requiredSkillIds, gapSkillIds, matchScore, summary, isNewUser }
    */
   @Post('analyze-gap')
-  async analyzeGap(@Body() body: AnalyzeGapDto) {
+  @UseGuards(JwtAuthGuard)
+  async analyzeGap(
+    @Body() body: AnalyzeGapDto,
+    @Request() req: ExpressRequest & { user: any },
+  ) {
     try {
       if (!body.jobId) {
         throw new HttpException(
@@ -64,8 +70,7 @@ export class JobsController {
         );
       }
 
-      // Use getDemoUserId() pattern consistent with other controllers
-      const userId = await this.progressService.getDemoUserId();
+      const userId = req.user.id;
 
       this.logger.log(
         `Gap analysis request: jobId=${body.jobId}, userId=${userId}`,
@@ -106,9 +111,13 @@ export class JobsController {
    * Parses an arbitrary JD to find skill gaps and roadmap type.
    */
   @Post('parse-jd')
-  async parseJd(@Body() body: ParseJdDto) {
+  @UseGuards(JwtAuthGuard)
+  async parseJd(
+    @Body() body: ParseJdDto,
+    @Request() req: ExpressRequest & { user: any },
+  ) {
     try {
-      const userId = await this.progressService.getDemoUserId();
+      const userId = req.user.id;
       this.logger.log(`JD Parse request: userId=${userId}`);
 
       const result = await this.jobsService.parseJd(body.rawJdText, userId);
@@ -131,6 +140,42 @@ export class JobsController {
 
       throw new HttpException(
         { message: 'AI JD parsing failed', error: error.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * POST /api/jobs/analyze-jd
+   * Analyzes a job description deeply using AI (seniority, must-have, nice-to-have, AI advice).
+   */
+  @Post('analyze-jd')
+  @UseGuards(JwtAuthGuard)
+  async analyzeJobJD(
+    @Body() body: AnalyzeGapDto,
+  ) {
+    try {
+      if (!body.jobId) {
+        throw new HttpException(
+          { message: 'jobId is required' },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      this.logger.log(`Job deep analysis request: jobId=${body.jobId}`);
+      return await this.jobsService.analyzeJobJD(body.jobId);
+    } catch (error: any) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error(
+        `Job deep analysis failed: ${error.message}`,
+        error.stack,
+      );
+      throw new HttpException(
+        {
+          message: 'AI job analysis failed',
+          error: error.message,
+        },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

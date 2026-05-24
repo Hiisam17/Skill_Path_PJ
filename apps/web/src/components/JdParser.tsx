@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { parseJdGap } from "@/services/gapService";
 import type { ParseJdResponse } from "@/services/gapService";
+import { isAuthenticated } from "@/services/api";
 import "./JdParser.css";
 
 export const JdParser: React.FC = () => {
@@ -15,8 +16,17 @@ export const JdParser: React.FC = () => {
   const charCount = jdText.length;
   const isValid = charCount >= 50;
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!isValid) return;
+
+    if (!isAuthenticated()) {
+      alert("Vui lòng đăng nhập để phân tích JD bằng AI.");
+      navigate("/login");
+      return;
+    }
+
     setIsAnalyzing(true);
     setErrorMsg("");
     setResult(null);
@@ -54,7 +64,9 @@ export const JdParser: React.FC = () => {
     navigate(path);
   };
 
-  const handleManualNavigate = () => {
+  const handleManualNavigate = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!result || !selectedRoadmap) return;
     navigateToRoadmap(result, selectedRoadmap);
   };
@@ -76,6 +88,7 @@ export const JdParser: React.FC = () => {
             {charCount}/50 ký tự
           </span>
           <button 
+            type="button"
             className={`btn-analyze-jd ${isAnalyzing ? 'loading' : ''}`}
             onClick={handleAnalyze} 
             disabled={!isValid || isAnalyzing}
@@ -106,6 +119,7 @@ export const JdParser: React.FC = () => {
               <option value="/roadmaps/3">DevOps Engineer</option>
             </select>
             <button 
+              type="button"
               className="btn-navigate" 
               onClick={handleManualNavigate}
               disabled={!selectedRoadmap}

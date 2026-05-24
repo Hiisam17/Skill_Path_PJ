@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiGapService, GapAnalysisResult } from '../ai/ai-gap.service';
+import { ProgressService } from '../progress/progress.service';
 
 /**
  * Extended gap analysis response that includes the isNewUser flag.
@@ -20,6 +21,7 @@ export class JobsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiGapService: AiGapService,
+    private readonly progressService: ProgressService,
   ) {}
 
   /**
@@ -50,17 +52,23 @@ export class JobsService {
     }
 
     // 2. Fetch user's completed skills (join with Skill to get nodeId + name)
-    const completedStatusId = await this.getCompletedStatusId();
+    const completedStatusId = await this.progressService.getCompletedStatusId();
 
     const userProgress = await this.prisma.userSkillProgress.findMany({
       where: {
         userId,
         statusId: completedStatusId,
-        skill: { nodeId: { not: null } },
+        roadmapSkill: {
+          skill: { nodeId: { not: null } },
+        },
       },
       include: {
-        skill: {
-          select: { nodeId: true, name: true, description: true },
+        roadmapSkill: {
+          include: {
+            skill: {
+              select: { nodeId: true, name: true, description: true },
+            },
+          },
         },
       },
     });
@@ -68,16 +76,17 @@ export class JobsService {
     // Build unique skill list (a user may have completed the same skill across multiple roadmaps)
     const seenNodeIds = new Set<string>();
     const userCompletedSkills = userProgress
-      .filter((p) => p.skill?.nodeId)
+      .map((p) => p.roadmapSkill.skill)
+      .filter((skill): skill is NonNullable<typeof skill> => !!skill?.nodeId)
       .filter((p) => {
-        if (seenNodeIds.has(p.skill!.nodeId!)) return false;
-        seenNodeIds.add(p.skill!.nodeId!);
+        if (seenNodeIds.has(p.nodeId!)) return false;
+        seenNodeIds.add(p.nodeId!);
         return true;
       })
-      .map((p) => ({
-        nodeId: p.skill!.nodeId!,
-        name: p.skill!.name,
-        description: p.skill!.description,
+      .map((skill) => ({
+        nodeId: skill.nodeId!,
+        name: skill.name,
+        description: skill.description,
       }));
 
     const isNewUser = userCompletedSkills.length === 0;
@@ -118,33 +127,40 @@ export class JobsService {
       throw new BadRequestException('JD text must be at least 50 characters');
     }
 
-    const completedStatusId = await this.getCompletedStatusId();
+    const completedStatusId = await this.progressService.getCompletedStatusId();
 
     const userProgress = await this.prisma.userSkillProgress.findMany({
       where: {
         userId,
         statusId: completedStatusId,
-        skill: { nodeId: { not: null } },
+        roadmapSkill: {
+          skill: { nodeId: { not: null } },
+        },
       },
       include: {
-        skill: {
-          select: { nodeId: true, name: true, description: true },
+        roadmapSkill: {
+          include: {
+            skill: {
+              select: { nodeId: true, name: true, description: true },
+            },
+          },
         },
       },
     });
 
     const seenNodeIds = new Set<string>();
     const userCompletedSkills = userProgress
-      .filter((p) => p.skill?.nodeId)
+      .map((p) => p.roadmapSkill.skill)
+      .filter((skill): skill is NonNullable<typeof skill> => !!skill?.nodeId)
       .filter((p) => {
-        if (seenNodeIds.has(p.skill!.nodeId!)) return false;
-        seenNodeIds.add(p.skill!.nodeId!);
+        if (seenNodeIds.has(p.nodeId!)) return false;
+        seenNodeIds.add(p.nodeId!);
         return true;
       })
-      .map((p) => ({
-        nodeId: p.skill!.nodeId!,
-        name: p.skill!.name,
-        description: p.skill!.description,
+      .map((skill) => ({
+        nodeId: skill.nodeId!,
+        name: skill.name,
+        description: skill.description,
       }));
 
     const isNewUser = userCompletedSkills.length === 0;
@@ -168,23 +184,21 @@ export class JobsService {
   }
 
   /**
-   * Resolves the COMPLETED status ID (caches after first call).
+   * Analyzes a job description deeply using AI (senority, must-have, nice-to-have, AI advice)
+   * and includes the job's roadmapPath from the database.
    */
-  private completedStatusIdCache: number | null = null;
-
-  private async getCompletedStatusId(): Promise<number> {
-    if (this.completedStatusIdCache !== null) {
-      return this.completedStatusIdCache;
-    }
-
-    const status = await this.prisma.progressStatus.upsert({
-      where: { name: 'COMPLETED' },
-      update: {},
-      create: { name: 'COMPLETED' },
-      select: { id: true },
+  async analyzeJobJD(jobId: number) {
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      select: { roadmapPath: true },
     });
-
-    this.completedStatusIdCache = status.id;
-    return status.id;
+    if (!job) {
+      throw new NotFoundException(`Job with ID ${jobId} not found`);
+    }
+    const analysis = await this.aiGapService.analyzeJobJD(jobId);
+    return {
+      ...analysis,
+      roadmapPath: job.roadmapPath,
+    };
   }
 }

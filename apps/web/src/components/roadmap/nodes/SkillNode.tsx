@@ -87,9 +87,10 @@ export default function SkillNode({ data }: NodeProps) {
   const rawName = String((data as any).label || (data as any).title || (data as any).name || 'Unnamed');
   const nodeName = titleCase(rawName);
   const statusId = (data as any).statusId;
-  const isCompleted = statusId === 1 || !!(data as any).isCompleted;
-  const isInProgress = statusId === 2;
-  const isSkipped = statusId === 3;
+  const status = (data as any).status;
+  const isCompleted = status === 'COMPLETED' || statusId === 1 || !!(data as any).isCompleted;
+  const isInProgress = status === 'IN_PROGRESS' || statusId === 2;
+  const isSkipped = status === 'SKIPPED' || statusId === 3;
   const isLeft = !!(data as any).isLeft;
   const isHighlighted = !!(data as any).isHighlighted;
   const labelType = (data as any).labelType;

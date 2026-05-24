@@ -8,12 +8,38 @@ import { getLayoutedElements } from '@/utils/layout';
 import SectionNode from '@/components/roadmap/nodes/SectionNode';
 import SkillNode from '@/components/roadmap/nodes/SkillNode';
 import type { RoadmapFlowResponse, RoadmapData, RoadmapNode } from '@/types/roadmap';
+import {
+  getPendingStatusForRoadmapSkill,
+  type ProgressStatus,
+} from '@/services/progressSyncService';
 
 import { ResourceDrawer } from '@/components/roadmap/ResourceDrawer';
 import RoadmapLegend from '@/components/roadmap/RoadmapLegend';
 const nodeTypes: NodeTypes = {
   sectionNode: SectionNode,
   skillNode: SkillNode,
+};
+
+const isCompletedStatus = (status: unknown) => status === 'COMPLETED';
+
+const applyPendingProgressToNode = (node: any) => {
+  if (node.type !== 'skillNode') return node;
+
+  const roadmapSkillId = Number(node.data?.roadmapSkillId ?? node.id);
+  if (!roadmapSkillId) return node;
+
+  const pendingStatus = getPendingStatusForRoadmapSkill(roadmapSkillId);
+  if (pendingStatus === undefined) return node;
+
+  return {
+    ...node,
+    data: {
+      ...node.data,
+      status: pendingStatus ?? 'NOT_STARTED',
+      statusId: null,
+      isCompleted: pendingStatus === 'COMPLETED',
+    },
+  };
 };
 
 export default function SkillsTreePage() {
@@ -82,8 +108,10 @@ export default function SkillsTreePage() {
           return n;
         });
 
+        const nodesWithPendingProgress = nodesWithHighlights.map(applyPendingProgressToNode);
+
         // Inject progress counts into section nodes (#4)
-        const nodesWithProgress = nodesWithHighlights.map((n: any) => {
+        const nodesWithProgress = nodesWithPendingProgress.map((n: any) => {
           if (n.type !== 'sectionNode') return n;
           
           // Find skill nodes connected to this section
@@ -91,13 +119,13 @@ export default function SkillsTreePage() {
             .filter((e: any) => e.source === n.id)
             .map((e: any) => e.target);
           
-          const connectedSkills = nodesWithHighlights.filter(
+          const connectedSkills = nodesWithPendingProgress.filter(
             (s: any) => s.type === 'skillNode' && connectedSkillIds.includes(s.id)
           );
           
           const totalCount = connectedSkills.length;
           const completedCount = connectedSkills.filter(
-            (s: any) => !!(s.data as any)?.isCompleted
+            (s: any) => !!(s.data as any)?.isCompleted || isCompletedStatus((s.data as any)?.status)
           ).length;
           
           return {
@@ -147,7 +175,20 @@ export default function SkillsTreePage() {
 
       const response = await apiClient.get(endpoint);
       console.log('Detail data from backend:', response.data);
-      setDrawerData(response.data);
+
+      const pendingStatus = !isSection
+        ? getPendingStatusForRoadmapSkill(Number(numericId))
+        : undefined;
+
+      setDrawerData(
+        pendingStatus === undefined
+          ? response.data
+          : {
+              ...response.data,
+              status: pendingStatus ?? 'NOT_STARTED',
+              statusId: null,
+            },
+      );
     } catch (error) {
       console.error('Failed to fetch node detail:', error);
     } finally {
@@ -155,8 +196,8 @@ export default function SkillsTreePage() {
     }
   }, []);
 
-  const handleStatusChange = useCallback((roadmapSkillId: number, statusId: number | null) => {
-    console.log("🛑 6. Component cha đã nhận được ID và trạng thái mới:", roadmapSkillId, statusId);
+  const handleStatusChange = useCallback((roadmapSkillId: number, status: ProgressStatus | null) => {
+    console.log("Progress status changed:", roadmapSkillId, status);
     
     // Update nodes state for React Flow visualization
     setNodes((nds) =>
@@ -169,8 +210,9 @@ export default function SkillsTreePage() {
             ...node,
             data: {
               ...node.data,
-              isCompleted: statusId === 1,
-              statusId: statusId,
+              isCompleted: status === 'COMPLETED',
+              status: status ?? 'NOT_STARTED',
+              statusId: null,
             },
           };
         }
@@ -183,7 +225,8 @@ export default function SkillsTreePage() {
       if (!prev || !roadmapSkillId) return prev;
       return {
         ...prev,
-        statusId: statusId
+        status: status ?? 'NOT_STARTED',
+        statusId: null,
       };
     });
   }, [setNodes, setDrawerData]);

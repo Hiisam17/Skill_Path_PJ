@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoadmapDto } from '../types';
+import { RoadmapDto, UserSkillStatus } from '../types';
 
 /**
  * Service for managing roadmaps and career paths.
@@ -50,6 +50,20 @@ export class RoadmapsService {
     }
 
     return this.toDto(roadmap);
+  }
+
+  private mapProgressStatus(statusName?: string | null): UserSkillStatus {
+    const normalized = (statusName ?? '').trim().toUpperCase();
+    if (normalized === 'COMPLETED' || normalized === 'DONE') {
+      return UserSkillStatus.COMPLETED;
+    }
+    if (normalized === 'IN_PROGRESS' || normalized === 'IN PROGRESS') {
+      return UserSkillStatus.IN_PROGRESS;
+    }
+    if (normalized === 'SKIPPED') {
+      return UserSkillStatus.SKIPPED;
+    }
+    return UserSkillStatus.NOT_STARTED;
   }
 
   async findByCareerPath(careerPathId: number): Promise<RoadmapDto[]> {
@@ -105,7 +119,9 @@ export class RoadmapsService {
                 skill: true,
                 userProgress: {
                   where: { userId },
-                  select: { statusId: true },
+                  include: {
+                    status: { select: { name: true } },
+                  },
                   take: 1,
                 },
               },
@@ -149,6 +165,7 @@ export class RoadmapsService {
         
         // Progress is now tracked at RoadmapSkill level
         const progress = rs.userProgress[0];
+        const status = this.mapProgressStatus(progress?.status?.name);
 
         nodes.push({
           id: skillNodeId,
@@ -156,8 +173,9 @@ export class RoadmapsService {
           data: { 
             name: rs.skill?.name || 'Unknown Skill', 
             isOptional: rs.isOptional,
-            isCompleted: progress?.statusId === 1,
+            isCompleted: status === UserSkillStatus.COMPLETED,
             statusId: progress?.statusId || null,
+            status,
             skillId: rs.skill?.id,
             roadmapSkillId: rs.id,
             labelType: rs.labelType

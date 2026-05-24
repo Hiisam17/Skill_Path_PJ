@@ -6,6 +6,7 @@ import { Skeleton } from '../ui/skeleton';
 import { RotateCcw, ChevronDown } from 'lucide-react';
 import { useProgressSync } from '@/context/ProgressSyncContext';
 import { useNavigate } from 'react-router-dom';
+import type { ProgressStatus } from '@/services/progressSyncService';
 
 export interface Resource {
   id: number;
@@ -20,7 +21,7 @@ export interface DrawerData {
   title: string;
   content: string;
   statusId: number | null;
-  status: string;
+  status: ProgressStatus | 'NOT_STARTED' | string;
   resources: Resource[];
 }
 
@@ -30,7 +31,7 @@ interface ResourceDrawerProps {
   isLoading: boolean;
   data: DrawerData | null;
   roadmapSkillId?: number | null;
-  onStatusChange?: (roadmapSkillId: number, statusId: number | null) => void;
+  onStatusChange?: (roadmapSkillId: number, status: ProgressStatus | null) => void;
 }
 
 /** Maps resource type names to their visual badge styles. */
@@ -107,17 +108,20 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
   const { enqueue } = useProgressSync();
   const navigate = useNavigate();
 
-  const currentStatusId = data?.statusId || null;
+  const currentStatus =
+    data?.status && data.status !== 'NOT_STARTED'
+      ? data.status
+      : '';
 
-  const handleStatusChange = async (statusId: number) => {
+  const handleStatusChange = async (status: ProgressStatus) => {
     if (!roadmapSkillId) return;
 
     // 1. Đưa vào hàng đợi Sync (Background)
-    enqueue(roadmapSkillId, statusId);
+    enqueue(roadmapSkillId, status);
     
     // 2. Cập nhật UI ngay lập tức (Optimistic Update)
-    onStatusChange?.(roadmapSkillId, statusId);
-    console.log(`[BatchSync] 📥 Đã đưa roadmapSkillId=${roadmapSkillId} vào hàng đợi với statusId=${statusId}`);
+    onStatusChange?.(roadmapSkillId, status);
+    console.log(`[BatchSync] queued roadmapSkillId=${roadmapSkillId} with status=${status}`);
   };
 
   const handleReset = async () => {
@@ -189,16 +193,16 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
               {/* Select Status Dropdown - Glass Style */}
               <div className="relative flex-1 group">
                 <select
-                  value={currentStatusId || ''}
-                  onChange={(e) => handleStatusChange(Number(e.target.value))}
+                  value={currentStatus}
+                  onChange={(e) => handleStatusChange(e.target.value as ProgressStatus)}
                   className="w-full appearance-none bg-black/20 backdrop-blur-md border border-white/10 px-4 py-2.5 font-bold text-white text-xs uppercase tracking-wider shadow-lg focus:outline-none transition-all cursor-pointer"
                 >
                   <option value="" disabled className="bg-[#131b2e]">
                     Update Status
                   </option>
-                  <option value="1" className="bg-[#131b2e] font-bold text-cyan-400">Completed</option>
-                  <option value="2" className="bg-[#131b2e] font-bold text-amber-500">In Progress</option>
-                  <option value="3" className="bg-[#131b2e] font-bold text-slate-400">Skipped</option>
+                  <option value="COMPLETED" className="bg-[#131b2e] font-bold text-cyan-400">Completed</option>
+                  <option value="IN_PROGRESS" className="bg-[#131b2e] font-bold text-amber-500">In Progress</option>
+                  <option value="SKIPPED" className="bg-[#131b2e] font-bold text-slate-400">Skipped</option>
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none border-l border-white/20 pl-2">
                   <ChevronDown className="w-4 h-4 text-white/70 stroke-[3]" />
@@ -208,7 +212,7 @@ export const ResourceDrawer: React.FC<ResourceDrawerProps> = ({
               {/* Reset Button - Red Glass Style */}
               <button
                 onClick={handleReset}
-                disabled={!currentStatusId}
+                disabled={!currentStatus}
                 title="Reset progress"
                 className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 flex items-center justify-center shadow-lg transition-all duration-500 hover:bg-red-500/20 hover:rotate-180 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed group"
               >

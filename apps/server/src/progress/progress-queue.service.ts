@@ -42,26 +42,11 @@ export class ProgressQueueService {
     const records = Array.from(batch.values());
 
     try {
-      const completedStatusId = await this.progressService.getCompletedStatusId();
       const uniqueRoadmapSkillIds = [...new Set(records.map(r => r.roadmapSkillId))];
 
       const affectedRoadmapSkills = await this.prisma.roadmapSkill.findMany({
         where: { id: { in: uniqueRoadmapSkillIds } },
-        select: { id: true, skillId: true, section: { select: { roadmapId: true } } },
-      });
-
-      await this.prisma.userSkillProgress.createMany({
-        data: records.map((record) => {
-          const rs = affectedRoadmapSkills.find(r => r.id === record.roadmapSkillId);
-          return {
-            userId: record.userId,
-            roadmapSkillId: record.roadmapSkillId,
-            skillId: rs?.skillId || null,
-            statusId: completedStatusId,
-            completedAt: new Date(),
-          };
-        }),
-        skipDuplicates: true, 
+        select: { id: true, section: { select: { roadmapId: true } } },
       });
 
       // Lấy danh sách các roadmapId cần update (loại bỏ null và trùng lặp)

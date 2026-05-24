@@ -70,7 +70,10 @@ export const SignUpPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+      const apiUrl =
+        import.meta.env.VITE_API_BASE_URL ||
+        import.meta.env.VITE_API_URL ||
+        "http://localhost:3000/api";
       const response = await fetch(`${apiUrl}/auth/register`, {
         method: "POST",
         headers: {
@@ -114,11 +117,14 @@ export const SignUpPage: React.FC = () => {
       });
 
       if (error) {
-      console.error('Social login error:', error.message);
-        setErrors({ submit: 'Could not connect to ' + provider });
+        console.error('Social login error:', error.message);
+        setErrors({ submit: error.message || 'Could not connect to ' + provider });
       }
     } catch (error) {
       console.error('System error:', error);
+      setErrors({
+        submit: error instanceof Error ? error.message : 'Could not connect to ' + provider,
+      });
     }
   };
 

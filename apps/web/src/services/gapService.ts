@@ -16,28 +16,6 @@ export interface ParseJdResponse extends GapAnalysisResponse {
   roadmapPath: string | null;
 }
 
-export interface JobData {
-  id: number;
-  title: string;
-  company: string;
-  location?: string;
-  skills?: string[];
-  jobType?: string;
-  description: string;
-  requirements?: string;
-  source?: string;
-  sourceUrl?: string;
-  roadmapPath: string;
-}
-
-/**
- * Fetches all available jobs from the backend.
- */
-export async function fetchJobs(): Promise<JobData[]> {
-  const response = await api.get<JobData[]>("/jobs");
-  return response.data;
-}
-
 /**
  * Analyzes the gap between a user's skills and a job's requirements.
  * Calls the real backend API which uses Claude/Gemini/Groq AI for analysis.
@@ -86,3 +64,23 @@ export async function parseJdGap(rawJdText: string): Promise<ParseJdResponse> {
 
   return response.data;
 }
+
+export interface JobAnalysisResponse {
+  seniority: 'Intern' | 'Fresher' | 'Junior' | 'Mid' | 'Senior' | 'Lead' | string;
+  must_have: string[];
+  nice_to_have: string[];
+  experience_years: string | number;
+  ai_advice: string;
+  roadmapPath?: string | string[];
+}
+
+/**
+ * Analyzes a job deeply using AI for seniority, must-haves, nice-to-haves, AI advice, and roadmapPath.
+ */
+export async function analyzeJobJD(jobId: number): Promise<JobAnalysisResponse> {
+  const response = await api.post<JobAnalysisResponse>("/jobs/analyze-jd", {
+    jobId,
+  });
+  return response.data;
+}
+

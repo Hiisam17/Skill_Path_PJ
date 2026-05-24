@@ -17,6 +17,26 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ProgressService {
   // 1. Khai báo biến lưu cache trên RAM (In-memory cache)
   private completedStatusIdCache: number | null = null;
+  private readonly statusAliases: Record<UserSkillStatus, string[]> = {
+    [UserSkillStatus.NOT_STARTED]: [],
+    [UserSkillStatus.COMPLETED]: [
+      'COMPLETED',
+      'Completed',
+      'completed',
+      'DONE',
+      'Done',
+      'done',
+    ],
+    [UserSkillStatus.IN_PROGRESS]: [
+      'IN_PROGRESS',
+      'IN PROGRESS',
+      'In Progress',
+      'in progress',
+      'in-progress',
+      'In-progress',
+    ],
+    [UserSkillStatus.SKIPPED]: ['SKIPPED', 'Skipped', 'skipped'],
+  };
 
   constructor(private readonly prisma: PrismaService) { }
 
@@ -28,19 +48,12 @@ export class ProgressService {
       return this.completedStatusIdCache;
     }
 
-    const status = await this.prisma.progressStatus.upsert({
-      where: { name: 'COMPLETED' },
-      update: {},
-      create: { name: 'COMPLETED' },
-      select: { id: true },
-    });
-
-    this.completedStatusIdCache = status.id;
-    return status.id;
+    this.completedStatusIdCache = await this.getStatusId(UserSkillStatus.COMPLETED);
+    return this.completedStatusIdCache;
   }
 
   /** Maps a raw status name string to the UserSkillStatus enum. */
-  private mapStatusNameToEnum(statusName?: string | null): UserSkillStatus {
+  public mapStatusNameToEnum(statusName?: string | null): UserSkillStatus {
     const normalized = (statusName ?? '').trim().toUpperCase();
     if (normalized === 'COMPLETED' || normalized === 'DONE') {
       return UserSkillStatus.COMPLETED;
@@ -52,6 +65,45 @@ export class ProgressService {
       return UserSkillStatus.SKIPPED;
     }
     return UserSkillStatus.NOT_STARTED;
+  }
+
+  /**
+   * Resolves the DB ID for a status enum while tolerating legacy seed names
+   * such as "Completed" and "In Progress".
+   */
+  public async getStatusId(status: UserSkillStatus): Promise<number> {
+    if (status === UserSkillStatus.NOT_STARTED) {
+      throw new NotFoundException('NOT_STARTED is represented by no progress row');
+    }
+
+    const aliases = this.statusAliases[status] ?? [status];
+    const existing = await this.prisma.progressStatus.findFirst({
+      where: { name: { in: aliases } },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+
+    if (existing) return existing.id;
+
+    const created = await this.prisma.progressStatus.create({
+      data: { name: status },
+      select: { id: true },
+    });
+
+    return created.id;
+  }
+
+  public async getStatusEnumById(statusId: number): Promise<UserSkillStatus> {
+    const status = await this.prisma.progressStatus.findUnique({
+      where: { id: statusId },
+      select: { name: true },
+    });
+
+    if (!status) {
+      throw new NotFoundException(`ProgressStatus ${statusId} not found`);
+    }
+
+    return this.mapStatusNameToEnum(status.name);
   }
 
   /**
@@ -120,7 +172,47 @@ export class ProgressService {
       throw new NotFoundException(`RoadmapSkill ${roadmapSkillId} not found`);
     }
 
-    const completedStatusId = await this.getCompletedStatusId();
+    const statusEnum = await this.getStatusEnumById(statusId);
+    const completedAt = statusEnum === UserSkillStatus.COMPLETED ? new Date() : null;
+    const updatedAt = new Date();
+
+    if (!roadmapSkill.skillId) {
+      throw new NotFoundException(`RoadmapSkill ${roadmapSkillId} has no skill`);
+    }
+
+    const existingBySkill = await this.prisma.userSkillProgress.findFirst({
+      where: {
+        userId,
+        skillId: roadmapSkill.skillId,
+      },
+      include: {
+        status: { select: { name: true } },
+      },
+    });
+
+    if (existingBySkill) {
+      const progress = await this.prisma.userSkillProgress.update({
+        where: { id: existingBySkill.id },
+        data: {
+          roadmapSkillId,
+          skillId: roadmapSkill.skillId,
+          statusId,
+          completedAt,
+          updatedAt,
+        },
+        include: {
+          status: { select: { name: true } },
+        },
+      });
+
+      return {
+        id: String(progress.id),
+        userId: progress.userId,
+        roadmapSkillId: String(progress.roadmapSkillId),
+        status: this.mapStatusNameToEnum(progress.status?.name),
+        completedAt: progress.completedAt,
+      };
+    }
 
     const progress = await this.prisma.userSkillProgress.upsert({
       where: {
@@ -132,16 +224,16 @@ export class ProgressService {
       update: {
         statusId,
         skillId: roadmapSkill.skillId,
-        completedAt: statusId === completedStatusId ? new Date() : null,
-        updatedAt: new Date(),
+        completedAt,
+        updatedAt,
       },
       create: {
         userId,
         roadmapSkillId,
         skillId: roadmapSkill.skillId,
         statusId,
-        completedAt: statusId === completedStatusId ? new Date() : null,
-        updatedAt: new Date(),
+        completedAt,
+        updatedAt,
       },
       include: {
         status: { select: { name: true } },

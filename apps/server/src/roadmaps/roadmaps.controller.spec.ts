@@ -1,12 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoadmapsController } from './roadmaps.controller';
 import { RoadmapsService } from './roadmaps.service';
-import { ProgressService } from '../progress/progress.service';
 
 describe('RoadmapsController', () => {
   let controller: RoadmapsController;
   let roadmapsService: RoadmapsService;
-  let progressService: ProgressService;
+  const req = { user: { id: 'user-id' } } as any;
 
   let mockRoadmapsService: {
     findAllCareerPaths: jest.Mock;
@@ -15,10 +14,6 @@ describe('RoadmapsController', () => {
     findByCareerPath: jest.Mock;
     getRoadmapFlow: jest.Mock;
     findByTitle: jest.Mock;
-  };
-
-  let mockProgressService: {
-    getDemoUserId: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -31,10 +26,6 @@ describe('RoadmapsController', () => {
       findByTitle: jest.fn(),
     };
 
-    mockProgressService = {
-      getDemoUserId: jest.fn().mockResolvedValue('demo-id'),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RoadmapsController],
       providers: [
@@ -42,16 +33,11 @@ describe('RoadmapsController', () => {
           provide: RoadmapsService,
           useValue: mockRoadmapsService,
         },
-        {
-          provide: ProgressService,
-          useValue: mockProgressService,
-        },
       ],
     }).compile();
 
     controller = module.get<RoadmapsController>(RoadmapsController);
     roadmapsService = module.get<RoadmapsService>(RoadmapsService);
-    progressService = module.get<ProgressService>(ProgressService);
   });
 
   it('should be defined', () => {
@@ -66,10 +52,9 @@ describe('RoadmapsController', () => {
   });
 
   describe('getRoadmapFlow', () => {
-    it('should fetch demo user ID and call roadmapsService.getRoadmapFlow', async () => {
-      await controller.getRoadmapFlow('javascript');
-      expect(progressService.getDemoUserId).toHaveBeenCalled();
-      expect(roadmapsService.getRoadmapFlow).toHaveBeenCalledWith('javascript', 'demo-id');
+    it('should call roadmapsService.getRoadmapFlow for the authenticated user', async () => {
+      await controller.getRoadmapFlow('javascript', req);
+      expect(roadmapsService.getRoadmapFlow).toHaveBeenCalledWith('javascript', 'user-id');
     });
   });
 

@@ -44,8 +44,14 @@ export class AuthService {
     // Sync the Supabase user ID and name to the local Prisma profile table.
     if (data.user) {
       try {
-        await this.prisma.profile.create({
-          data: {
+        await this.prisma.profile.upsert({
+          where: { userId: data.user.id },
+          update: {
+            fullName: name || null,
+            isDeleted: false,
+            updatedAt: new Date(),
+          },
+          create: {
             userId: data.user.id,
             fullName: name || null,
           },

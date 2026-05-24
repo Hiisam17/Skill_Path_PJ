@@ -1,7 +1,8 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Request, UseGuards } from '@nestjs/common';
 import { SkillDto } from '../types';
 import { SkillsService } from './skills.service';
-import { ProgressService } from '../progress/progress.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Request as ExpressRequest } from 'express';
 
 /**
  * Controller for skill-related endpoints scoped under roadmaps.
@@ -10,23 +11,26 @@ import { ProgressService } from '../progress/progress.service';
  * NOTE: Uses demo user ID as a temporary measure until auth guard integration.
  */
 @Controller('roadmaps')
+@UseGuards(JwtAuthGuard)
 export class SkillsController {
   constructor(
     private readonly skillsService: SkillsService,
-    private readonly progressService: ProgressService,
   ) { }
 
-  // TODO(auth): Replace demo user with @UseGuards(JwtAuthGuard) and @Request() req.user.id.
   @Get(':roadmapId/skills')
   async getSkillsByRoadmap(
     @Param('roadmapId', ParseIntPipe) roadmapId: number,
+    @Request() req: ExpressRequest & { user: any },
   ): Promise<SkillDto[]> {
-    const userId = await this.progressService.getDemoUserId();
+    const userId = req.user.id;
     return this.skillsService.findSkillsByRoadmap(roadmapId, userId);
   }
   @Get(':id/detail')
-  async getSkillDetail(@Param('id', ParseIntPipe) id: number) {
-    const userId = await this.progressService.getDemoUserId();
+  async getSkillDetail(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: ExpressRequest & { user: any },
+  ) {
+    const userId = req.user.id;
     return this.skillsService.getSkillDetail(id, userId);
   }
 }

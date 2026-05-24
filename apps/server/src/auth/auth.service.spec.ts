@@ -21,7 +21,8 @@ describe('AuthService', () => {
 
   const mockPrismaService = {
     profile: {
-      create: jest.fn(),
+      upsert: jest.fn(),
+      findUnique: jest.fn(),
     },
   };
 
@@ -60,14 +61,20 @@ describe('AuthService', () => {
         data: { user: { id: 'supabase-id' } },
         error: null,
       });
-      mockPrismaService.profile.create.mockResolvedValue({});
+      mockPrismaService.profile.upsert.mockResolvedValue({});
 
       const result = await service.register(email, password, name);
 
       expect(result.message).toBe('Registration successful!');
       expect(supabaseMock.auth.signUp).toHaveBeenCalledWith({ email, password });
-      expect(prisma.profile.create).toHaveBeenCalledWith({
-        data: { userId: 'supabase-id', fullName: name },
+      expect(prisma.profile.upsert).toHaveBeenCalledWith({
+        where: { userId: 'supabase-id' },
+        update: {
+          fullName: name,
+          isDeleted: false,
+          updatedAt: expect.any(Date),
+        },
+        create: { userId: 'supabase-id', fullName: name },
       });
     });
 
@@ -85,7 +92,7 @@ describe('AuthService', () => {
         data: { user: { id: 'id' } },
         error: null,
       });
-      mockPrismaService.profile.create.mockRejectedValue(new Error('DB Error'));
+      mockPrismaService.profile.upsert.mockRejectedValue(new Error('DB Error'));
 
       await expect(service.register(email, password)).rejects.toThrow(InternalServerErrorException);
     });
@@ -99,6 +106,12 @@ describe('AuthService', () => {
       supabaseMock.auth.signInWithPassword.mockResolvedValue({
         data: { session: { access_token: 'token' }, user: { id: 'id' } },
         error: null,
+      });
+      mockPrismaService.profile.findUnique.mockResolvedValue({
+        fullName: 'Test User',
+        avatarUrl: null,
+        bio: null,
+        githubLink: null,
       });
 
       const result = await service.login(email, password);

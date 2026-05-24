@@ -19,11 +19,14 @@ const SYNC_INTERVAL_MS = 60_000; // 60 giây
 const SYNC_LAST_FLUSHED_KEY = 'progressSyncLastFlushed';
 
 // ───── TYPES ─────
+export type ProgressStatus = 'COMPLETED' | 'IN_PROGRESS' | 'SKIPPED';
+
 export interface ProgressQueueItem {
   /** ID của RoadmapSkill (junction table) */
   roadmapSkillId: number;
   /** ID trạng thái mới (1=COMPLETED, 2=IN_PROGRESS, 3=SKIPPED, null=RESET) */
-  statusId: number | null;
+  status?: ProgressStatus | null;
+  statusId?: number | null;
   /** Thời điểm thay đổi (ISO string) */
   changedAt: string;
 }
@@ -42,6 +45,38 @@ export function getQueue(): ProgressQueueItem[] {
   } catch {
     return [];
   }
+}
+
+function statusFromLegacyId(statusId?: number | null): ProgressStatus | null | undefined {
+  if (statusId === null) return null;
+  if (statusId === 1) return 'COMPLETED';
+  if (statusId === 2) return 'IN_PROGRESS';
+  if (statusId === 3) return 'SKIPPED';
+  return undefined;
+}
+
+function normalizeQueueItem(item: ProgressQueueItem): ProgressQueueItem {
+  if (item.status !== undefined) return item;
+  return {
+    roadmapSkillId: item.roadmapSkillId,
+    status: statusFromLegacyId(item.statusId),
+    statusId: item.statusId,
+    changedAt: item.changedAt,
+  };
+}
+
+function getSyncPayloadItems(): ProgressQueueItem[] {
+  return getQueue().map(normalizeQueueItem);
+}
+
+export function getPendingStatusForRoadmapSkill(
+  roadmapSkillId: number,
+): ProgressStatus | null | undefined {
+  const item = getQueue()
+    .map(normalizeQueueItem)
+    .find((queueItem) => queueItem.roadmapSkillId === roadmapSkillId);
+
+  return item?.status;
 }
 
 /**
@@ -64,7 +99,7 @@ function clearQueue(): void {
  */
 export function enqueueProgressChange(
   roadmapSkillId: number,
-  statusId: number | null,
+  status: ProgressStatus | null,
 ): void {
   const queue = getQueue();
 
@@ -75,7 +110,7 @@ export function enqueueProgressChange(
 
   const newItem: ProgressQueueItem = {
     roadmapSkillId,
-    statusId,
+    status,
     changedAt: new Date().toISOString(),
   };
 
@@ -106,6 +141,7 @@ export function getPendingCount(): number {
  */
 export async function flushProgressQueue(): Promise<boolean> {
   const queue = getQueue();
+  const payloadItems = getSyncPayloadItems();
 
   // Không có gì để sync
   if (queue.length === 0) return true;
@@ -115,7 +151,10 @@ export async function flushProgressQueue(): Promise<boolean> {
       `[ProgressSync] 🔄 Đang đồng bộ ${queue.length} thay đổi lên server...`,
     );
 
-    await api.post('/progress/batch-sync', { items: queue });
+    const response = await api.post('/progress/batch-sync', { items: payloadItems });
+    if (response.data?.errors && response.data.errors > 0) {
+      throw new Error(`Batch sync completed with ${response.data.errors} failed item(s)`);
+    }
 
     // Flush thành công → xóa queue
     clearQueue();
@@ -155,14 +194,17 @@ function handleVisibilityChange(): void {
 function handleBeforeUnload(): void {
   const queue = getQueue();
   if (queue.length === 0) return;
+  const payloadItems = getSyncPayloadItems();
 
   // Sử dụng navigator.sendBeacon cho reliability khi trang đóng
   const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_URL ||
+    'http://localhost:3000/api';
   const token = localStorage.getItem('access_token');
 
   const blob = new Blob(
-    [JSON.stringify({ items: queue })],
+    [JSON.stringify({ items: payloadItems })],
     { type: 'application/json' },
   );
 
@@ -176,18 +218,14 @@ function handleBeforeUnload(): void {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ items: queue }),
+        body: JSON.stringify({ items: payloadItems }),
         keepalive: true, // Đảm bảo request sống sót khi trang đóng
       });
     } catch {
       // Fallback to sendBeacon (không có auth header)
       navigator.sendBeacon(`${apiBaseUrl}/progress/batch-sync`, blob);
     }
-  } else {
-    navigator.sendBeacon(`${apiBaseUrl}/progress/batch-sync`, blob);
   }
-
-  clearQueue();
 }
 
 /**

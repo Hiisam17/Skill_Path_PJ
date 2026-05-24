@@ -1,20 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SkillsController } from './skills.controller';
 import { SkillsService } from './skills.service';
-import { ProgressService } from '../progress/progress.service';
 
 describe('SkillsController', () => {
   let controller: SkillsController;
   let skillsService: SkillsService;
-  let progressService: ProgressService;
+  const req = { user: { id: 'user-id' } } as any;
 
   const mockSkillsService = {
     findSkillsByRoadmap: jest.fn(),
     getSkillDetail: jest.fn(),
-  };
-
-  const mockProgressService = {
-    getDemoUserId: jest.fn().mockResolvedValue('demo-id'),
   };
 
   beforeEach(async () => {
@@ -25,16 +20,11 @@ describe('SkillsController', () => {
           provide: SkillsService,
           useValue: mockSkillsService,
         },
-        {
-          provide: ProgressService,
-          useValue: mockProgressService,
-        },
       ],
     }).compile();
 
     controller = module.get<SkillsController>(SkillsController);
     skillsService = module.get<SkillsService>(SkillsService);
-    progressService = module.get<ProgressService>(ProgressService);
   });
 
   it('should be defined', () => {
@@ -42,18 +32,16 @@ describe('SkillsController', () => {
   });
 
   describe('getSkillsByRoadmap', () => {
-    it('should fetch demo user ID and call skillsService.findSkillsByRoadmap', async () => {
-      await controller.getSkillsByRoadmap(1);
-      expect(progressService.getDemoUserId).toHaveBeenCalled();
-      expect(skillsService.findSkillsByRoadmap).toHaveBeenCalledWith(1, 'demo-id');
+    it('should call skillsService.findSkillsByRoadmap for the authenticated user', async () => {
+      await controller.getSkillsByRoadmap(1, req);
+      expect(skillsService.findSkillsByRoadmap).toHaveBeenCalledWith(1, 'user-id');
     });
   });
 
   describe('getSkillDetail', () => {
-    it('should fetch demo user ID and call skillsService.getSkillDetail', async () => {
-      await controller.getSkillDetail(10);
-      expect(progressService.getDemoUserId).toHaveBeenCalled();
-      expect(skillsService.getSkillDetail).toHaveBeenCalledWith(10, 'demo-id');
+    it('should call skillsService.getSkillDetail for the authenticated user', async () => {
+      await controller.getSkillDetail(10, req);
+      expect(skillsService.getSkillDetail).toHaveBeenCalledWith(10, 'user-id');
     });
   });
 });

@@ -21,6 +21,17 @@ export interface GapAnalysisJdResult extends GapAnalysisResult {
 }
 
 /**
+ * Response structure from AI for Job JD deep analysis (AI Job Analyst).
+ */
+export interface JobAnalysisResult {
+  seniority: 'Intern' | 'Fresher' | 'Junior' | 'Mid' | 'Senior' | 'Lead';
+  must_have: string[];
+  nice_to_have: string[];
+  experience_years: string | number;
+  ai_advice: string;
+}
+
+/**
  * Minimal Job type used by AiGapService.
  */
 export interface JobInput {
@@ -320,6 +331,206 @@ Hãy:
       }
       this.logger.error(`Groq API error: ${error.message}`, error.stack);
       throw new Error(`AI JD analysis failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Analyzes a Job's JD deeply using Groq to classify skills, seniority, and give advice.
+   *
+   * Dynamic prompt strategy:
+   *  - If job.skills.length > 0 → classify existing normalized skills into must-have / nice-to-have.
+   *  - If job.skills.length === 0 → extract skills from raw JD content.
+   *
+   * @param jobId - The ID of the Job record in the database
+   * @returns Parsed JobAnalysisResult or a safe fallback on error
+   */
+  async analyzeJobJD(jobId: number): Promise<JobAnalysisResult> {
+    // ── 1. Fetch Job from DB ──────────────────────────────────────────────────
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        description: true,
+        requirements: true,
+        skills: true,
+        roadmapPath: true,
+      },
+    });
+
+    if (!job) {
+      throw new Error(`Job with id=${jobId} not found`);
+    }
+
+    this.logger.log(
+      `analyzeJobJD: jobId=${jobId}, title="${job.title}", skills.length=${job.skills.length}`,
+    );
+
+    // ── 2. Build Dynamic System Prompt ───────────────────────────────────────
+    const hasSkills = job.skills.length > 0;
+
+    const systemPrompt = hasSkills
+      ? `Bạn là AI chuyên phân tích JD tuyển dụng IT.
+
+Dưới đây là JD và mảng kỹ năng chuẩn hệ thống đã nhận diện được.
+Nhiệm vụ của bạn là phân loại các kỹ năng trong mảng này thành Must-have và Nice-to-have dựa vào ngữ cảnh JD.
+Tuyệt đối chỉ sử dụng các từ khóa nằm trong mảng được cung cấp, KHÔNG TỰ BỊA THÊM kỹ năng khác.
+
+Quy tắc cho từng trường:
+4. Lời khuyên (ai_advice): TUYỆT ĐỐI KHÔNG viết những câu sáo rỗng, chung chung về thái độ học hỏi hay kỹ năng mềm. Bạn PHẢI chỉ đích danh ít nhất 1-2 kỹ năng (tech stack) quan trọng nhất trong mục must_have để khuyên ứng viên ôn tập sâu, hoặc gợi ý cách dùng kỹ năng nice_to_have để ghi điểm. Viết 2-3 câu ngắn gọn, mang tính chiến lược chuyên môn của một Tech Lead.
+
+Trả về JSON với cấu trúc BẮT BUỘC sau (không markdown, không giải thích thêm):
+{
+  "seniority": "Intern" | "Fresher" | "Junior" | "Mid" | "Senior" | "Lead",
+  "must_have": string[],
+  "nice_to_have": string[],
+  "experience_years": string | number,
+  "ai_advice": string
+}`
+      : `Bạn là AI chuyên phân tích JD tuyển dụng IT.
+
+Hệ thống không tìm thấy kỹ năng chuẩn cho vị trí này.
+Dựa vào nội dung JD dưới đây, hãy tự bóc tách các kỹ năng IT và phân loại chúng vào Must-have và Nice-to-have.
+
+Quy tắc cho từng trường:
+4. Lời khuyên (ai_advice): TUYỆT ĐỐI KHÔNG viết những câu sáo rỗng, chung chung về thái độ học hỏi hay kỹ năng mềm. Bạn PHẢI chỉ đích danh ít nhất 1-2 kỹ năng (tech stack) quan trọng nhất trong mục must_have để khuyên ứng viên ôn tập sâu, hoặc gợi ý cách dùng kỹ năng nice_to_have để ghi điểm. Viết 2-3 câu ngắn gọn, mang tính chiến lược chuyên môn của một Tech Lead.
+
+Trả về JSON với cấu trúc BẮT BUỘC sau (không markdown, không giải thích thêm):
+{
+  "seniority": "Intern" | "Fresher" | "Junior" | "Mid" | "Senior" | "Lead",
+  "must_have": string[],
+  "nice_to_have": string[],
+  "experience_years": string | number,
+  "ai_advice": string
+}`;
+
+    // ── 3. Build User Prompt ──────────────────────────────────────────────────
+    const jdContent = [
+      `Job Title: ${job.title}`,
+      `Company: ${job.company}`,
+      `Description:\n${job.description}`,
+      job.requirements ? `Requirements:\n${job.requirements}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const userPrompt = hasSkills
+      ? `${jdContent}\n\n---\nMảng kỹ năng chuẩn hệ thống (CHỈ dùng các từ khóa này):\n${JSON.stringify(job.skills)}`
+      : jdContent;
+
+    // ── 4. Call Groq ─────────────────────────────────────────────────────────
+    const FALLBACK: JobAnalysisResult = {
+      seniority: 'Junior',
+      must_have: job.skills.slice(0, 5),
+      nice_to_have: [],
+      experience_years: 'N/A',
+      ai_advice: 'Không thể phân tích JD lúc này. Vui lòng thử lại sau.',
+    };
+
+    console.log(`[analyzeJobJD] BEFORE API Call - Job ID: ${jobId}, Title: "${job.title}", Company: "${job.company}"`);
+    console.log(`[analyzeJobJD] BEFORE API Call - JD Content Length: ${jdContent.length} characters`);
+    console.log(`[analyzeJobJD] BEFORE API Call - Skills Array Length: ${job.skills.length}`, job.skills);
+
+    try {
+      const response = await this.groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.15,
+        response_format: { type: 'json_object' },
+      });
+
+      const rawText = response.choices[0]?.message?.content?.trim() || '';
+      console.log(`[analyzeJobJD] AFTER API Call - Groq Raw Response (Raw Text):`, rawText);
+      this.logger.debug(`Groq analyzeJobJD raw: ${rawText.substring(0, 300)}`);
+
+      if (!rawText) {
+        console.warn('[analyzeJobJD] Groq returned empty response, using fallback');
+        this.logger.warn('analyzeJobJD: Groq returned empty response, using fallback');
+        return FALLBACK;
+      }
+
+      // Strip potential markdown fences (safety net even with json_object mode)
+      let jsonStr = rawText;
+      const fenceMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) {
+        jsonStr = fenceMatch[1].trim();
+        console.log(`[analyzeJobJD] Stripped markdown fences. Clean JSON string to parse:`, jsonStr);
+      }
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (parseErr: any) {
+        console.error(`[analyzeJobJD] JSON Parse Error:`, {
+          errorMessage: parseErr.message,
+          errorStack: parseErr.stack,
+          rawResponseAttemptedToParse: rawText
+        });
+        this.logger.error(
+          `analyzeJobJD: JSON parse failed for jobId=${jobId}. Raw: ${rawText.substring(0, 300)}`,
+        );
+        return FALLBACK;
+      }
+
+      // ── 5. Validate & Sanitize Output ──────────────────────────────────────
+      const validSeniorities = ['Intern', 'Fresher', 'Junior', 'Mid', 'Senior', 'Lead'];
+
+      const result: JobAnalysisResult = {
+        seniority: validSeniorities.includes(parsed.seniority)
+          ? parsed.seniority
+          : 'Junior',
+        must_have: Array.isArray(parsed.must_have)
+          ? parsed.must_have.filter((s: any) => typeof s === 'string')
+          : [],
+        nice_to_have: Array.isArray(parsed.nice_to_have)
+          ? parsed.nice_to_have.filter((s: any) => typeof s === 'string')
+          : [],
+        experience_years:
+          parsed.experience_years !== undefined ? parsed.experience_years : 'N/A',
+        ai_advice:
+          typeof parsed.ai_advice === 'string' && parsed.ai_advice.trim()
+            ? parsed.ai_advice.trim()
+            : FALLBACK.ai_advice,
+      };
+
+      // If skills were pre-normalized, filter hallucinated entries
+      if (hasSkills) {
+        const allowedSet = new Set(job.skills);
+        const before = result.must_have.length + result.nice_to_have.length;
+        result.must_have = result.must_have.filter((s) => allowedSet.has(s));
+        result.nice_to_have = result.nice_to_have.filter((s) => allowedSet.has(s));
+        const after = result.must_have.length + result.nice_to_have.length;
+        if (before !== after) {
+          console.warn(`[analyzeJobJD] Filtered ${before - after} hallucinated skills for jobId=${jobId}`);
+          this.logger.warn(
+            `analyzeJobJD: Filtered ${before - after} hallucinated skills for jobId=${jobId}`,
+          );
+        }
+      }
+
+      this.logger.log(
+        `analyzeJobJD complete: jobId=${jobId}, seniority=${result.seniority}, ` +
+          `must_have=${result.must_have.length}, nice_to_have=${result.nice_to_have.length}`,
+      );
+
+      return result;
+    } catch (error: any) {
+      console.error(`[analyzeJobJD] Groq calling/processing failure! Full error details:`, {
+        message: error.message,
+        stack: error.stack,
+        statusCode: error.status || error.statusCode || (error.response && error.response.status) || 'N/A',
+        errorObject: error
+      });
+      this.logger.error(
+        `analyzeJobJD: Groq API error for jobId=${jobId}: ${error.message}`,
+        error.stack,
+      );
+      // Return safe fallback instead of crashing the caller
+      return FALLBACK;
     }
   }
 }

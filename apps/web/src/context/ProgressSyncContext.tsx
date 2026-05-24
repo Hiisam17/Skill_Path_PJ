@@ -27,6 +27,7 @@ import {
   getPendingCount,
   getLastFlushedTime,
 } from '@/services/progressSyncService';
+import type { ProgressStatus } from '@/services/progressSyncService';
 
 // ───── CONTEXT TYPES ─────
 
@@ -35,7 +36,7 @@ interface ProgressSyncContextType {
    * Thêm một thay đổi tiến độ vào hàng đợi.
    * Sẽ được đồng bộ lên server ở cycle tiếp theo (mỗi 60 giây).
    */
-  enqueue: (roadmapSkillId: number, statusId: number | null) => void;
+  enqueue: (roadmapSkillId: number, status: ProgressStatus | null) => void;
 
   /**
    * Flush ngay lập tức (không chờ interval).
@@ -104,8 +105,8 @@ export const ProgressSyncProvider = ({ children }: ProgressSyncProviderProps) =>
   }, [isSyncActive]);
 
   const enqueue = useCallback(
-    (roadmapSkillId: number, statusId: number | null) => {
-      enqueueProgressChange(roadmapSkillId, statusId);
+    (roadmapSkillId: number, status: ProgressStatus | null) => {
+      enqueueProgressChange(roadmapSkillId, status);
       setPendingCount(getPendingCount());
     },
     [],

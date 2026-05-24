@@ -14,6 +14,7 @@ export interface SkillNodeData {
     roadmapSkillId?: number;
     labelType?: string;
     isCompleted?: boolean;
+    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED';
     statusId?: number | null;
     isHighlighted?: boolean;
 }

@@ -11,6 +11,9 @@ describe('ProgressService', () => {
   const mockPrismaService = {
     progressStatus: {
       upsert: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
     },
     profile: {
       findUnique: jest.fn(),
@@ -23,6 +26,8 @@ describe('ProgressService', () => {
       findMany: jest.fn(),
     },
     userSkillProgress: {
+      findFirst: jest.fn(),
+      update: jest.fn(),
       upsert: jest.fn(),
       delete: jest.fn(),
       count: jest.fn(),
@@ -60,20 +65,20 @@ describe('ProgressService', () => {
   });
 
   describe('getCompletedStatusId', () => {
-    it('should upsert and return COMPLETED status ID', async () => {
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+    it('should return an existing COMPLETED-compatible status ID', async () => {
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue({ id: 1 });
       const id = await service.getCompletedStatusId();
       expect(id).toBe(1);
-      expect(mockPrismaService.progressStatus.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        where: { name: 'COMPLETED' }
+      expect(mockPrismaService.progressStatus.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: { name: { in: expect.arrayContaining(['COMPLETED', 'Completed']) } }
       }));
     });
 
     it('should use cache on subsequent calls', async () => {
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue({ id: 1 });
       await service.getCompletedStatusId();
       await service.getCompletedStatusId();
-      expect(mockPrismaService.progressStatus.upsert).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.progressStatus.findFirst).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -124,8 +129,9 @@ describe('ProgressService', () => {
 
   describe('updateSkillStatus', () => {
     it('should update roadmap skill status successfully (Happy Path)', async () => {
-      mockPrismaService.roadmapSkill.findUnique.mockResolvedValue({ id: 10 });
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 }); // Completed ID
+      mockPrismaService.roadmapSkill.findUnique.mockResolvedValue({ id: 10, skillId: 5 });
+      mockPrismaService.progressStatus.findUnique.mockResolvedValue({ name: 'COMPLETED' });
+      mockPrismaService.userSkillProgress.findFirst.mockResolvedValue(null);
       mockPrismaService.userSkillProgress.upsert.mockResolvedValue({
         id: 1,
         userId: 'u1',
@@ -141,8 +147,9 @@ describe('ProgressService', () => {
     });
 
     it('should use correct unique key userId_roadmapSkillId when upserting', async () => {
-      mockPrismaService.roadmapSkill.findUnique.mockResolvedValue({ id: 10 });
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+      mockPrismaService.roadmapSkill.findUnique.mockResolvedValue({ id: 10, skillId: 5 });
+      mockPrismaService.progressStatus.findUnique.mockResolvedValue({ name: 'IN_PROGRESS' });
+      mockPrismaService.userSkillProgress.findFirst.mockResolvedValue(null);
       mockPrismaService.userSkillProgress.upsert.mockResolvedValue({
         id: 1, userId: 'u1', roadmapSkillId: 10,
         status: { name: 'IN_PROGRESS' }, completedAt: null,
@@ -154,6 +161,42 @@ describe('ProgressService', () => {
           where: { userId_roadmapSkillId: { userId: 'u1', roadmapSkillId: 10 } },
         })
       );
+    });
+
+    it('should update existing progress by skillId for legacy DB uniqueness', async () => {
+      mockPrismaService.roadmapSkill.findUnique.mockResolvedValue({ id: 10, skillId: 5 });
+      mockPrismaService.progressStatus.findUnique.mockResolvedValue({ name: 'IN_PROGRESS' });
+      mockPrismaService.userSkillProgress.findFirst.mockResolvedValue({
+        id: 1,
+        userId: 'u1',
+        roadmapSkillId: 9,
+        skillId: 5,
+        status: { name: 'COMPLETED' },
+        completedAt: new Date(),
+      });
+      mockPrismaService.userSkillProgress.update.mockResolvedValue({
+        id: 1,
+        userId: 'u1',
+        roadmapSkillId: 10,
+        skillId: 5,
+        status: { name: 'IN_PROGRESS' },
+        completedAt: null,
+      });
+
+      const result = await service.updateSkillStatus('u1', 10, 2);
+
+      expect(result.status).toBe(UserSkillStatus.IN_PROGRESS);
+      expect(mockPrismaService.userSkillProgress.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 1 },
+          data: expect.objectContaining({
+            roadmapSkillId: 10,
+            skillId: 5,
+            statusId: 2,
+          }),
+        }),
+      );
+      expect(mockPrismaService.userSkillProgress.upsert).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if roadmapSkill does not exist', async () => {
@@ -179,7 +222,7 @@ describe('ProgressService', () => {
 
   describe('getUserProgress', () => {
     it('should calculate percentage based on user roadmap enrollment', async () => {
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue({ id: 1 });
       mockPrismaService.userSkillProgress.count.mockResolvedValue(5);
       mockPrismaService.userRoadmap.findFirst.mockResolvedValue({ roadmapId: 100 });
       mockPrismaService.roadmapSkill.count.mockResolvedValue(10);
@@ -191,7 +234,7 @@ describe('ProgressService', () => {
     });
 
     it('should fallback to first system roadmap if user has no enrollment', async () => {
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue({ id: 1 });
       mockPrismaService.userSkillProgress.count.mockResolvedValue(2);
       mockPrismaService.userRoadmap.findFirst.mockResolvedValue(null);
       mockPrismaService.roadmap.findFirst.mockResolvedValue({ id: 200 });
@@ -203,7 +246,7 @@ describe('ProgressService', () => {
     });
 
     it('should return 0 percentage if no skills found', async () => {
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue({ id: 1 });
       mockPrismaService.userSkillProgress.count.mockResolvedValue(0);
       mockPrismaService.userRoadmap.findFirst.mockResolvedValue(null);
       mockPrismaService.roadmap.findFirst.mockResolvedValue(null);
@@ -216,7 +259,7 @@ describe('ProgressService', () => {
 
   describe('syncRoadmapProgressPercentage', () => {
     it('should calculate and update progressPercentage using roadmapSkillIds', async () => {
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue({ id: 1 });
       mockPrismaService.roadmapSkill.count.mockResolvedValue(10);
       // Trả về id thay vì skillId
       mockPrismaService.roadmapSkill.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
@@ -247,7 +290,7 @@ describe('ProgressService', () => {
 
   describe('getUserMultiRoadmapProgress', () => {
     it('should return breakdown using roadmapSkillIds for enrolled roadmaps', async () => {
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue({ id: 1 });
       mockPrismaService.userRoadmap.findMany.mockResolvedValue([
         { roadmapId: 1, roadmap: { id: 1, title: 'R1' } }
       ]);
@@ -269,7 +312,7 @@ describe('ProgressService', () => {
     });
 
     it('should fallback to all system roadmaps if user has no enrollments', async () => {
-      mockPrismaService.progressStatus.upsert.mockResolvedValue({ id: 1 });
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue({ id: 1 });
       mockPrismaService.userRoadmap.findMany.mockResolvedValue([]);
       mockPrismaService.roadmap.findMany.mockResolvedValue([
         { id: 2, title: 'System Roadmap' }

@@ -10,16 +10,12 @@ describe('ProgressQueueService', () => {
   let progressService: ProgressService;
 
   const mockPrismaService = {
-    userSkillProgress: {
-      createMany: jest.fn(),
-    },
     roadmapSkill: {
       findMany: jest.fn(),
     },
   };
 
   const mockProgressService = {
-    getCompletedStatusId: jest.fn().mockResolvedValue(1),
     syncRoadmapProgressPercentage: jest.fn().mockResolvedValue(undefined),
   };
 
@@ -69,7 +65,7 @@ describe('ProgressQueueService', () => {
   describe('flushQueueToDatabase', () => {
     it('should stop early if queue is empty', async () => {
       await service.flushQueueToDatabase();
-      expect(mockPrismaService.userSkillProgress.createMany).not.toHaveBeenCalled();
+      expect(mockPrismaService.roadmapSkill.findMany).not.toHaveBeenCalled();
     });
 
     it('should process queue items and sync roadmap percentages', async () => {
@@ -80,14 +76,14 @@ describe('ProgressQueueService', () => {
 
       await service.flushQueueToDatabase();
 
-      expect(mockPrismaService.userSkillProgress.createMany).toHaveBeenCalled();
+      expect(mockPrismaService.roadmapSkill.findMany).toHaveBeenCalled();
       expect(mockProgressService.syncRoadmapProgressPercentage).toHaveBeenCalledWith('user1', 1);
       expect((service as any).cacheQueue.size).toBe(0);
     });
 
     it('should handle errors during flushing', async () => {
       service.enqueueProgress('user1', 10);
-      mockPrismaService.userSkillProgress.createMany.mockRejectedValue(new Error('DB Error'));
+      mockPrismaService.roadmapSkill.findMany.mockRejectedValue(new Error('DB Error'));
 
       await expect(service.flushQueueToDatabase()).resolves.not.toThrow();
       // Even if it fails, queue should be cleared in current implementation (or retried)

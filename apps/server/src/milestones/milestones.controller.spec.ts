@@ -1,15 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MilestonesController } from './milestones.controller';
 import { MilestonesService } from './milestones.service';
-import { PrismaService } from '../prisma/prisma.service';
 
 describe('MilestonesController', () => {
   let controller: MilestonesController;
+  const mockMilestonesService = {
+    getDashboardStats: jest.fn(),
+    updateUserActivity: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MilestonesController],
-      providers: [MilestonesService, PrismaService],
+      providers: [
+        {
+          provide: MilestonesService,
+          useValue: mockMilestonesService,
+        },
+      ],
     }).compile();
 
     controller = module.get<MilestonesController>(MilestonesController);

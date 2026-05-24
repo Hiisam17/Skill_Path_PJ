@@ -83,9 +83,30 @@ export class UsersService {
       githubLink?: string;
     },
   ) {
-    return this.prisma.profile.update({
+    const data: {
+      fullName?: string | null;
+      avatarUrl?: string | null;
+      bio?: string | null;
+      githubLink?: string | null;
+      updatedAt: Date;
+      isDeleted: boolean;
+    } = {
+      updatedAt: new Date(),
+      isDeleted: false,
+    };
+
+    if (updateProfileDto.fullName !== undefined) data.fullName = updateProfileDto.fullName.trim() || null;
+    if (updateProfileDto.avatarUrl !== undefined) data.avatarUrl = updateProfileDto.avatarUrl.trim() || null;
+    if (updateProfileDto.bio !== undefined) data.bio = updateProfileDto.bio.trim() || null;
+    if (updateProfileDto.githubLink !== undefined) data.githubLink = updateProfileDto.githubLink.trim() || null;
+
+    return this.prisma.profile.upsert({
       where: { userId },
-      data: updateProfileDto,
+      update: data,
+      create: {
+        userId,
+        ...data,
+      },
     });
   }
 

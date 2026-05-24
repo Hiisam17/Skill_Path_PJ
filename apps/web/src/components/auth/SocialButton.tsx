@@ -18,12 +18,14 @@ export const SocialButton: React.FC<SocialButtonProps> = ({
   provider,
   loading = false,
   disabled = false,
+  type = "button",
   ...props
 }) => {
   const isGithub = provider === "github";
 
   return (
     <button
+      type={type}
       disabled={disabled || loading}
       className={`
         w-full py-3 px-4 rounded-lg border border-slate-700

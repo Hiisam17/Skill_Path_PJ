@@ -7,13 +7,14 @@ describe('UsersController', () => {
   let controller: UsersController;
   let usersService: UsersService;
   let progressService: ProgressService;
+  const req = { user: { id: 'user-id' } } as any;
 
   const mockUsersService = {
     selectRoadmap: jest.fn(),
+    updateProfile: jest.fn(),
   };
 
   const mockProgressService = {
-    getDemoUserId: jest.fn().mockResolvedValue('demo-id'),
     getUserMultiRoadmapProgress: jest.fn(),
   };
 
@@ -42,10 +43,9 @@ describe('UsersController', () => {
   });
 
   describe('getProgress', () => {
-    it('should fetch progress for demo user', async () => {
-      await controller.getProgress();
-      expect(progressService.getDemoUserId).toHaveBeenCalled();
-      expect(progressService.getUserMultiRoadmapProgress).toHaveBeenCalledWith('demo-id');
+    it('should fetch progress for the authenticated user', async () => {
+      await controller.getProgress(req);
+      expect(progressService.getUserMultiRoadmapProgress).toHaveBeenCalledWith('user-id');
     });
   });
 
@@ -54,10 +54,22 @@ describe('UsersController', () => {
       const dto = { careerPathId: '1' };
       mockUsersService.selectRoadmap.mockResolvedValue({ id: 10, title: 'Roadmap 1' });
 
-      const result = await controller.selectRoadmap(dto);
+      const result = await controller.selectRoadmap(dto, req);
 
       expect(result).toEqual({ roadmapId: 10, roadmapTitle: 'Roadmap 1' });
-      expect(usersService.selectRoadmap).toHaveBeenCalledWith('demo-id', dto);
+      expect(usersService.selectRoadmap).toHaveBeenCalledWith('user-id', dto);
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('should call usersService.updateProfile for the authenticated user', async () => {
+      const dto = { fullName: 'Test User' };
+      mockUsersService.updateProfile.mockResolvedValue({ userId: 'user-id', ...dto });
+
+      const result = await controller.updateProfile(dto, req);
+
+      expect(result).toEqual({ userId: 'user-id', ...dto });
+      expect(usersService.updateProfile).toHaveBeenCalledWith('user-id', dto);
     });
   });
 });

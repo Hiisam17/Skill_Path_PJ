@@ -43,10 +43,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         try {
             this.logger.debug(`Token payload received: sub=${payload?.sub} email=${payload?.email}`);
             
-            // Fetch profile info from local DB
-            const profile = await this.prisma.profile.findUnique({
+            const metadata = payload?.user_metadata ?? {};
+            const fallbackFullName =
+                metadata.full_name ?? metadata.name ?? metadata.user_name ?? null;
+            const fallbackAvatarUrl =
+                metadata.avatar_url ?? metadata.picture ?? null;
+
+            const profile = await this.prisma.profile.upsert({
                 where: { userId: payload.sub },
-                select: { fullName: true, avatarUrl: true, bio: true, githubLink: true }
+                update: { isDeleted: false },
+                create: {
+                    userId: payload.sub,
+                    fullName: fallbackFullName,
+                    avatarUrl: fallbackAvatarUrl,
+                    isDeleted: false,
+                },
+                select: { fullName: true, avatarUrl: true, bio: true, githubLink: true },
             });
 
             return { 

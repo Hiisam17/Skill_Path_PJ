@@ -4,6 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { passportJwtSecret } from 'jwks-rsa';
 import { PrismaService } from '../prisma/prisma.service';
+import * as jwt from 'jsonwebtoken';
 
 /**
  * JWT strategy that validates tokens against Supabase's JWKS endpoint.
@@ -18,16 +19,41 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     ) {
         const supabaseUrl = configService.get<string>('SUPABASE_URL');
 
+        const jwksSecretProvider = passportJwtSecret({
+            cache: true,
+            rateLimit: true,
+            jwksRequestsPerMinute: 5,
+            jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
+        });
+
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
 
-            secretOrKeyProvider: passportJwtSecret({
-                cache: true,
-                rateLimit: true,
-                jwksRequestsPerMinute: 5,
-                jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
-            }),
+            secretOrKeyProvider: (request, rawJwtToken, done) => {
+                const decoded = jwt.decode(rawJwtToken, { complete: true });
+                const algorithm = decoded?.header?.alg;
+
+                if (algorithm?.startsWith('HS')) {
+                    const jwtSecret =
+                        configService.get<string>('SUPABASE_JWT_SECRET') ??
+                        configService.get<string>('JWT_SECRET');
+
+                    if (!jwtSecret) {
+                        done(
+                            new Error(
+                                'JWT_SECRET or SUPABASE_JWT_SECRET is required for HS-signed Supabase tokens',
+                            ),
+                        );
+                        return;
+                    }
+
+                    done(null, jwtSecret);
+                    return;
+                }
+
+                jwksSecretProvider(request, rawJwtToken, done);
+            },
             algorithms: ['RS256', 'HS256', 'ES256'],
         });
         this.logger.debug(`JwtStrategy initialized with JWKS URI: ${supabaseUrl}/auth/v1/.well-known/jwks.json`);

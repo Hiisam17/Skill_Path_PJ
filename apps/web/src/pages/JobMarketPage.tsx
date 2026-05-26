@@ -31,6 +31,22 @@ import { analyzeJobJD, type JobAnalysisResponse } from "@/services/gapService";
 import { fetchJobs, type JobData } from "@/services/jobService";
 import "./JobMarketPage.css";
 
+const ROADMAP_ROUTE_MAP: Record<string, { title: string; href: string }> = {
+  "1": { title: "Frontend Developer", href: `/roadmaps/${encodeURIComponent("Frontend")}` },
+  "2": { title: "Backend Developer", href: `/roadmaps/${encodeURIComponent("Backend")}` },
+  "3": { title: "DevOps Engineer", href: `/roadmaps/${encodeURIComponent("DevOps")}` },
+  frontend: { title: "Frontend Developer", href: `/roadmaps/${encodeURIComponent("Frontend")}` },
+  "frontend developer": { title: "Frontend Developer", href: `/roadmaps/${encodeURIComponent("Frontend")}` },
+  backend: { title: "Backend Developer", href: `/roadmaps/${encodeURIComponent("Backend")}` },
+  "backend developer": { title: "Backend Developer", href: `/roadmaps/${encodeURIComponent("Backend")}` },
+  devops: { title: "DevOps Engineer", href: `/roadmaps/${encodeURIComponent("DevOps")}` },
+  "devops engineer": { title: "DevOps Engineer", href: `/roadmaps/${encodeURIComponent("DevOps")}` },
+  "full-stack": { title: "Full Stack Developer", href: `/roadmaps/${encodeURIComponent("Full Stack")}` },
+  fullstack: { title: "Full Stack Developer", href: `/roadmaps/${encodeURIComponent("Full Stack")}` },
+  "full stack": { title: "Full Stack Developer", href: `/roadmaps/${encodeURIComponent("Full Stack")}` },
+  "full stack developer": { title: "Full Stack Developer", href: `/roadmaps/${encodeURIComponent("Full Stack")}` },
+};
+
 type JobFeedItem = {
   id: number;
   title: string;
@@ -97,6 +113,35 @@ function formatRoadmapPath(value?: string | null) {
   return value;
 }
 
+function resolveRoadmapLink(path: string) {
+  const raw = path.trim();
+  const decoded = decodeURIComponent(raw);
+  const pathKey = decoded.replace(/^\/?roadmaps\//i, "");
+  const roadmapKey = pathKey.startsWith("@roadmap:")
+    ? pathKey.split(":")[1] ?? ""
+    : pathKey;
+  const normalizedKey = roadmapKey.toLocaleLowerCase("vi-VN");
+  const mapped = ROADMAP_ROUTE_MAP[normalizedKey];
+
+  if (mapped) return { link: mapped.href, title: mapped.title };
+
+  if (/^\/?roadmaps\//i.test(decoded)) {
+    return {
+      link: `/roadmaps/${encodeURIComponent(roadmapKey)}`,
+      title: formatRoadmapPath(roadmapKey),
+    };
+  }
+
+  if (raw.startsWith("/")) {
+    return { link: raw, title: formatRoadmapPath(pathKey) };
+  }
+
+  return {
+    link: `/roadmaps/${encodeURIComponent(roadmapKey)}`,
+    title: formatRoadmapPath(roadmapKey),
+  };
+}
+
 function formatPostedAt(createdAt?: string | null) {
   if (!createdAt) return "Đăng gần đây";
 
@@ -159,28 +204,14 @@ function getRoadmapLinks(pathData?: string | string[]) {
   }
 
   return paths.map((path) => {
-    if (path.startsWith("@roadmap:")) {
-      const type = path.split(":")[1] ?? "";
-      const map: Record<string, { slug: string; title: string }> = {
-        frontend: { slug: "1", title: "Frontend Developer" },
-        backend: { slug: "Backend", title: "Backend Developer" },
-        devops: { slug: "3", title: "DevOps Engineer" },
-      };
-      const matched = map[type.toLocaleLowerCase("vi-VN")];
-
-      if (matched) {
-        return { link: `/roadmaps/${matched.slug}`, title: matched.title };
-      }
-
-      return { link: `/roadmaps/${type}`, title: type || path };
-    }
-
-    if (path.startsWith("/")) {
-      return { link: path, title: formatRoadmapPath(path.split("/").pop()) };
-    }
-
-    return { link: `/roadmaps/${path}`, title: formatRoadmapPath(path) };
+    return resolveRoadmapLink(path);
   });
+}
+
+function buildAnalysisSkillList(result: JobAnalysisResponse, sourceSkills: string[] = []) {
+  return Array.from(new Set([...result.must_have, ...result.nice_to_have, ...sourceSkills]))
+    .map((skill) => skill.trim())
+    .filter(Boolean);
 }
 
 function mapJobData(job: JobData): JobFeedItem {
@@ -513,10 +544,12 @@ function EmptyDetailsPanel() {
 }
 
 function JobAnalysisDrawer({
+  job,
   result,
   isOpen,
   onClose,
 }: {
+  job: JobFeedItem;
   result: JobAnalysisResponse | null;
   isOpen: boolean;
   onClose: () => void;
@@ -524,6 +557,7 @@ function JobAnalysisDrawer({
   if (!result) return null;
 
   const roadmapLinks = getRoadmapLinks(result.roadmapPath);
+  const matchingSkills = buildAnalysisSkillList(result, job.skills);
   const experienceText =
     result.experience_years === "N/A"
       ? "Kinh nghiệm: N/A"
@@ -636,7 +670,22 @@ function JobAnalysisDrawer({
                     key={`${item.link}-${item.title}`}
                     to={item.link}
                     className="flex items-center justify-between rounded-lg border border-[#00BDD6]/30 bg-[#00BDD6]/10 px-4 py-3 font-semibold text-[#00E5FF] transition-colors hover:bg-[#00BDD6]/20"
-                    onClick={onClose}
+                    onClick={() => {
+                      localStorage.setItem(
+                        "activeGapAnalysis",
+                        JSON.stringify({
+                          roadmapPath: item.link,
+                          jobTitle: job.title,
+                          companyName: job.company,
+                          gapNodes: matchingSkills,
+                          matchingSkills,
+                          mustHaveSkills: result.must_have,
+                          niceToHaveSkills: result.nice_to_have,
+                          summary: result.ai_advice,
+                        }),
+                      );
+                      onClose();
+                    }}
                   >
                     {item.title}
                     <ChevronRight className="size-4" />
@@ -773,6 +822,7 @@ function JobDetailsPanel({ job }: { job: JobFeedItem | null }) {
       </Card>
 
       <JobAnalysisDrawer
+        job={job}
         result={analysisResult}
         isOpen={isAnalysisOpen}
         onClose={() => setIsAnalysisOpen(false)}

@@ -46,38 +46,48 @@ export const AIJobAnalystWidget: React.FC<AIJobAnalystWidgetProps> = ({ jobId, o
 
   const getRoadmapLinks = (pathData?: string | string[]) => {
     if (!pathData) return [];
-    try {
-      let paths: string[] = [];
-      if (typeof pathData === 'string') {
+    let paths: string[] = [];
+
+    if (typeof pathData === 'string') {
+      try {
         const parsed = JSON.parse(pathData);
         paths = Array.isArray(parsed) ? parsed : [pathData];
-      } else if (Array.isArray(pathData)) {
-        paths = pathData;
+      } catch {
+        paths = [pathData];
       }
-      
-      return paths.map(path => {
-        let slug = path;
-        if (path.startsWith('@roadmap:')) {
-          const type = path.split(':')[1];
-          const map: Record<string, {slug: string, title: string}> = {
-            frontend: { slug: '1', title: 'Frontend Developer' },
-            backend: { slug: 'Backend', title: 'Backend Developer' },
-            devops: { slug: '3', title: 'DevOps Engineer' }
-          };
-          const matched = map[type.toLowerCase()];
-          if (matched) {
-            return { link: `/roadmaps/${matched.slug}`, title: matched.title };
-          }
-          slug = type;
-        }
-        return { link: `/roadmaps/${slug}`, title: path };
-      });
-    } catch (e) {
-       if (typeof pathData === 'string') {
-         return [{ link: pathData, title: pathData }];
-       }
-       return [];
+    } else if (Array.isArray(pathData)) {
+      paths = pathData;
     }
+
+    return paths.map(path => {
+      const key = decodeURIComponent(path)
+        .replace(/^\/?roadmaps\//i, '')
+        .replace(/^@roadmap:/i, '')
+        .toLowerCase();
+      const map: Record<string, {slug: string, title: string}> = {
+        '1': { slug: encodeURIComponent('Frontend'), title: 'Frontend Developer' },
+        '2': { slug: encodeURIComponent('Backend'), title: 'Backend Developer' },
+        '3': { slug: encodeURIComponent('DevOps'), title: 'DevOps Engineer' },
+        frontend: { slug: encodeURIComponent('Frontend'), title: 'Frontend Developer' },
+        'frontend developer': { slug: encodeURIComponent('Frontend'), title: 'Frontend Developer' },
+        backend: { slug: encodeURIComponent('Backend'), title: 'Backend Developer' },
+        'backend developer': { slug: encodeURIComponent('Backend'), title: 'Backend Developer' },
+        devops: { slug: encodeURIComponent('DevOps'), title: 'DevOps Engineer' },
+        'devops engineer': { slug: encodeURIComponent('DevOps'), title: 'DevOps Engineer' },
+        'full-stack': { slug: encodeURIComponent('Full Stack'), title: 'Full Stack Developer' },
+        fullstack: { slug: encodeURIComponent('Full Stack'), title: 'Full Stack Developer' },
+        'full stack': { slug: encodeURIComponent('Full Stack'), title: 'Full Stack Developer' },
+        'full stack developer': { slug: encodeURIComponent('Full Stack'), title: 'Full Stack Developer' },
+      };
+      const matched = map[key];
+      if (matched) {
+        return { link: `/roadmaps/${matched.slug}`, title: matched.title };
+      }
+      return {
+        link: path.startsWith('/') ? path : `/roadmaps/${encodeURIComponent(path)}`,
+        title: path,
+      };
+    });
   };
 
   return (

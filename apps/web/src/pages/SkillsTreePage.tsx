@@ -42,6 +42,123 @@ const applyPendingProgressToNode = (node: any) => {
   };
 };
 
+const normalizeSkillText = (value: unknown) =>
+  String(value ?? '')
+    .toLocaleLowerCase('vi-VN')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9+#.]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const SKILL_MATCH_ALIASES: Record<string, string[]> = {
+  js: ['javascript', 'syntax and basic constructs', 'learn dom manipulation', 'learn fetch api ajax xhr'],
+  javascript: ['js', 'syntax and basic constructs', 'learn dom manipulation', 'learn fetch api ajax xhr'],
+  ts: ['typescript', 'typescripxt', 'type checkers'],
+  typescript: ['ts', 'typescripxt', 'type checkers'],
+  react: ['react js', 'reactjs'],
+  reactjs: ['react', 'react js'],
+  vue: ['vue js', 'vuejs'],
+  vuejs: ['vue', 'vue js'],
+  angularjs: ['angular'],
+  html: ['writing semantic html', 'forms and validations', 'accessibility', 'seo basics'],
+  css: [
+    'making layouts',
+    'responsive design and media queries',
+    'modern css',
+    'css frameworks',
+    'css architecture',
+    'css preprocessors',
+    'sass',
+    'bem',
+    'postcss',
+  ],
+  git: ['basic usage of git', 'version control systems', 'repo hosting services', 'github', 'gitlab', 'bitbucket'],
+  'ci/cd': ['ci cd', 'cicd'],
+  cicd: ['ci cd', 'ci/cd'],
+  sql: ['relational databases', 'postgresql', 'mysql', 'sqlite', 'mariadb', 'mssql', 'oracle'],
+  postgres: ['postgresql'],
+  postgresql: ['postgres'],
+  'rest api': ['rest', 'json apis', 'open api spec'],
+  restful: ['rest', 'json apis', 'open api spec'],
+  api: ['apis', 'rest', 'json apis', 'open api spec', 'graphql', 'grpc'],
+  apis: ['api', 'rest', 'json apis', 'open api spec', 'graphql', 'grpc'],
+  testing: ['testing your apps', 'unit testing', 'integration testing', 'functional testing', 'vitest', 'jest', 'playwright', 'cypress'],
+  docker: ['containerization'],
+  security: ['web security knowledge', 'owasp security risks', 'content security policy', 'cors', 'https'],
+  graphql: ['apollo', 'relay modern'],
+  ssr: ['server side rendering', 'next js', 'nuxt js'],
+  nextjs: ['next js', 'server side rendering'],
+  nuxtjs: ['nuxt js', 'server side rendering'],
+};
+
+const getSkillMatchTokens = (value: unknown) => {
+  const normalized = normalizeSkillText(value);
+  if (!normalized) return [];
+
+  const compact = normalized.replace(/[^a-z0-9+#]+/g, '');
+  const tokens = new Set([normalized, compact]);
+
+  if (compact.endsWith('js') && compact.length > 2) {
+    tokens.add(compact.slice(0, -2));
+  }
+
+  if (normalized === '.net' || compact === 'net') {
+    tokens.add('dotnet');
+  }
+
+  const aliasKeys = [normalized, compact];
+  aliasKeys.forEach((key) => {
+    SKILL_MATCH_ALIASES[key]?.forEach((alias) => {
+      const aliasNormalized = normalizeSkillText(alias);
+      const aliasCompact = aliasNormalized.replace(/[^a-z0-9+#]+/g, '');
+      tokens.add(aliasNormalized);
+      tokens.add(aliasCompact);
+    });
+  });
+
+  return Array.from(tokens).filter(Boolean);
+};
+
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+
+const isSkillMatchedByAnalysis = (nodeData: any, analysisSkills: string[]) => {
+  const targetTokens = new Set(analysisSkills.flatMap(getSkillMatchTokens));
+  if (targetTokens.size === 0) return false;
+
+  const nodeTokens = [
+    nodeData?.nodeId,
+    nodeData?.name,
+    nodeData?.label,
+    nodeData?.title,
+    nodeData?.skillId,
+    nodeData?.roadmapSkillId,
+  ].flatMap(getSkillMatchTokens);
+
+  return nodeTokens.some((token) => {
+    if (targetTokens.has(token)) return true;
+    if (token.length < 4) return false;
+    return Array.from(targetTokens).some(
+      (target) =>
+        target.length >= 4 &&
+        (token.startsWith(target) || target.startsWith(token)),
+    );
+  });
+};
+
+const isSectionMatchedByAnalysis = (nodeData: any, analysisSkills: string[]) =>
+  isSkillMatchedByAnalysis(
+    {
+      name: nodeData?.label || nodeData?.title || nodeData?.name,
+      label: nodeData?.label,
+      title: nodeData?.title,
+    },
+    analysisSkills,
+  );
+
 export default function SkillsTreePage() {
   // 1. SỬA LẠI TÊN PARAM CHO KHỚP VỚI App.tsx
   const { title } = useParams<{ title: string }>();
@@ -88,17 +205,38 @@ export default function SkillsTreePage() {
           const stored = localStorage.getItem("activeGapAnalysis");
           if (stored) {
             const parsed = JSON.parse(stored);
-            setActiveJobInfo({ title: parsed.jobTitle, company: parsed.companyName });
-            if (Array.isArray(parsed.gapNodes)) {
-              gapNodesList = parsed.gapNodes;
-            }
+            setActiveJobInfo({
+              title: parsed.jobTitle || 'JD Analysis',
+              company: parsed.companyName || 'AI Job Analyst',
+            });
+            gapNodesList = Array.from(
+              new Set([
+                ...toStringArray(parsed.gapNodes),
+                ...toStringArray(parsed.matchingSkills),
+                ...toStringArray(parsed.mustHaveSkills),
+                ...toStringArray(parsed.niceToHaveSkills),
+              ]),
+            );
           }
         } catch (e) {
           console.error("Failed to parse activeGapAnalysis", e);
         }
 
+        const matchedSectionIds = new Set(
+          layoutedNodes
+            .filter((n: any) => n.type === "sectionNode" && isSectionMatchedByAnalysis(n.data, gapNodesList))
+            .map((n: any) => n.id),
+        );
+        const sectionMatchedSkillIds = new Set(
+          layoutedEdges
+            .filter((edge: any) => matchedSectionIds.has(edge.source))
+            .map((edge: any) => edge.target),
+        );
+
         const nodesWithHighlights = layoutedNodes.map((n: any) => {
-          const matched = n.data?.name && gapNodesList.some(gap => gap.toLowerCase() === n.data.name.toLowerCase());
+          const matched =
+            n.type === "skillNode" &&
+            (isSkillMatchedByAnalysis(n.data, gapNodesList) || sectionMatchedSkillIds.has(n.id));
           if (n.type === "skillNode" && matched) {
             return {
               ...n,

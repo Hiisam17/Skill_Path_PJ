@@ -5,6 +5,12 @@ import type { ParseJdResponse } from "@/services/gapService";
 import { isAuthenticated } from "@/services/api";
 import "./JdParser.css";
 
+const roadmapPathOptions = {
+  frontend: `/roadmaps/${encodeURIComponent("Frontend")}`,
+  backend: `/roadmaps/${encodeURIComponent("Backend")}`,
+  devops: `/roadmaps/${encodeURIComponent("DevOps")}`,
+};
+
 export const JdParser: React.FC = () => {
   const [jdText, setJdText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -57,6 +63,7 @@ export const JdParser: React.FC = () => {
       jobTitle: "Custom JD",
       companyName: "Thị trường",
       gapNodes: res.gapSkillIds,
+      matchingSkills: res.requiredSkillIds,
       matchScore: res.matchScore,
       summary: res.summary,
     }));
@@ -114,9 +121,9 @@ export const JdParser: React.FC = () => {
               className="roadmap-select"
             >
               <option value="">-- Chọn lộ trình phù hợp --</option>
-              <option value="/roadmaps/1">Frontend Developer</option>
-              <option value="/roadmaps/Backend">Backend Developer</option>
-              <option value="/roadmaps/3">DevOps Engineer</option>
+              <option value={roadmapPathOptions.frontend}>Frontend Developer</option>
+              <option value={roadmapPathOptions.backend}>Backend Developer</option>
+              <option value={roadmapPathOptions.devops}>DevOps Engineer</option>
             </select>
             <button 
               type="button"

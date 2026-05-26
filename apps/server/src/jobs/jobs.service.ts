@@ -168,9 +168,9 @@ export class JobsService {
     const aiResult = await this.aiGapService.parseJd(rawJdText, userCompletedSkills);
 
     const roadmapMap: Record<string, string | null> = {
-      frontend: '/roadmaps/1',
+      frontend: '/roadmaps/Frontend',
       backend: '/roadmaps/Backend',
-      devops: '/roadmaps/3',
+      devops: '/roadmaps/DevOps',
       unknown: null,
     };
     

@@ -8,6 +8,7 @@ export interface SectionNodeData {
 
 export interface SkillNodeData {
     name: string;
+    nodeId?: string | null;
     isOptional: boolean;
     isLeft?: boolean;
     skillId?: number;

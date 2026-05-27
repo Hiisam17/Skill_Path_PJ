@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Logger,
   Request,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
@@ -28,6 +29,20 @@ interface AnalyzeGapDto {
   jobId: number;
 }
 
+type AuthenticatedRequest = ExpressRequest & {
+  user: {
+    id: string;
+  };
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
+function getErrorStack(error: unknown): string | undefined {
+  return error instanceof Error ? error.stack : undefined;
+}
+
 /**
  * Controller for job-related API endpoints.
  * Provides AI-powered skill gap analysis for authenticated users.
@@ -36,9 +51,7 @@ interface AnalyzeGapDto {
 export class JobsController {
   private readonly logger = new Logger(JobsController.name);
 
-  constructor(
-    private readonly jobsService: JobsService,
-  ) {}
+  constructor(private readonly jobsService: JobsService) {}
 
   /**
    * GET /api/jobs
@@ -47,6 +60,21 @@ export class JobsController {
   @Get()
   async findAll() {
     return this.jobsService.findAll();
+  }
+
+  /**
+   * GET /api/jobs/trends
+   * Returns market demand signals aggregated from persisted jobs.
+   */
+  @Get('trends')
+  async getMarketTrends(
+    @Query('periodDays') periodDays?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.jobsService.getMarketTrends(
+      periodDays ? Number(periodDays) : undefined,
+      limit ? Number(limit) : undefined,
+    );
   }
 
   /**
@@ -60,7 +88,7 @@ export class JobsController {
   @UseGuards(JwtAuthGuard)
   async analyzeGap(
     @Body() body: AnalyzeGapDto,
-    @Request() req: ExpressRequest & { user: any },
+    @Request() req: AuthenticatedRequest,
   ) {
     try {
       if (!body.jobId) {
@@ -92,14 +120,14 @@ export class JobsController {
       }
 
       this.logger.error(
-        `Gap analysis failed: ${error.message}`,
-        error.stack,
+        `Gap analysis failed: ${getErrorMessage(error)}`,
+        getErrorStack(error),
       );
 
       throw new HttpException(
         {
           message: 'AI gap analysis failed',
-          error: error.message,
+          error: getErrorMessage(error),
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -114,7 +142,7 @@ export class JobsController {
   @UseGuards(JwtAuthGuard)
   async parseJd(
     @Body() body: ParseJdDto,
-    @Request() req: ExpressRequest & { user: any },
+    @Request() req: AuthenticatedRequest,
   ) {
     try {
       const userId = req.user.id;
@@ -136,10 +164,13 @@ export class JobsController {
         throw error;
       }
 
-      this.logger.error(`JD Parse failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `JD Parse failed: ${getErrorMessage(error)}`,
+        getErrorStack(error),
+      );
 
       throw new HttpException(
-        { message: 'AI JD parsing failed', error: error.message },
+        { message: 'AI JD parsing failed', error: getErrorMessage(error) },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -151,9 +182,7 @@ export class JobsController {
    */
   @Post('analyze-jd')
   @UseGuards(JwtAuthGuard)
-  async analyzeJobJD(
-    @Body() body: AnalyzeGapDto,
-  ) {
+  async analyzeJobJD(@Body() body: AnalyzeGapDto) {
     try {
       if (!body.jobId) {
         throw new HttpException(
@@ -168,13 +197,13 @@ export class JobsController {
         throw error;
       }
       this.logger.error(
-        `Job deep analysis failed: ${error.message}`,
-        error.stack,
+        `Job deep analysis failed: ${getErrorMessage(error)}`,
+        getErrorStack(error),
       );
       throw new HttpException(
         {
           message: 'AI job analysis failed',
-          error: error.message,
+          error: getErrorMessage(error),
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );

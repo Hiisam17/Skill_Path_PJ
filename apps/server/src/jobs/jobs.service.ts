@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiGapService, GapAnalysisResult } from '../ai/ai-gap.service';
 import { ProgressService } from '../progress/progress.service';
@@ -9,6 +14,40 @@ import { ProgressService } from '../progress/progress.service';
 export interface GapAnalysisResponse extends GapAnalysisResult {
   isNewUser: boolean;
 }
+
+export type MarketTrendDirection = 'up' | 'down' | 'flat' | 'new';
+export type MarketTrendBasis = 'recent_period' | 'all_time_fallback';
+
+export interface MarketTrendSkillDto {
+  name: string;
+  currentCount: number;
+  previousCount: number;
+  growthPct: number | null;
+  demandShare: number;
+  trend: MarketTrendDirection;
+}
+
+export interface MarketTrendSparklinePointDto {
+  date: string;
+  jobCount: number;
+}
+
+export interface MarketTrendsDto {
+  generatedAt: string;
+  periodDays: number;
+  basis: MarketTrendBasis;
+  topSkills: MarketTrendSkillDto[];
+  sparkline: MarketTrendSparklinePointDto[];
+}
+
+type TrendJob = {
+  skills: string[];
+  createdAt: Date | null;
+};
+
+type ScoredMarketTrendSkillDto = MarketTrendSkillDto & {
+  score: number;
+};
 
 /**
  * Service handling job-related business logic.
@@ -34,6 +73,109 @@ export class JobsService {
   }
 
   /**
+   * Builds market demand signals from persisted jobs.
+   * This currently aggregates the local jobs table, but the response contract is
+   * intentionally source-agnostic so a future scheduled Adzuna sync or snapshot
+   * table can feed the same dashboard without frontend changes.
+   */
+  async getMarketTrends(periodDays = 30, limit = 3): Promise<MarketTrendsDto> {
+    const safePeriodDays = this.clampInteger(periodDays, 7, 180);
+    const safeLimit = this.clampInteger(limit, 1, 10);
+    const now = new Date();
+    const currentStart = this.addDays(now, -safePeriodDays);
+    const previousStart = this.addDays(currentStart, -safePeriodDays);
+
+    const jobs = await this.prisma.job.findMany({
+      select: {
+        skills: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const currentPeriodJobs = jobs.filter((job) => {
+      return (
+        !!job.createdAt && job.createdAt >= currentStart && job.createdAt <= now
+      );
+    });
+    const previousPeriodJobs = jobs.filter((job) => {
+      return (
+        !!job.createdAt &&
+        job.createdAt >= previousStart &&
+        job.createdAt < currentStart
+      );
+    });
+
+    const basis: MarketTrendBasis =
+      currentPeriodJobs.length > 0 ? 'recent_period' : 'all_time_fallback';
+    const trendSourceJobs =
+      basis === 'recent_period' ? currentPeriodJobs : jobs;
+    const previousSourceJobs =
+      basis === 'recent_period' ? previousPeriodJobs : [];
+
+    const currentCounts = this.countSkills(trendSourceJobs);
+    const previousCounts = this.countSkills(previousSourceJobs);
+    const totalSkillMentions = Array.from(currentCounts.values()).reduce(
+      (sum, count) => sum + count,
+      0,
+    );
+
+    const scoredSkills: ScoredMarketTrendSkillDto[] = Array.from(
+      currentCounts.entries(),
+    )
+      .map(([name, currentCount]) => {
+        const previousCount = previousCounts.get(name) ?? 0;
+        const growthPct =
+          previousCount === 0
+            ? null
+            : Math.round(
+                ((currentCount - previousCount) / previousCount) * 1000,
+              ) / 10;
+        const demandShare =
+          totalSkillMentions === 0
+            ? 0
+            : Math.round((currentCount / totalSkillMentions) * 1000) / 10;
+
+        return {
+          name,
+          currentCount,
+          previousCount,
+          growthPct,
+          demandShare,
+          trend: this.getTrendDirection(currentCount, previousCount, growthPct),
+          score: currentCount * 10 + (growthPct ?? 0),
+        };
+      })
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, safeLimit);
+
+    const topSkills = scoredSkills.map((skill) => ({
+      name: skill.name,
+      currentCount: skill.currentCount,
+      previousCount: skill.previousCount,
+      growthPct: skill.growthPct,
+      demandShare: skill.demandShare,
+      trend: skill.trend,
+    }));
+
+    return {
+      generatedAt: now.toISOString(),
+      periodDays: safePeriodDays,
+      basis,
+      topSkills,
+      sparkline: this.buildSparkline(
+        trendSourceJobs,
+        safePeriodDays,
+        now,
+        basis,
+      ),
+    };
+  }
+
+  /**
    * Analyzes the skill gap between a job's requirements and a user's completed skills.
    *
    * @param jobId - Database ID of the job posting
@@ -41,7 +183,10 @@ export class JobsService {
    * @returns Gap analysis result with isNewUser flag
    * @throws NotFoundException if job is not found
    */
-  async analyzeGap(jobId: number, userId: string): Promise<GapAnalysisResponse> {
+  async analyzeGap(
+    jobId: number,
+    userId: string,
+  ): Promise<GapAnalysisResponse> {
     // 1. Fetch the job from DB
     const job = await this.prisma.job.findUnique({
       where: { id: jobId },
@@ -92,7 +237,9 @@ export class JobsService {
     const isNewUser = userCompletedSkills.length === 0;
 
     if (isNewUser) {
-      this.logger.log(`User ${userId} has no completed skills — flagging as new user`);
+      this.logger.log(
+        `User ${userId} has no completed skills — flagging as new user`,
+      );
     } else {
       this.logger.log(
         `User ${userId} has ${userCompletedSkills.length} completed skills`,
@@ -165,7 +312,10 @@ export class JobsService {
 
     const isNewUser = userCompletedSkills.length === 0;
 
-    const aiResult = await this.aiGapService.parseJd(rawJdText, userCompletedSkills);
+    const aiResult = await this.aiGapService.parseJd(
+      rawJdText,
+      userCompletedSkills,
+    );
 
     const roadmapMap: Record<string, string | null> = {
       frontend: '/roadmaps/Frontend',
@@ -173,7 +323,7 @@ export class JobsService {
       devops: '/roadmaps/DevOps',
       unknown: null,
     };
-    
+
     const roadmapPath = roadmapMap[aiResult.roadmapType] ?? null;
 
     return {
@@ -200,5 +350,85 @@ export class JobsService {
       ...analysis,
       roadmapPath: job.roadmapPath,
     };
+  }
+
+  private clampInteger(value: number, min: number, max: number): number {
+    if (!Number.isFinite(value)) return min;
+    return Math.min(max, Math.max(min, Math.trunc(value)));
+  }
+
+  private addDays(date: Date, days: number): Date {
+    const copy = new Date(date);
+    copy.setUTCDate(copy.getUTCDate() + days);
+    return copy;
+  }
+
+  private countSkills(jobs: TrendJob[]): Map<string, number> {
+    const counts = new Map<string, number>();
+
+    for (const job of jobs) {
+      const uniqueSkills = new Set(
+        job.skills.map((skill) => skill.trim()).filter(Boolean),
+      );
+
+      for (const skill of uniqueSkills) {
+        counts.set(skill, (counts.get(skill) ?? 0) + 1);
+      }
+    }
+
+    return counts;
+  }
+
+  private getTrendDirection(
+    currentCount: number,
+    previousCount: number,
+    growthPct: number | null,
+  ): MarketTrendDirection {
+    if (previousCount === 0 && currentCount > 0) return 'new';
+    if (growthPct === null || Math.abs(growthPct) < 1) return 'flat';
+    return growthPct > 0 ? 'up' : 'down';
+  }
+
+  private buildSparkline(
+    jobs: TrendJob[],
+    periodDays: number,
+    now: Date,
+    basis: MarketTrendBasis,
+  ): MarketTrendSparklinePointDto[] {
+    if (basis === 'all_time_fallback') {
+      const countsByDate = new Map<string, number>();
+
+      for (const job of jobs) {
+        const key = job.createdAt
+          ? job.createdAt.toISOString().slice(0, 10)
+          : 'unknown';
+        countsByDate.set(key, (countsByDate.get(key) ?? 0) + 1);
+      }
+
+      return Array.from(countsByDate.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, jobCount]) => ({ date, jobCount }));
+    }
+
+    const start = this.addDays(now, -(periodDays - 1));
+    const countsByDate = new Map<string, number>();
+
+    for (let index = 0; index < periodDays; index += 1) {
+      const date = this.addDays(start, index).toISOString().slice(0, 10);
+      countsByDate.set(date, 0);
+    }
+
+    for (const job of jobs) {
+      if (!job.createdAt) continue;
+      const key = job.createdAt.toISOString().slice(0, 10);
+      if (countsByDate.has(key)) {
+        countsByDate.set(key, (countsByDate.get(key) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(countsByDate.entries()).map(([date, jobCount]) => ({
+      date,
+      jobCount,
+    }));
   }
 }

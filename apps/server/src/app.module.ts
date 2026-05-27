@@ -18,7 +18,10 @@ import { MilestonesModule } from './milestones/milestones.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: join(process.cwd(), '.env.development'),
+      envFilePath:
+        process.env.NODE_ENV === 'production'
+          ? undefined
+          : join(process.cwd(), '.env.development'),
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
@@ -30,9 +33,9 @@ import { MilestonesModule } from './milestones/milestones.module';
     ProgressModule,
     RoadmapSectionsModule,
     MilestonesModule,
-    JobsModule
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

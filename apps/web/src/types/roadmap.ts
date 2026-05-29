@@ -8,8 +8,16 @@ export interface SectionNodeData {
 
 export interface SkillNodeData {
     name: string;
+    nodeId?: string | null;
     isOptional: boolean;
     isLeft?: boolean;
+    skillId?: number;
+    roadmapSkillId?: number;
+    labelType?: string;
+    isCompleted?: boolean;
+    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED';
+    statusId?: number | null;
+    isHighlighted?: boolean;
 }
 
 export type RoadmapData = SectionNodeData | SkillNodeData;

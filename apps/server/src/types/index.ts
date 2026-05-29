@@ -27,6 +27,8 @@ export enum UserSkillStatus {
 export interface UserDto {
   id: string;
   email: string;
+  fullName?: string;
+  avatarUrl?: string;
   createdAt: Date;
 }
 
@@ -143,7 +145,7 @@ export interface MultiRoadmapProgressDto {
 export interface UserSkillProgressDto {
   id: string;
   userId: string;
-  skillId: string;
+  roadmapSkillId: string;
   status: UserSkillStatus;
   completedAt: Date | null;
 }

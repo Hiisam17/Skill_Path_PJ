@@ -8,17 +8,160 @@ import { getLayoutedElements } from '@/utils/layout';
 import SectionNode from '@/components/roadmap/nodes/SectionNode';
 import SkillNode from '@/components/roadmap/nodes/SkillNode';
 import type { RoadmapFlowResponse, RoadmapData, RoadmapNode } from '@/types/roadmap';
+import {
+  getPendingStatusForRoadmapSkill,
+  type ProgressStatus,
+} from '@/services/progressSyncService';
 
 import { ResourceDrawer } from '@/components/roadmap/ResourceDrawer';
-
+import RoadmapLegend from '@/components/roadmap/RoadmapLegend';
 const nodeTypes: NodeTypes = {
   sectionNode: SectionNode,
   skillNode: SkillNode,
 };
 
+const isCompletedStatus = (status: unknown) => status === 'COMPLETED';
+
+const applyPendingProgressToNode = (node: any) => {
+  if (node.type !== 'skillNode') return node;
+
+  const roadmapSkillId = Number(node.data?.roadmapSkillId ?? node.id);
+  if (!roadmapSkillId) return node;
+
+  const pendingStatus = getPendingStatusForRoadmapSkill(roadmapSkillId);
+  if (pendingStatus === undefined) return node;
+
+  return {
+    ...node,
+    data: {
+      ...node.data,
+      status: pendingStatus ?? 'NOT_STARTED',
+      statusId: null,
+      isCompleted: pendingStatus === 'COMPLETED',
+    },
+  };
+};
+
+const normalizeSkillText = (value: unknown) =>
+  String(value ?? '')
+    .toLocaleLowerCase('vi-VN')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9+#.]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const SKILL_MATCH_ALIASES: Record<string, string[]> = {
+  js: ['javascript', 'syntax and basic constructs', 'learn dom manipulation', 'learn fetch api ajax xhr'],
+  javascript: ['js', 'syntax and basic constructs', 'learn dom manipulation', 'learn fetch api ajax xhr'],
+  ts: ['typescript', 'typescripxt', 'type checkers'],
+  typescript: ['ts', 'typescripxt', 'type checkers'],
+  react: ['react js', 'reactjs'],
+  reactjs: ['react', 'react js'],
+  vue: ['vue js', 'vuejs'],
+  vuejs: ['vue', 'vue js'],
+  angularjs: ['angular'],
+  html: ['writing semantic html', 'forms and validations', 'accessibility', 'seo basics'],
+  css: [
+    'making layouts',
+    'responsive design and media queries',
+    'modern css',
+    'css frameworks',
+    'css architecture',
+    'css preprocessors',
+    'sass',
+    'bem',
+    'postcss',
+  ],
+  git: ['basic usage of git', 'version control systems', 'repo hosting services', 'github', 'gitlab', 'bitbucket'],
+  'ci/cd': ['ci cd', 'cicd'],
+  cicd: ['ci cd', 'ci/cd'],
+  sql: ['relational databases', 'postgresql', 'mysql', 'sqlite', 'mariadb', 'mssql', 'oracle'],
+  postgres: ['postgresql'],
+  postgresql: ['postgres'],
+  'rest api': ['rest', 'json apis', 'open api spec'],
+  restful: ['rest', 'json apis', 'open api spec'],
+  api: ['apis', 'rest', 'json apis', 'open api spec', 'graphql', 'grpc'],
+  apis: ['api', 'rest', 'json apis', 'open api spec', 'graphql', 'grpc'],
+  testing: ['testing your apps', 'unit testing', 'integration testing', 'functional testing', 'vitest', 'jest', 'playwright', 'cypress'],
+  docker: ['containerization'],
+  security: ['web security knowledge', 'owasp security risks', 'content security policy', 'cors', 'https'],
+  graphql: ['apollo', 'relay modern'],
+  ssr: ['server side rendering', 'next js', 'nuxt js'],
+  nextjs: ['next js', 'server side rendering'],
+  nuxtjs: ['nuxt js', 'server side rendering'],
+};
+
+const getSkillMatchTokens = (value: unknown) => {
+  const normalized = normalizeSkillText(value);
+  if (!normalized) return [];
+
+  const compact = normalized.replace(/[^a-z0-9+#]+/g, '');
+  const tokens = new Set([normalized, compact]);
+
+  if (compact.endsWith('js') && compact.length > 2) {
+    tokens.add(compact.slice(0, -2));
+  }
+
+  if (normalized === '.net' || compact === 'net') {
+    tokens.add('dotnet');
+  }
+
+  const aliasKeys = [normalized, compact];
+  aliasKeys.forEach((key) => {
+    SKILL_MATCH_ALIASES[key]?.forEach((alias) => {
+      const aliasNormalized = normalizeSkillText(alias);
+      const aliasCompact = aliasNormalized.replace(/[^a-z0-9+#]+/g, '');
+      tokens.add(aliasNormalized);
+      tokens.add(aliasCompact);
+    });
+  });
+
+  return Array.from(tokens).filter(Boolean);
+};
+
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+
+const isSkillMatchedByAnalysis = (nodeData: any, analysisSkills: string[]) => {
+  const targetTokens = new Set(analysisSkills.flatMap(getSkillMatchTokens));
+  if (targetTokens.size === 0) return false;
+
+  const nodeTokens = [
+    nodeData?.nodeId,
+    nodeData?.name,
+    nodeData?.label,
+    nodeData?.title,
+    nodeData?.skillId,
+    nodeData?.roadmapSkillId,
+  ].flatMap(getSkillMatchTokens);
+
+  return nodeTokens.some((token) => {
+    if (targetTokens.has(token)) return true;
+    if (token.length < 4) return false;
+    return Array.from(targetTokens).some(
+      (target) =>
+        target.length >= 4 &&
+        (token.startsWith(target) || target.startsWith(token)),
+    );
+  });
+};
+
+const isSectionMatchedByAnalysis = (nodeData: any, analysisSkills: string[]) =>
+  isSkillMatchedByAnalysis(
+    {
+      name: nodeData?.label || nodeData?.title || nodeData?.name,
+      label: nodeData?.label,
+      title: nodeData?.title,
+    },
+    analysisSkills,
+  );
+
 export default function SkillsTreePage() {
   // 1. SỬA LẠI TÊN PARAM CHO KHỚP VỚI App.tsx
-  const { roadmapId } = useParams<{ roadmapId: string }>();
+  const { title } = useParams<{ title: string }>();
   const navigate = useNavigate();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<RoadmapData>([]);
@@ -28,7 +171,7 @@ export default function SkillsTreePage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDrawerLoading, setIsDrawerLoading] = useState(false);
   const [drawerData, setDrawerData] = useState(null);
-  const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
+  const [selectedRoadmapSkillId, setSelectedRoadmapSkillId] = useState<number | null>(null);
   
   const [activeJobInfo, setActiveJobInfo] = useState<{title: string, company: string} | null>(null);
   const [rfInstance, setRfInstance] = useState<any>(null);
@@ -37,9 +180,11 @@ export default function SkillsTreePage() {
 
   useEffect(() => {
     const loadRoadmap = async () => {
+      if (!title) return;
+
       try {
         setLoading(true);
-        const { data } = await apiClient.get<RoadmapFlowResponse>(`/roadmaps/${roadmapId}/flow`);
+        const { data } = await apiClient.get<RoadmapFlowResponse>(`/roadmaps/${encodeURIComponent(title)}/flow`);
         if (data.title) setRoadmapTitle(data.title);
 
         const sidebarWidth = window.innerWidth > 960 ? 260 : 0;
@@ -60,17 +205,38 @@ export default function SkillsTreePage() {
           const stored = localStorage.getItem("activeGapAnalysis");
           if (stored) {
             const parsed = JSON.parse(stored);
-            setActiveJobInfo({ title: parsed.jobTitle, company: parsed.companyName });
-            if (Array.isArray(parsed.gapNodes)) {
-              gapNodesList = parsed.gapNodes;
-            }
+            setActiveJobInfo({
+              title: parsed.jobTitle || 'JD Analysis',
+              company: parsed.companyName || 'AI Job Analyst',
+            });
+            gapNodesList = Array.from(
+              new Set([
+                ...toStringArray(parsed.gapNodes),
+                ...toStringArray(parsed.matchingSkills),
+                ...toStringArray(parsed.mustHaveSkills),
+                ...toStringArray(parsed.niceToHaveSkills),
+              ]),
+            );
           }
         } catch (e) {
           console.error("Failed to parse activeGapAnalysis", e);
         }
 
+        const matchedSectionIds = new Set(
+          layoutedNodes
+            .filter((n: any) => n.type === "sectionNode" && isSectionMatchedByAnalysis(n.data, gapNodesList))
+            .map((n: any) => n.id),
+        );
+        const sectionMatchedSkillIds = new Set(
+          layoutedEdges
+            .filter((edge: any) => matchedSectionIds.has(edge.source))
+            .map((edge: any) => edge.target),
+        );
+
         const nodesWithHighlights = layoutedNodes.map((n: any) => {
-          const matched = n.data?.name && gapNodesList.some(gap => gap.toLowerCase() === n.data.name.toLowerCase());
+          const matched =
+            n.type === "skillNode" &&
+            (isSkillMatchedByAnalysis(n.data, gapNodesList) || sectionMatchedSkillIds.has(n.id));
           if (n.type === "skillNode" && matched) {
             return {
               ...n,
@@ -80,8 +246,10 @@ export default function SkillsTreePage() {
           return n;
         });
 
+        const nodesWithPendingProgress = nodesWithHighlights.map(applyPendingProgressToNode);
+
         // Inject progress counts into section nodes (#4)
-        const nodesWithProgress = nodesWithHighlights.map((n: any) => {
+        const nodesWithProgress = nodesWithPendingProgress.map((n: any) => {
           if (n.type !== 'sectionNode') return n;
           
           // Find skill nodes connected to this section
@@ -89,13 +257,13 @@ export default function SkillsTreePage() {
             .filter((e: any) => e.source === n.id)
             .map((e: any) => e.target);
           
-          const connectedSkills = nodesWithHighlights.filter(
+          const connectedSkills = nodesWithPendingProgress.filter(
             (s: any) => s.type === 'skillNode' && connectedSkillIds.includes(s.id)
           );
           
           const totalCount = connectedSkills.length;
           const completedCount = connectedSkills.filter(
-            (s: any) => !!(s.data as any)?.isCompleted
+            (s: any) => !!(s.data as any)?.isCompleted || isCompletedStatus((s.data as any)?.status)
           ).length;
           
           return {
@@ -113,8 +281,8 @@ export default function SkillsTreePage() {
       }
     };
 
-    if (roadmapId) loadRoadmap();
-  }, [roadmapId, setNodes, setEdges]);
+    if (title) loadRoadmap();
+  }, [title, setNodes, setEdges]);
 
   const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
     event.preventDefault();
@@ -124,16 +292,19 @@ export default function SkillsTreePage() {
 
     try {
       const isSection = node.type === 'sectionNode';
-      const rawId = (node.data as any)?.id || (node.data as any)?.skillId || node.id;
+      const nodeData = node.data as any;
+      const rawId = isSection 
+        ? (nodeData.id || node.id)
+        : (nodeData.roadmapSkillId || node.id);
 
       if (!rawId) throw new Error('Node ID not found');
 
       const numericId = String(rawId).replace(/[^0-9]/g, '');
 
       if (!isSection) {
-        setSelectedSkillId(Number(numericId));
+        setSelectedRoadmapSkillId(nodeData.roadmapSkillId || null);
       } else {
-        setSelectedSkillId(null);
+        setSelectedRoadmapSkillId(null);
       }
 
       const endpoint = isSection
@@ -142,7 +313,20 @@ export default function SkillsTreePage() {
 
       const response = await apiClient.get(endpoint);
       console.log('Detail data from backend:', response.data);
-      setDrawerData(response.data);
+
+      const pendingStatus = !isSection
+        ? getPendingStatusForRoadmapSkill(Number(numericId))
+        : undefined;
+
+      setDrawerData(
+        pendingStatus === undefined
+          ? response.data
+          : {
+              ...response.data,
+              status: pendingStatus ?? 'NOT_STARTED',
+              statusId: null,
+            },
+      );
     } catch (error) {
       console.error('Failed to fetch node detail:', error);
     } finally {
@@ -150,22 +334,23 @@ export default function SkillsTreePage() {
     }
   }, []);
 
-  const handleStatusChange = useCallback((skillId: number, statusId: number | null) => {
-    console.log("🛑 6. Component cha đã nhận được ID và trạng thái mới:", skillId, statusId);
+  const handleStatusChange = useCallback((roadmapSkillId: number, status: ProgressStatus | null) => {
+    console.log("Progress status changed:", roadmapSkillId, status);
     
     // Update nodes state for React Flow visualization
     setNodes((nds) =>
       nds.map((node) => {
         if (
           node.type === 'skillNode' &&
-          ((node.data as any)?.skillId === skillId || (node.data as any)?.id === skillId || node.id === String(skillId))
+          ((node.data as any)?.roadmapSkillId === roadmapSkillId)
         ) {
           return {
             ...node,
             data: {
               ...node.data,
-              isCompleted: statusId === 1,
-              statusId: statusId,
+              isCompleted: status === 'COMPLETED',
+              status: status ?? 'NOT_STARTED',
+              statusId: null,
             },
           };
         }
@@ -175,10 +360,11 @@ export default function SkillsTreePage() {
 
     // Sync drawerData if the changed skill is the one currently open
     setDrawerData((prev: any) => {
-      if (!prev || !skillId) return prev;
+      if (!prev || !roadmapSkillId) return prev;
       return {
         ...prev,
-        statusId: statusId
+        status: status ?? 'NOT_STARTED',
+        statusId: null,
       };
     });
   }, [setNodes, setDrawerData]);
@@ -358,9 +544,11 @@ export default function SkillsTreePage() {
         onClose={() => setIsDrawerOpen(false)}
         isLoading={isDrawerLoading}
         data={drawerData}
-        skillId={selectedSkillId}
+        roadmapSkillId={selectedRoadmapSkillId}
         onStatusChange={handleStatusChange}
       />
+
+      <RoadmapLegend nodes={nodes} />
     </div>
   );
 }

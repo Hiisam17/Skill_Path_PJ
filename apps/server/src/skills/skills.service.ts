@@ -10,6 +10,43 @@ import { PrismaService } from '../prisma/prisma.service';
 export class SkillsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private getResourceDedupKey(resource: {
+    title: string;
+    url: string | null;
+    resourceType?: { name: string } | null;
+  }): string {
+    const normalizedUrl = resource.url?.trim().toLowerCase();
+    if (normalizedUrl) {
+      return `url:${normalizedUrl}`;
+    }
+
+    const normalizedTitle = resource.title.trim().toLowerCase();
+    const normalizedType = resource.resourceType?.name?.trim().toLowerCase() || '';
+    return `title:${normalizedTitle}|type:${normalizedType}`;
+  }
+
+  private deduplicateResources<T extends {
+    id: number;
+    title: string;
+    url: string | null;
+    resourceType?: { name: string } | null;
+  }>(resources: T[]): T[] {
+    const seenIds = new Set<number>();
+    const seenKeys = new Set<string>();
+
+    return resources.filter((resource) => {
+      const key = this.getResourceDedupKey(resource);
+
+      if (seenIds.has(resource.id) || seenKeys.has(key)) {
+        return false;
+      }
+
+      seenIds.add(resource.id);
+      seenKeys.add(key);
+      return true;
+    });
+  }
+
   private mapProgressStatus(statusName?: string | null): UserSkillStatus {
     const normalized = (statusName ?? '').trim().toUpperCase();
     if (normalized === 'COMPLETED' || normalized === 'DONE') {
@@ -42,34 +79,29 @@ export class SkillsService {
       },
       orderBy: [{ sectionId: 'asc' }, { id: 'asc' }],
       include: {
-        skill: {
+        skill: true,
+        userProgress: {
+          where: { userId },
           include: {
-            userProgress: {
-              where: { userId },
-              include: {
-                status: {
-                  select: { name: true },
-                },
-              },
-              take: 1,
-            },
+            status: { select: { name: true } },
           },
+          take: 1,
         },
       },
     });
 
     return roadmapSkills
-      .filter((roadmapSkill) => roadmapSkill.skill !== null) 
+      .filter((roadmapSkill) => roadmapSkill.skill !== null)
       .map((roadmapSkill) => {
-        const skill = roadmapSkill.skill!; 
-        const progressStatusName = skill.userProgress[0]?.status?.name;
+        const skill = roadmapSkill.skill!;
+        const progressStatusName = roadmapSkill.userProgress[0]?.status?.name;
 
         return {
           id: String(skill.id),
           roadmapId: String(roadmapId),
           name: skill.name,
           description: skill.description ?? '',
-          orderIndex: roadmapSkill.id, 
+          orderIndex: roadmapSkill.id,
           status: this.mapProgressStatus(progressStatusName),
         };
       });
@@ -85,10 +117,18 @@ export class SkillsService {
    * @returns An object containing skill title, description, and formatted resources.
    * @throws NotFoundException if the skill does not exist.
    */
-  async getSkillDetail(id: number, userId: string) {
-    const skill = await this.prisma.skill.findUnique({
-      where: { id },
+  async getSkillDetail(roadmapSkillId: number, userId: string) {
+    const roadmapSkill = await this.prisma.roadmapSkill.findUnique({
+      where: { id: roadmapSkillId },
       include: {
+        skill: {
+          include: {
+            resources: {
+              where: { isActive: true },
+              include: { resourceType: true },
+            },
+          },
+        },
         resources: {
           where: { isActive: true },
           include: { resourceType: true },
@@ -103,16 +143,23 @@ export class SkillsService {
       },
     });
 
+    if (!roadmapSkill) throw new NotFoundException('Roadmap skill not found');
+
+    const skill = roadmapSkill.skill;
     if (!skill) throw new NotFoundException('Skill not found');
 
-    const progress = skill.userProgress[0];
+    const progress = roadmapSkill.userProgress[0];
+    const resources = this.deduplicateResources([
+      ...roadmapSkill.resources,
+      ...(skill.resources || []),
+    ]);
 
     return {
       title: skill.name,
       content: skill.description || '',
       statusId: progress?.statusId || null,
       status: this.mapProgressStatus(progress?.status?.name),
-      resources: skill.resources.map(res => ({
+      resources: resources.map(res => ({
         id: res.id,
         type: res.resourceType?.name || 'link',
         title: res.title,

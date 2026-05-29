@@ -1,9 +1,10 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Request, UseGuards } from '@nestjs/common';
 import { RoadmapDto } from '../types';
 import { RoadmapsService } from './roadmaps.service';
 import { CareerResponseDto } from './dto/career-response.dto';
 import { RoadmapSummaryResponseDto } from './dto/roadmap-summary-response.dto';
-import { ProgressService } from '../progress/progress.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Request as ExpressRequest } from 'express';
 
 /**
  * Unified controller for career path and roadmap endpoints.
@@ -13,7 +14,6 @@ import { ProgressService } from '../progress/progress.service';
 export class RoadmapsController {
 	constructor(
 		private readonly roadmapsService: RoadmapsService,
-		private readonly progressService: ProgressService,
 	) { }
 
 	/** Lists all available career paths. */
@@ -42,18 +42,20 @@ export class RoadmapsController {
 	): Promise<RoadmapDto[]> {
 		return this.roadmapsService.findByCareerPath(careerPathId);
 	}
-	@Get('roadmaps/:roadmapId/flow')
+	@Get('roadmaps/:title/flow')
+	@UseGuards(JwtAuthGuard)
 	async getRoadmapFlow(
-		@Param('roadmapId', ParseIntPipe) roadmapId: number,
+		@Param('title') roadmapTitle: string,
+		@Request() req: ExpressRequest & { user: any },
 	) {
-		const userId = await this.progressService.getDemoUserId();
-		return this.roadmapsService.getRoadmapFlow(roadmapId, userId);
+		const userId = req.user.id;
+		return this.roadmapsService.getRoadmapFlow(roadmapTitle, userId);
 	}
 
-	@Get('roadmaps/:roadmapId')
-	async findById(
-		@Param('roadmapId', ParseIntPipe) roadmapId: number,
+	@Get('roadmaps/:title')
+	async findByTitle(
+		@Param('title') title: string,
 	): Promise<RoadmapDto> {
-		return this.roadmapsService.findById(roadmapId);
+		return this.roadmapsService.findByTitle(title);
 	}
 }

@@ -13,6 +13,7 @@ export const UserSkillStatus = {
   NOT_STARTED: "NOT_STARTED",
   IN_PROGRESS: "IN_PROGRESS",
   COMPLETED: "COMPLETED",
+  SKIPPED: "SKIPPED",
 } as const;
 
 export type UserSkillStatus =
@@ -25,6 +26,10 @@ export type UserSkillStatus =
 export interface UserDto {
   id: string;
   email: string;
+  fullName?: string;
+  avatarUrl?: string;
+  bio?: string;
+  githubLink?: string;
   createdAt: string;
 }
 

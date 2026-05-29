@@ -11,19 +11,20 @@ export class CareerPathsService {
   constructor(private readonly prisma: PrismaService) { }
 
   /**
-   * Retrieves all career paths available for user selection.
+   * Retrieves all system roadmaps available for user selection.
    *
-   * @returns Array of CareerPathDto objects sorted alphabetically by name.
+   * @returns Array of CareerPathDto objects sorted alphabetically by title.
    */
   async findAll(): Promise<CareerPathDto[]> {
-    const careerPaths = await this.prisma.careerPath.findMany({
-      orderBy: { name: 'asc' },
+    const roadmaps = await this.prisma.roadmap.findMany({
+      where: { userId: null }, // Only system roadmaps
+      orderBy: { title: 'asc' },
     });
 
-    return careerPaths.map((careerPath) => ({
-      id: String(careerPath.id),
-      name: careerPath.name,
-      description: careerPath.description ?? '',
+    return roadmaps.map((roadmap) => ({
+      id: String(roadmap.id),
+      name: roadmap.title,
+      description: roadmap.description ?? '',
     }));
   }
 }

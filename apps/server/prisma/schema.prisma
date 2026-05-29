@@ -18,10 +18,12 @@ model Profile {
   // Prisma không quản lý bảng auth.users nên chúng ta chỉ lưu userId làm khóa ngoại.
   userId         String    @id @map("user_id") @db.Uuid
   fullName       String?   @map("full_name")
-  avatarUrl      String?   @map("avatar_url")
+  avatarUrl      String?   @map("avatar_url") @db.Text
   bio            String?   @db.Text
   githubLink     String?   @map("github_link")
   streakCount    Int       @default(0) @map("streak_count")
+  currentStreak  Int       @default(0) @map("current_streak")
+  longestStreak  Int       @default(0) @map("longest_streak")
   lastActivityAt DateTime? @map("last_activity_at") @db.Timestamptz
   updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamptz
   isDeleted      Boolean   @default(false) @map("is_deleted")
@@ -32,6 +34,7 @@ model Profile {
   resourceProgress UserResourceProgress[]
   skillProgress    UserSkillProgress[]
   createdRoadmaps  Roadmap[] @relation("SystemUserRoadmaps")
+  userMilestones   UserMilestone[]
 
   @@map("profiles")
 }
@@ -73,21 +76,37 @@ model RewardType {
 }
 
 // =======================================
+// 2.5 ENUMS
+// =======================================
+
+enum SkillLabel {
+  STANDARD
+  RECOMMENDED
+  ALTERNATIVE
+  ANYTIME
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  OPTIONAL
+}
+
+// =======================================
 // 3. SKILLS & ROADMAPS
 // =======================================
 
 model Skill {
   id           Int        @id @default(autoincrement())
   name         String     @unique
+  nodeId       String?    @unique @map("node_id")
   description  String?    @db.Text
   levelId      Int?       @map("level_id")
   canonicalUrl String?    @map("canonical_url")
   createdAt    DateTime?  @default(now()) @map("created_at") @db.Timestamptz
 
-  level         SkillLevel?         @relation(fields: [levelId], references: [id])
+  level         SkillLevel?  @relation(fields: [levelId], references: [id])
   roadmapSkills RoadmapSkill[]
-  resources     Resource[]
-  userProgress  UserSkillProgress[]
+  resources      Resource[]
+  userProgress   UserSkillProgress[]
 
   @@map("skills")
 }
@@ -102,7 +121,7 @@ model CareerPath {
 
 model Roadmap {
   id                  Int       @id @default(autoincrement())
-  title               String
+  title               String    @unique
   description         String?   @db.Text
   userId              String?   @map("user_id") @db.Uuid // NULL = System Roadmap
   careerPathId              Int?      @map("career_id")
@@ -140,10 +159,13 @@ model RoadmapSkill {
   stepNumber     Int?    @map("step_number")
   isOptional     Boolean @default(false) @map("is_optional")
   estimatedHours Int?    @map("estimated_hours")
-  notes          String? @db.Text
+  notes          String?    @db.Text
+  labelType      SkillLabel @default(STANDARD) @map("label_type")
 
-  section RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  skill   Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  section      RoadmapSection?     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  skill        Skill?              @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  resources    Resource[]
+  userProgress UserSkillProgress[]
 
   @@unique([sectionId, stepNumber])
   @@map("roadmap_skills")
@@ -170,18 +192,20 @@ model UserRoadmap {
 }
 
 model UserSkillProgress {
-  id          Int       @id @default(autoincrement())
-  userId      String    @map("user_id") @db.Uuid
-  skillId     Int       @map("skill_id")
-  statusId    Int?      @map("status_id")
-  completedAt DateTime? @map("completed_at") @db.Timestamptz
-  updatedAt   DateTime? @default(now()) @map("updated_at") @db.Timestamptz
+  id             Int       @id @default(autoincrement())
+  userId         String    @map("user_id") @db.Uuid
+  roadmapSkillId Int       @map("roadmap_skill_id")
+  skillId        Int?      @map("skill_id")
+  statusId       Int?      @map("status_id")
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz
+  updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamptz
 
-  user   Profile         @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  skill  Skill           @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  status ProgressStatus? @relation(fields: [statusId], references: [id])
+  user         Profile         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  roadmapSkill RoadmapSkill    @relation(fields: [roadmapSkillId], references: [id], onDelete: Cascade)
+  skill        Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  status       ProgressStatus? @relation(fields: [statusId], references: [id])
 
-  @@unique([userId, skillId])
+  @@unique([userId, roadmapSkillId])
   @@map("user_skill_progress")
 }
 
@@ -202,6 +226,9 @@ model Resource {
 
   skillId   Int?     @map("skill_id")
   skill     Skill?   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  roadmapSkillId Int?          @map("roadmap_skill_id")
+  roadmapSkill   RoadmapSkill? @relation(fields: [roadmapSkillId], references: [id], onDelete: Cascade)
   
   sectionId Int?     @map("section_id")
   section   RoadmapSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
@@ -250,7 +277,6 @@ model Reward {
   reward_type_id Int
   reward_type    RewardType   @relation(fields: [reward_type_id], references: [id])
   user_rewards   UserReward[]
-  milestones     Milestone[]
 
   @@map("rewards")
 }
@@ -269,13 +295,54 @@ model UserReward {
 model Milestone {
   id               Int      @id @default(autoincrement())
   roadmapId        Int?     @map("roadmap_id")
-  name             String
-  requiredProgress Float?   @map("required_progress") // Float tương ứng với double precision trong SQL
-  rewardId         Int?     @map("reward_id")
+  name             String   @unique // Thêm @unique vì có icon vân tay trên Supabase
+
+  // Thêm 3 trường mới cho khớp với ảnh
+  description      String?  @db.Text
+  icon             String?  
+  criteria         Json?    // Json sẽ map với kiểu jsonb trong PostgreSQL
 
   // Thiết lập khóa ngoại (Relations)
   roadmap          Roadmap? @relation(fields: [roadmapId], references: [id])
-  reward           Reward?  @relation(fields: [rewardId], references: [id])
-
+  userMilestones   UserMilestone[]
+  
   @@map("milestones")
+}
+
+model UserMilestone {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id") @db.Uuid
+  milestoneId Int      @map("milestone_id")
+  unlockedAt  DateTime @default(now()) @map("unlocked_at") @db.Timestamptz
+
+  // Nối thẳng vào bảng Profile (nằm cùng schema public), bỏ qua auth.users
+  user        Profile   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  // Nối vào bảng Milestone
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  // Đảm bảo 1 user không nhận 1 huy hiệu 2 lần
+  @@unique([userId, milestoneId])
+  @@map("user_milestones") 
+}
+
+// =======================================
+// 6. JOBS
+// =======================================
+
+model Job {
+  id           Int       @id @default(autoincrement())
+  title        String
+  company      String
+  location     String?
+  description  String    @db.Text
+  requirements String?   @db.Text
+  skills       String[]  @default([])
+  jobType      String?   @map("job_type")
+  source       String?
+  sourceUrl    String?   @map("source_url")
+  roadmapPath  String?   @map("roadmap_path")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("jobs")
 }

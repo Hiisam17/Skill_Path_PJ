@@ -3,6 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { passportJwtSecret } from 'jwks-rsa';
+import { PrismaService } from '../prisma/prisma.service';
+import * as jwt from 'jsonwebtoken';
 
 /**
  * JWT strategy that validates tokens against Supabase's JWKS endpoint.
@@ -11,20 +13,48 @@ import { passportJwtSecret } from 'jwks-rsa';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly logger = new Logger(JwtStrategy.name);
-    constructor(configService: ConfigService) {
+    constructor(
+        configService: ConfigService,
+        private prisma: PrismaService
+    ) {
         const supabaseUrl = configService.get<string>('SUPABASE_URL');
+
+        const jwksSecretProvider = passportJwtSecret({
+            cache: true,
+            rateLimit: true,
+            jwksRequestsPerMinute: 5,
+            jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
+        });
 
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
 
-            secretOrKeyProvider: passportJwtSecret({
-                cache: true,
-                rateLimit: true,
-                jwksRequestsPerMinute: 5,
-                jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
-            }),
-            algorithms: ['RS256', 'HS256'],
+            secretOrKeyProvider: (request, rawJwtToken, done) => {
+                const decoded = jwt.decode(rawJwtToken, { complete: true });
+                const algorithm = decoded?.header?.alg;
+
+                if (algorithm?.startsWith('HS')) {
+                    const jwtSecret =
+                        configService.get<string>('SUPABASE_JWT_SECRET') ??
+                        configService.get<string>('JWT_SECRET');
+
+                    if (!jwtSecret) {
+                        done(
+                            new Error(
+                                'JWT_SECRET or SUPABASE_JWT_SECRET is required for HS-signed Supabase tokens',
+                            ),
+                        );
+                        return;
+                    }
+
+                    done(null, jwtSecret);
+                    return;
+                }
+
+                jwksSecretProvider(request, rawJwtToken, done);
+            },
+            algorithms: ['RS256', 'HS256', 'ES256'],
         });
         this.logger.debug(`JwtStrategy initialized with JWKS URI: ${supabaseUrl}/auth/v1/.well-known/jwks.json`);
     }
@@ -38,7 +68,34 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     async validate(payload: any) {
         try {
             this.logger.debug(`Token payload received: sub=${payload?.sub} email=${payload?.email}`);
-            return { userId: payload.sub, email: payload.email, role: payload.role };
+            
+            const metadata = payload?.user_metadata ?? {};
+            const fallbackFullName =
+                metadata.full_name ?? metadata.name ?? metadata.user_name ?? null;
+            const fallbackAvatarUrl =
+                metadata.avatar_url ?? metadata.picture ?? null;
+
+            const profile = await this.prisma.profile.upsert({
+                where: { userId: payload.sub },
+                update: { isDeleted: false },
+                create: {
+                    userId: payload.sub,
+                    fullName: fallbackFullName,
+                    avatarUrl: fallbackAvatarUrl,
+                    isDeleted: false,
+                },
+                select: { fullName: true, avatarUrl: true, bio: true, githubLink: true },
+            });
+
+            return { 
+                id: payload.sub, 
+                email: payload.email, 
+                role: payload.role,
+                fullName: profile?.fullName || null,
+                avatarUrl: profile?.avatarUrl || null,
+                bio: profile?.bio || null,
+                githubLink: profile?.githubLink || null,
+            };
         } catch (err) {
             this.logger.error('Error while validating JWT payload', err as any);
             throw err;

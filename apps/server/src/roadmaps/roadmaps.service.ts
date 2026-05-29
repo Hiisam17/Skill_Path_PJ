@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoadmapDto } from '../types';
+import { RoadmapDto, UserSkillStatus } from '../types';
 
 /**
  * Service for managing roadmaps and career paths.
@@ -9,6 +9,27 @@ import { RoadmapDto } from '../types';
 @Injectable()
 export class RoadmapsService {
   constructor(private readonly prisma: PrismaService) { }
+
+  private resolveRoadmapTitle(title: string): string {
+    const decoded = decodeURIComponent(title).trim();
+    const aliases: Record<string, string> = {
+      '1': 'Frontend',
+      '2': 'Backend',
+      '3': 'DevOps',
+      frontend: 'Frontend',
+      'frontend developer': 'Frontend',
+      backend: 'Backend',
+      'backend developer': 'Backend',
+      devops: 'DevOps',
+      'devops engineer': 'DevOps',
+      'full-stack': 'Full Stack',
+      fullstack: 'Full Stack',
+      'full stack': 'Full Stack',
+      'full stack developer': 'Full Stack',
+    };
+
+    return aliases[decoded.toLowerCase()] ?? decoded;
+  }
 
   /** Infers difficulty level from a roadmap title string. */
   private toLevel(title: string): string {
@@ -36,20 +57,35 @@ export class RoadmapsService {
   }
 
   /**
-   * Finds a single roadmap by its ID.
+   * Finds a single roadmap by its title.
    *
    * @throws NotFoundException if the roadmap does not exist.
    */
-  async findById(roadmapId: number): Promise<RoadmapDto> {
+  async findByTitle(title: string): Promise<RoadmapDto> {
+    const resolvedTitle = this.resolveRoadmapTitle(title);
     const roadmap = await this.prisma.roadmap.findUnique({
-      where: { id: roadmapId },
+      where: { title: resolvedTitle },
     });
 
     if (!roadmap) {
-      throw new NotFoundException(`Roadmap ${roadmapId} not found`);
+      throw new NotFoundException(`Roadmap ${resolvedTitle} not found`);
     }
 
     return this.toDto(roadmap);
+  }
+
+  private mapProgressStatus(statusName?: string | null): UserSkillStatus {
+    const normalized = (statusName ?? '').trim().toUpperCase();
+    if (normalized === 'COMPLETED' || normalized === 'DONE') {
+      return UserSkillStatus.COMPLETED;
+    }
+    if (normalized === 'IN_PROGRESS' || normalized === 'IN PROGRESS') {
+      return UserSkillStatus.IN_PROGRESS;
+    }
+    if (normalized === 'SKIPPED') {
+      return UserSkillStatus.SKIPPED;
+    }
+    return UserSkillStatus.NOT_STARTED;
   }
 
   async findByCareerPath(careerPathId: number): Promise<RoadmapDto[]> {
@@ -93,33 +129,33 @@ export class RoadmapsService {
    * Transforms a roadmap into React Flow nodes and edges for frontend visualization.
    * Sections become primary nodes connected vertically; skills branch out from each section.
    */
-  async getRoadmapFlow(roadmapId: number, userId?: string) {
+  async getRoadmapFlow(title: string, userId?: string) {
+    const resolvedTitle = this.resolveRoadmapTitle(title);
     const roadmap = await this.prisma.roadmap.findUnique({
-      where: { id: roadmapId },
+      where: { title: resolvedTitle },
       include: {
         sections: {
           orderBy: { sortOrder: 'asc' },
-          include: { 
-            skills: { 
-              include: { 
-                skill: {
+          include: {
+            skills: {
+              include: {
+                skill: true,
+                userProgress: {
+                  where: { userId },
                   include: {
-                    userProgress: {
-                      where: { userId },
-                      include: { status: { select: { id: true } } },
-                      take: 1
-                    }
-                  }
-                } 
-              } 
-            } 
+                    status: { select: { name: true } },
+                  },
+                  take: 1,
+                },
+              },
+            },
           },
         },
       },
     });
 
     if (!roadmap) {
-      throw new NotFoundException(`Roadmap ${roadmapId} not found`);
+      throw new NotFoundException(`Roadmap ${resolvedTitle} not found`);
     }
 
     const nodes: any[] = [];
@@ -147,19 +183,26 @@ export class RoadmapsService {
       }
 
       section.skills.forEach((rs) => {
-        const skillNodeId = String(rs.skill?.id || `skill-${rs.id}`);
-        // rs.skill is included, so we can check progress
-        const progress = rs.skill?.userProgress[0];
+        const roadmapSkillId = rs.id;
+        const skillNodeId = String(roadmapSkillId);
+        
+        // Progress is now tracked at RoadmapSkill level
+        const progress = rs.userProgress[0];
+        const status = this.mapProgressStatus(progress?.status?.name);
 
         nodes.push({
           id: skillNodeId,
           type: 'skillNode',
-          data: { 
-            name: rs.skill?.name || 'Unknown Skill', 
+          data: {
+            name: rs.skill?.name || 'Unknown Skill',
+            nodeId: rs.skill?.nodeId,
             isOptional: rs.isOptional,
-            isCompleted: progress?.statusId === 1,
+            isCompleted: status === UserSkillStatus.COMPLETED,
             statusId: progress?.statusId || null,
-            skillId: rs.skill?.id
+            status,
+            skillId: rs.skill?.id,
+            roadmapSkillId: rs.id,
+            labelType: rs.labelType
           },
           position: { x: 0, y: 0 },
         });

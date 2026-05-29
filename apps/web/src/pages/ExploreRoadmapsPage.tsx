@@ -41,21 +41,29 @@ function PathCard({
   path,
   index,
   onSelect,
-  loading,
 }: {
   path: CareerPath
   index: number
-  onSelect: (id: string) => void
-  loading: boolean
+  onSelect: (path: CareerPath) => void
 }) {
   const Icon = PATH_ICONS[index % PATH_ICONS.length]
   const description = path.description || 'No description available for this career path.';
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(path)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onSelect(path)
+        }
+      }}
       className="group rounded-xl p-6 bg-[#111726] border border-transparent hover:border-[#00BDD6]/30
                  transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,189,214,0.08)]
-                 hover:-translate-y-1 flex flex-col gap-4"
+                 hover:-translate-y-1 flex flex-col gap-4 cursor-pointer focus:outline-none
+                 focus-visible:border-[#00BDD6]/60 focus-visible:ring-2 focus-visible:ring-[#00BDD6]/30"
     >
       <div
         className="w-12 h-12 rounded-lg flex items-center justify-center
@@ -69,13 +77,15 @@ function PathCard({
       <p className="text-[#94A3B8] text-sm leading-relaxed flex-1">{description}</p>
 
       <button
-        onClick={() => onSelect(path.id)}
-        disabled={loading}
+        onClick={(event) => {
+          event.stopPropagation()
+          onSelect(path)
+        }}
         className="flex items-center gap-1 text-[#00BDD6] text-sm font-medium
                    hover:text-[#00E5FF] transition-colors duration-200
-                   disabled:opacity-50 disabled:cursor-not-allowed w-fit group/btn"
+                   w-fit group/btn"
       >
-        {loading ? 'Enrolling...' : 'Enroll Now'}
+        View Roadmap
         <ChevronRight
           className="w-4 h-4 transition-transform duration-200 group-hover/btn:translate-x-0.5"
         />
@@ -89,7 +99,6 @@ export const ExploreRoadmapsPage = () => {
   const [paths, setPaths] = useState<CareerPath[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [fetching, setFetching] = useState(true)
-  const [selectingId, setSelectingId] = useState<string | null>(null)
 
  useEffect(() => {
     let cancelled = false
@@ -120,14 +129,8 @@ export const ExploreRoadmapsPage = () => {
     }
   }, [])
 
-  const handleSelect = async (careerPathId: string) => {
-    setSelectingId(careerPathId)
-    try {
-      const res = await apiClient.post('/users/select-roadmap', { careerPathId })
-      navigate(`/roadmaps/${res.data.roadmapId}`)
-    } catch {
-      setSelectingId(null)
-    }
+  const handleSelect = (path: CareerPath) => {
+    navigate(`/roadmaps/${encodeURIComponent(path.title)}`)
   }
 
   const filteredPaths = paths.filter((p) => 
@@ -179,7 +182,6 @@ export const ExploreRoadmapsPage = () => {
                 path={path}
                 index={i}
                 onSelect={handleSelect}
-                loading={selectingId === path.id}
               />
             ))
           ) : (

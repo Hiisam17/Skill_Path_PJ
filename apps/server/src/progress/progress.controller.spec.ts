@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProgressController } from './progress.controller';
 import { ProgressService } from './progress.service';
+import { ProgressQueueService } from './progress-queue.service';
 import { jest } from '@jest/globals';
 describe('ProgressController', () => {
   let controller: ProgressController;
@@ -11,12 +12,17 @@ describe('ProgressController', () => {
     getUserProgress: jest.fn(),
   };
 
+  const mockProgressQueueService = {
+    enqueueProgress: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProgressController],
       // 2. Khai báo provider bằng bản mock
       providers: [
-        { provide: ProgressService, useValue: mockProgressService }
+        { provide: ProgressService, useValue: mockProgressService },
+        { provide: ProgressQueueService, useValue: mockProgressQueueService },
       ],
     }).compile();
 

@@ -8,8 +8,8 @@ export class ProgressQueueService {
   private readonly logger = new Logger(ProgressQueueService.name);
 
   // Sử dụng Map để lưu trữ. 
-  // Key là dạng "userId:skillId" để tự động ghi đè (chống spam click)
-  private cacheQueue = new Map<string, { userId: string; skillId: number }>();
+  // Key là dạng "userId:roadmapSkillId" để tự động ghi đè (chống spam click)
+  private cacheQueue = new Map<string, { userId: string; roadmapSkillId: number }>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -19,9 +19,9 @@ export class ProgressQueueService {
   /**
    * Đẩy tiến độ vào RAM. Hàm này trả về ngay lập tức (Non-blocking).
    */
-  enqueueProgress(userId: string, skillId: number): void {
-    const key = `${userId}:${skillId}`;
-    this.cacheQueue.set(key, { userId, skillId });
+  enqueueProgress(userId: string, roadmapSkillId: number): void {
+    const key = `${userId}:${roadmapSkillId}`;
+    this.cacheQueue.set(key, { userId, roadmapSkillId });
   }
 
   /**
@@ -42,22 +42,11 @@ export class ProgressQueueService {
     const records = Array.from(batch.values());
 
     try {
-      const completedStatusId = await this.progressService.getCompletedStatusId();
+      const uniqueRoadmapSkillIds = [...new Set(records.map(r => r.roadmapSkillId))];
 
-      await this.prisma.userSkillProgress.createMany({
-        data: records.map((record) => ({
-          userId: record.userId,
-          skillId: record.skillId,
-          statusId: completedStatusId,
-          completedAt: new Date(),
-        })),
-        skipDuplicates: true, 
-      });
-      const uniqueSkillIds = [...new Set(records.map(r => r.skillId))];
-      
       const affectedRoadmapSkills = await this.prisma.roadmapSkill.findMany({
-        where: { skillId: { in: uniqueSkillIds } },
-        select: { section: { select: { roadmapId: true } } },
+        where: { id: { in: uniqueRoadmapSkillIds } },
+        select: { id: true, section: { select: { roadmapId: true } } },
       });
 
       // Lấy danh sách các roadmapId cần update (loại bỏ null và trùng lặp)

@@ -7,7 +7,9 @@ import axios from "axios";
 import type { AxiosInstance, AxiosError, AxiosResponse } from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:3000/api";
 const TOKEN_KEY = "access_token";
 
 /** Configured Axios instance for all API calls. */

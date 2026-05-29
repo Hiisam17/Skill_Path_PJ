@@ -9,6 +9,19 @@ import { PrismaService } from '../prisma/prisma.service';
 export class RoadmapSectionsService {
   constructor(private prisma: PrismaService) {}
 
+  private deduplicateResources<T extends { id: number }>(resources: T[]): T[] {
+    const seen = new Set<number>();
+
+    return resources.filter((resource) => {
+      if (seen.has(resource.id)) {
+        return false;
+      }
+
+      seen.add(resource.id);
+      return true;
+    });
+  }
+
   /**
    * Retrieves a roadmap section along with its active resources.
    *
@@ -29,10 +42,12 @@ export class RoadmapSectionsService {
     
     if (!section) throw new NotFoundException('Section not Found');
 
+    const resources = this.deduplicateResources(section.resources);
+
     return {
       title: section.title,
       content: section.description || '',
-      resources: section.resources.map(res => ({
+      resources: resources.map(res => ({
         id: res.id,
         type: res.resourceType?.name || 'link',
         title: res.title,

@@ -43,11 +43,16 @@ Required for backend CI:
 Required for production backend deployment:
 
 - `DATABASE_URL`
-- `JWT_SECRET`
+- `DIRECT_URL` if Prisma migrations or direct database access require it
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_JWT_SECRET` or `JWT_SECRET`
 - `ADZUNA_APP_ID`
 - `ADZUNA_APP_KEY`
 - `ADZUNA_COUNTRY`
-- `GROQ_API_KEY` or whichever AI provider key the deployment uses.
+- `GROQ_API_KEY`
+- `GROQ_MODEL`, defaults to `llama-3.3-70b-versatile` if omitted.
 
 Required for frontend deployment:
 

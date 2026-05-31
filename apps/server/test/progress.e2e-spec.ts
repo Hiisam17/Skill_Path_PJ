@@ -3,12 +3,16 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
+import { mockJwtAuthGuard } from './mock-auth.guard';
 
 describe('ProgressController (e2e)', () => {
   let app: INestApplication;
   const mockPrisma = {
     progressStatus: {
-      upsert: jest.fn().mockResolvedValue({ id: 1 }),
+      findFirst: jest.fn().mockResolvedValue({ id: 1 }),
+      findUnique: jest.fn().mockResolvedValue({ name: 'COMPLETED' }),
+      create: jest.fn().mockResolvedValue({ id: 1 }),
     },
     profile: {
       findFirst: jest.fn().mockResolvedValue({ userId: 'demo-user-id' }),
@@ -18,31 +22,40 @@ describe('ProgressController (e2e)', () => {
       findUnique: jest.fn().mockResolvedValue({ id: 1 }),
     },
     userSkillProgress: {
+      findFirst: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue({
         id: 101,
         userId: 'demo-user-id',
+        roadmapSkillId: 1,
         skillId: 1,
         status: { name: 'COMPLETED' },
         completedAt: new Date(),
       }),
+      update: jest.fn(),
       delete: jest.fn().mockResolvedValue({ id: 101 }),
       count: jest.fn().mockResolvedValue(5),
     },
     userRoadmap: {
       findFirst: jest.fn().mockResolvedValue({ roadmapId: 1 }),
-      findMany: jest.fn().mockResolvedValue([{ 
-        roadmapId: 1, 
-        roadmap: { id: 1, title: 'Roadmap 1' } 
-      }]),
+      findMany: jest.fn().mockResolvedValue([
+        {
+          roadmapId: 1,
+          roadmap: { id: 1, title: 'Roadmap 1' },
+        },
+      ]),
     },
     roadmapSkill: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 1,
+        skillId: 1,
+      }),
       count: jest.fn().mockResolvedValue(10),
-      findMany: jest.fn().mockResolvedValue([{ skillId: 1 }]),
+      findMany: jest.fn().mockResolvedValue([{ id: 1, skillId: 1 }]),
     },
     roadmap: {
       findFirst: jest.fn().mockResolvedValue({ id: 1 }),
       findMany: jest.fn().mockResolvedValue([{ id: 1, title: 'Roadmap 1' }]),
-    }
+    },
   };
 
   beforeAll(async () => {
@@ -51,6 +64,8 @@ describe('ProgressController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(mockPrisma)
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtAuthGuard)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -72,7 +87,7 @@ describe('ProgressController (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(res.body).toHaveProperty('status');
-          expect(res.body.skillId).toBe("1");
+          expect(res.body.roadmapSkillId).toBe('1');
         });
     });
 
@@ -91,7 +106,7 @@ describe('ProgressController (e2e)', () => {
     });
 
     it('should return 404 if skill not found in database (Edge case)', async () => {
-      mockPrisma.skill.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.roadmapSkill.findUnique.mockResolvedValueOnce(null);
       return request(app.getHttpServer())
         .patch('/api/progress/skills/999')
         .send({ statusId: 1 })
@@ -124,13 +139,20 @@ describe('ProgressController (e2e)', () => {
           expect(res.body.totalSkills).toBe(10);
         });
     });
-    
-    it('should return 404 if demo user profile cannot be resolved', async () => {
-       mockPrisma.profile.findFirst.mockResolvedValueOnce(null);
-       mockPrisma.profile.findUnique.mockResolvedValueOnce(null);
-       return request(app.getHttpServer())
-         .get('/api/progress/current')
-         .expect(404);
+
+    it('should return 200 with zero progress if no roadmap can be resolved', async () => {
+      mockPrisma.userSkillProgress.count.mockResolvedValueOnce(0);
+      mockPrisma.userRoadmap.findFirst.mockResolvedValueOnce(null);
+      mockPrisma.roadmap.findFirst.mockResolvedValueOnce(null);
+
+      return request(app.getHttpServer())
+        .get('/api/progress/current')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.completedSkills).toBe(0);
+          expect(res.body.totalSkills).toBe(0);
+          expect(res.body.percentage).toBe(0);
+        });
     });
   });
 

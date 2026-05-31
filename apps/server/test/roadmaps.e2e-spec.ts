@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
+import { mockJwtAuthGuard } from './mock-auth.guard';
 
 describe('RoadmapsController (e2e)', () => {
   let app: INestApplication;
@@ -13,7 +15,7 @@ describe('RoadmapsController (e2e)', () => {
         id: 1,
         title: 'Roadmap 1',
         careerPathId: 10,
-        sections: []
+        sections: [],
       }),
     },
     careerPath: {
@@ -25,7 +27,7 @@ describe('RoadmapsController (e2e)', () => {
     profile: {
       findFirst: jest.fn().mockResolvedValue({ userId: 'demo-user' }),
       findUnique: jest.fn().mockResolvedValue({ userId: 'demo-user' }),
-    }
+    },
   };
 
   beforeAll(async () => {
@@ -34,6 +36,8 @@ describe('RoadmapsController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(mockPrisma)
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtAuthGuard)
       .compile();
 
     app = moduleFixture.createNestApplication();

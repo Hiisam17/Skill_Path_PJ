@@ -1,7 +1,23 @@
-import { Controller, Param, Post, Get, Patch, Delete, Body, ParseIntPipe, HttpCode, HttpStatus, HttpException, Logger, UseGuards, Request } from '@nestjs/common';
-import { 
-  UserSkillProgressDto, 
-  ProgressDto, 
+import {
+  Controller,
+  Param,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+  HttpException,
+  Logger,
+  UseGuards,
+  Request,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  UserSkillProgressDto,
+  ProgressDto,
   MultiRoadmapProgressDto,
   UserSkillStatus,
 } from '../types';
@@ -18,15 +34,29 @@ interface BatchSyncItem {
   changedAt?: string;
 }
 
+interface AuthenticatedUser {
+  id: string;
+}
+
+type AuthenticatedRequest = ExpressRequest & { user: AuthenticatedUser };
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getErrorStack(error: unknown): string | undefined {
+  return error instanceof Error ? error.stack : undefined;
+}
+
 @Controller('progress')
 @UseGuards(JwtAuthGuard)
 export class ProgressController {
   private readonly logger = new Logger(ProgressController.name);
 
   constructor(
-	private readonly progressService: ProgressService,
-	private readonly progressQueueService: ProgressQueueService,
-) {}
+    private readonly progressService: ProgressService,
+    private readonly progressQueueService: ProgressQueueService,
+  ) {}
 
   /**
    * [POST] /progress/batch-sync
@@ -40,7 +70,7 @@ export class ProgressController {
   @Post('batch-sync')
   async batchSyncProgress(
     @Body('items') items: BatchSyncItem[],
-    @Request() req: ExpressRequest & { user: any },
+    @Request() req: AuthenticatedRequest,
   ) {
     if (!items || !Array.isArray(items) || items.length === 0) {
       return { synced: 0, message: 'No items to sync' };
@@ -58,7 +88,10 @@ export class ProgressController {
       try {
         if (item.status === null || item.statusId === null) {
           // RESET: xóa progress
-          await this.progressService.resetSkillStatus(userId, item.roadmapSkillId);
+          await this.progressService.resetSkillStatus(
+            userId,
+            item.roadmapSkillId,
+          );
         } else {
           // UPSERT: cập nhật hoặc tạo mới
           const statusId = item.status
@@ -80,10 +113,10 @@ export class ProgressController {
         this.progressQueueService.enqueueProgress(userId, item.roadmapSkillId);
 
         syncedCount++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         errorCount++;
         this.logger.warn(
-          `[BatchSync] ⚠️ Lỗi sync roadmapSkillId=${item.roadmapSkillId}: ${error.message}`,
+          `[BatchSync] ⚠️ Lỗi sync roadmapSkillId=${item.roadmapSkillId}: ${getErrorMessage(error)}`,
         );
       }
     }
@@ -108,8 +141,8 @@ export class ProgressController {
     @Param('roadmapSkillId', ParseIntPipe) roadmapSkillId: number,
     @Body('status') status: UserSkillStatus | undefined,
     @Body('statusId') statusId: number | undefined,
-    @Request() req: ExpressRequest & { user: any },
-  ) {
+    @Request() req: AuthenticatedRequest,
+  ): Promise<UserSkillProgressDto> {
     try {
       const userId = req.user.id;
       const resolvedStatusId = status
@@ -117,19 +150,27 @@ export class ProgressController {
         : Number(statusId);
 
       if (!resolvedStatusId || Number.isNaN(resolvedStatusId)) {
-        throw new Error('Missing or invalid status');
+        throw new BadRequestException('Missing or invalid status');
       }
 
-      const result = await this.progressService.updateSkillStatus(userId, roadmapSkillId, resolvedStatusId);
+      const result = await this.progressService.updateSkillStatus(
+        userId,
+        roadmapSkillId,
+        resolvedStatusId,
+      );
       this.progressQueueService.enqueueProgress(userId, roadmapSkillId);
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof HttpException) {
         throw error;
       }
 
       throw new HttpException(
-        { message: 'Custom Error Details', error: error.message, stack: error.stack },
+        {
+          message: 'Custom Error Details',
+          error: getErrorMessage(error),
+          stack: getErrorStack(error),
+        },
         500,
       );
     }
@@ -143,7 +184,7 @@ export class ProgressController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async resetSkillStatus(
     @Param('roadmapSkillId', ParseIntPipe) roadmapSkillId: number,
-    @Request() req: ExpressRequest & { user: any },
+    @Request() req: AuthenticatedRequest,
   ) {
     const userId = req.user.id;
     await this.progressService.resetSkillStatus(userId, roadmapSkillId);
@@ -155,7 +196,9 @@ export class ProgressController {
    * Lấy tổng quan tiến độ học tập của Roadmap hiện tại (hoặc Roadmap mặc định)
    */
   @Get('current')
-  async getUserProgress(@Request() req: ExpressRequest & { user: any }): Promise<ProgressDto> {
+  async getUserProgress(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<ProgressDto> {
     const userId = req.user.id;
     return this.progressService.getUserProgress(userId);
   }
@@ -165,7 +208,9 @@ export class ProgressController {
    * Lấy chi tiết tiến độ học tập của tất cả các Roadmaps mà User đang tham gia
    */
   @Get('all')
-  async getUserMultiRoadmapProgress(@Request() req: ExpressRequest & { user: any }): Promise<MultiRoadmapProgressDto> {
+  async getUserMultiRoadmapProgress(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<MultiRoadmapProgressDto> {
     const userId = req.user.id;
     return this.progressService.getUserMultiRoadmapProgress(userId);
   }

@@ -7,9 +7,22 @@ import { PrismaService } from '../src/prisma/prisma.service';
 describe('CareerPathsController (e2e)', () => {
   let app: INestApplication;
   const mockPrisma = {
+    roadmap: {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 1,
+          title: 'Backend Developer',
+          description: 'Server-side management',
+        },
+      ]),
+    },
     careerPath: {
       findMany: jest.fn().mockResolvedValue([
-        { id: 1, name: 'Backend Developer', description: 'Server-side management' }
+        {
+          id: 1,
+          name: 'Backend Developer',
+          description: 'Server-side management',
+        },
       ]),
     },
     // Mock profile and others to avoid app initialization issues
@@ -19,7 +32,7 @@ describe('CareerPathsController (e2e)', () => {
     },
     progressStatus: {
       upsert: jest.fn().mockResolvedValue({ id: 1 }),
-    }
+    },
   };
 
   beforeAll(async () => {

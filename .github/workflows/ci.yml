@@ -44,6 +44,28 @@ jobs:
           SUPABASE_ANON_KEY: test-key
           JWT_SECRET: test-secret
 
+      - name: Run backend e2e tests
+        working-directory: apps/server
+        run: npm run test:e2e -- --runInBand
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GROQ_API_KEY: test-key
+          SUPABASE_URL: http://localhost
+          SUPABASE_KEY: test-key
+          SUPABASE_ANON_KEY: test-key
+          JWT_SECRET: test-secret
+
+      - name: Check backend coverage threshold
+        working-directory: apps/server
+        run: npm run test:cov -- --runInBand
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GROQ_API_KEY: test-key
+          SUPABASE_URL: http://localhost
+          SUPABASE_KEY: test-key
+          SUPABASE_ANON_KEY: test-key
+          JWT_SECRET: test-secret
+
       - name: Build backend
         working-directory: apps/server
         run: npm run build

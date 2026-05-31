@@ -88,6 +88,56 @@ describe('ProgressService', () => {
     });
   });
 
+  describe('status mapping helpers', () => {
+    it.each([
+      ['COMPLETED', UserSkillStatus.COMPLETED],
+      ['Done', UserSkillStatus.COMPLETED],
+      ['in progress', UserSkillStatus.IN_PROGRESS],
+      ['SKIPPED', UserSkillStatus.SKIPPED],
+      [null, UserSkillStatus.NOT_STARTED],
+      ['unknown', UserSkillStatus.NOT_STARTED],
+    ])('should map "%s" to %s', (input, expected) => {
+      expect(service.mapStatusNameToEnum(input)).toBe(expected);
+    });
+
+    it('should create a missing status when no alias exists', async () => {
+      mockPrismaService.progressStatus.findFirst.mockResolvedValue(null);
+      mockPrismaService.progressStatus.create.mockResolvedValue({ id: 4 });
+
+      const id = await service.getStatusId(UserSkillStatus.SKIPPED);
+
+      expect(id).toBe(4);
+      expect(mockPrismaService.progressStatus.create).toHaveBeenCalledWith({
+        data: { name: UserSkillStatus.SKIPPED },
+        select: { id: true },
+      });
+    });
+
+    it('should reject NOT_STARTED as a persisted status', async () => {
+      await expect(
+        service.getStatusId(UserSkillStatus.NOT_STARTED),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return status enum by persisted status ID', async () => {
+      mockPrismaService.progressStatus.findUnique.mockResolvedValue({
+        name: 'In Progress',
+      });
+
+      const status = await service.getStatusEnumById(2);
+
+      expect(status).toBe(UserSkillStatus.IN_PROGRESS);
+    });
+
+    it('should throw if persisted status ID does not exist', async () => {
+      mockPrismaService.progressStatus.findUnique.mockResolvedValue(null);
+
+      await expect(service.getStatusEnumById(999)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
   describe('getDemoUserId', () => {
     const originalEnv = process.env;
 
@@ -236,6 +286,20 @@ describe('ProgressService', () => {
     it('should throw NotFoundException if roadmapSkill does not exist', async () => {
       mockPrismaService.roadmapSkill.findUnique.mockResolvedValue(null);
       await expect(service.updateSkillStatus('u1', 99, 1)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException if roadmapSkill has no linked skill', async () => {
+      mockPrismaService.roadmapSkill.findUnique.mockResolvedValue({
+        id: 10,
+        skillId: null,
+      });
+      mockPrismaService.progressStatus.findUnique.mockResolvedValue({
+        name: 'COMPLETED',
+      });
+
+      await expect(service.updateSkillStatus('u1', 10, 1)).rejects.toThrow(
         NotFoundException,
       );
     });

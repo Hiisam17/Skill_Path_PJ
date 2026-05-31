@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
+import { mockJwtAuthGuard } from './mock-auth.guard';
 
 describe('SkillsController (e2e)', () => {
   let app: INestApplication;
@@ -12,19 +14,25 @@ describe('SkillsController (e2e)', () => {
       findUnique: jest.fn().mockResolvedValue({ userId: 'demo-user' }),
     },
     roadmapSkill: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 1,
+        skill: {
+          id: 1,
+          name: 'Skill 1',
+          description: 'Skill description',
+          resources: [],
+        },
+        resources: [],
+        userProgress: [],
+      }),
       findMany: jest.fn().mockResolvedValue([]),
     },
     skill: {
-      findUnique: jest.fn().mockResolvedValue({
-        id: 1,
-        name: 'Skill 1',
-        resources: [],
-        userProgress: []
-      }),
+      findUnique: jest.fn(),
     },
     progressStatus: {
       upsert: jest.fn().mockResolvedValue({ id: 1 }),
-    }
+    },
   };
 
   beforeAll(async () => {
@@ -33,6 +41,8 @@ describe('SkillsController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(mockPrisma)
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtAuthGuard)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -66,7 +76,7 @@ describe('SkillsController (e2e)', () => {
     });
 
     it('should return 404 if skill missing (Edge case)', async () => {
-      mockPrisma.skill.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.roadmapSkill.findUnique.mockResolvedValueOnce(null);
       return request(app.getHttpServer())
         .get('/api/roadmaps/999/detail')
         .expect(404);

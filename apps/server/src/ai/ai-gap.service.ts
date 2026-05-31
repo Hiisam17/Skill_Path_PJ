@@ -59,12 +59,16 @@ export interface SkillInput {
 export class AiGapService {
   private readonly logger = new Logger(AiGapService.name);
   private readonly groq: Groq;
+  private readonly groqModel: string;
 
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
   ) {
     const apiKey = this.config.get<string>('GROQ_API_KEY');
+    this.groqModel =
+      this.config.get<string>('GROQ_MODEL')?.trim() ||
+      'llama-3.3-70b-versatile';
     if (!apiKey || apiKey.includes('your_groq_api_key')) {
       this.logger.warn(
         'GROQ_API_KEY is not configured. AI gap analysis will fail at runtime.',
@@ -148,7 +152,7 @@ Return the JSON analysis.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        model: 'llama-3.3-70b-versatile',
+        model: this.groqModel,
         temperature: 0.2, // Low temperature for more deterministic JSON output
         response_format: { type: 'json_object' }, // Enforce JSON output on Groq
       });
@@ -275,7 +279,7 @@ Hãy:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        model: 'llama-3.3-70b-versatile',
+        model: this.groqModel,
         temperature: 0.2,
         response_format: { type: 'json_object' },
       });
@@ -438,7 +442,7 @@ Trả về JSON với cấu trúc BẮT BUỘC sau (không markdown, không gi�
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        model: 'llama-3.3-70b-versatile',
+        model: this.groqModel,
         temperature: 0.15,
         response_format: { type: 'json_object' },
       });

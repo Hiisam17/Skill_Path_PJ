@@ -7,16 +7,20 @@ import { AuthService } from '../src/auth/auth.service';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
-  
+
   const mockAuthService = {
-    register: jest.fn().mockResolvedValue({ message: 'Success', user: { id: '1' } }),
-    login: jest.fn().mockResolvedValue({ access_token: 'token', user: { id: '1' } }),
+    register: jest
+      .fn()
+      .mockResolvedValue({ message: 'Success', user: { id: '1' } }),
+    login: jest
+      .fn()
+      .mockResolvedValue({ access_token: 'token', user: { id: '1' } }),
   };
 
   const mockPrismaService = {
     progressStatus: { upsert: jest.fn().mockResolvedValue({ id: 1 }) },
     roadmap: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
-    profile: { findFirst: jest.fn().mockResolvedValue({ userId: '1' }) }
+    profile: { findFirst: jest.fn().mockResolvedValue({ userId: '1' }) },
   };
 
   beforeAll(async () => {
@@ -42,7 +46,11 @@ describe('AuthController (e2e)', () => {
     it('should return 201 on successful registration (Happy Path)', () => {
       return request(app.getHttpServer())
         .post('/api/auth/register')
-        .send({ email: 'test@example.com', password: 'password', fullName: 'Test' })
+        .send({
+          email: 'test@example.com',
+          password: 'password',
+          fullName: 'Test',
+        })
         .expect(201)
         .expect({ message: 'Success', user: { id: '1' } });
     });
@@ -60,11 +68,9 @@ describe('AuthController (e2e)', () => {
 
   describe('GET /api/auth/me', () => {
     it('should return 401 if no token provided (Edge case)', () => {
-      return request(app.getHttpServer())
-        .get('/api/auth/me')
-        .expect(401);
+      return request(app.getHttpServer()).get('/api/auth/me').expect(401);
     });
-    
+
     // Note: Testing successful /me would require a real JWT or complex mock of JwtAuthGuard.
   });
 });

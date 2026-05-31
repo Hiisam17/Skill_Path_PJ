@@ -16,3 +16,17 @@ services:
         sync: false # User will set this in Render dashboard
       - key: DIRECT_URL
         sync: false # User will set this in Render dashboard
+      - key: SUPABASE_URL
+        sync: false # Required for JWT validation against Supabase JWKS
+      - key: SUPABASE_KEY
+        sync: false # Required by AuthService for Supabase auth calls
+      - key: SUPABASE_ANON_KEY
+        sync: false # Optional alias used by test/build environments
+      - key: SUPABASE_JWT_SECRET
+        sync: false # Required if Supabase issues HS-signed access tokens
+      - key: JWT_SECRET
+        sync: false # Fallback JWT secret for HS-signed tokens
+      - key: GROQ_API_KEY
+        sync: false # Required for AI job analysis/advice
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile

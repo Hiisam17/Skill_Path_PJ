@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { RequestMethod } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
 import * as dotenv from 'dotenv';
@@ -23,10 +24,11 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT ?? 3000;
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: 'health', method: RequestMethod.GET }],
+  });
   await app.listen(port);
   console.log(` Server is running on http://localhost:${port}`);
 }
 
 bootstrap();
-

@@ -5,15 +5,17 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ProgressService } from '../src/progress/progress.service';
 import { UsersService } from '../src/users/users.service';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
+import { mockJwtAuthGuard } from './mock-auth.guard';
 
 describe('UsersController (e2e)', () => {
   let app: INestApplication;
-  
+
   const mockProgressService = {
     getDemoUserId: jest.fn().mockResolvedValue('demo-user-id'),
-    getUserMultiRoadmapProgress: jest.fn().mockResolvedValue({ 
-      overall: { completedSkills: 0, totalSkills: 0, percentage: 0 }, 
-      roadmaps: [] 
+    getUserMultiRoadmapProgress: jest.fn().mockResolvedValue({
+      overall: { completedSkills: 0, totalSkills: 0, percentage: 0 },
+      roadmaps: [],
     }),
   };
 
@@ -24,7 +26,7 @@ describe('UsersController (e2e)', () => {
   const mockPrismaService = {
     progressStatus: { upsert: jest.fn().mockResolvedValue({ id: 1 }) },
     roadmap: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
-    profile: { findFirst: jest.fn().mockResolvedValue({ userId: '1' }) }
+    profile: { findFirst: jest.fn().mockResolvedValue({ userId: '1' }) },
   };
 
   beforeAll(async () => {
@@ -37,6 +39,8 @@ describe('UsersController (e2e)', () => {
       .useValue(mockUsersService)
       .overrideProvider(PrismaService)
       .useValue(mockPrismaService)
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtAuthGuard)
       .compile();
 
     app = moduleFixture.createNestApplication();

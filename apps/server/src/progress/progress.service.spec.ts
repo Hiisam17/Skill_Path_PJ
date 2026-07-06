@@ -6,12 +6,17 @@ describe('ProgressService', () => {
   let service: ProgressService;
 
   const mockPrisma = {
+    progressStatus: {
+      findUnique: jest.fn(),
+    },
     userSkillProgress: {
       upsert: jest.fn(),
       count: jest.fn(),
+    },
+    userRoadmap: {
       findFirst: jest.fn(),
     },
-    skill: { count: jest.fn() },
+    roadmapSkill: { count: jest.fn() },
     roadmap: { findFirst: jest.fn() },
   };
 
@@ -33,6 +38,7 @@ describe('ProgressService', () => {
   describe('completeSkill', () => {
     it('should call upsert and return COMPLETED status', async () => {
       // Giả lập kết quả trả về từ DB
+      mockPrisma.progressStatus.findUnique.mockResolvedValue({ id: 1 });
       const mockResult = { status: 'COMPLETED' };
       mockPrisma.userSkillProgress.upsert.mockResolvedValue(mockResult);
 
@@ -59,15 +65,16 @@ describe('ProgressService', () => {
   describe('getUserProgress', () => {
     it('should calculate correct percentage', async () => {
       // Giả lập: User đã hoàn thành 3 skills
+      mockPrisma.progressStatus.findUnique.mockResolvedValue({ id: 1 });
       mockPrisma.userSkillProgress.count.mockResolvedValue(3);
 
       // Giả lập: Tìm thấy roadmap mà user đang học
-      mockPrisma.userSkillProgress.findFirst.mockResolvedValue({
-        skill: { roadmapId: 'roadmap-1' }
+      mockPrisma.userRoadmap.findFirst.mockResolvedValue({
+        roadmapId: 1,
       });
 
       // Giả lập: Roadmap đó có tổng cộng 6 skills
-      mockPrisma.skill.count.mockResolvedValue(6);
+      mockPrisma.roadmapSkill.count.mockResolvedValue(6);
 
       const result = await service.getUserProgress('user-1');
 

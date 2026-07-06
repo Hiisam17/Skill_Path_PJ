@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';/**
+import { PrismaPg } from '@prisma/adapter-pg';
+
+/**
  * PrismaService - Wraps PrismaClient with NestJS lifecycle hooks
  * Handles database connection initialization and cleanup
  * Provides singleton access to Prisma ORM throughout the application
